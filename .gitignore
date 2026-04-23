@@ -1,0 +1,41 @@
+# Build artifacts
+[Bb]in/
+[Oo]bj/
+out/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# VS Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Visual Studio
+.vs/
+
+# NuGet
+*.nupkg
+*.snupkg
+
+# Logs
+*.log
+
+# Environment files
+.env
+.env.*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Nested accidental repo/folder
+warehouse/
+
+# ASP.NET Core static assets cache
+wwwroot/lib/
