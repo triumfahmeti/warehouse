@@ -55,6 +55,38 @@ namespace Warehouse
                 .WithMany()
                 .HasForeignKey(u => u.CreatedById)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Product>()
+                .Property(p => p.Length)
+                .HasPrecision(18, 3);
+
+            modelBuilder.Entity<Product>()
+                .Property(p => p.Width)
+                .HasPrecision(18, 3);
+
+            modelBuilder.Entity<Product>()
+                .Property(p => p.Height)
+                .HasPrecision(18, 3);
+
+            modelBuilder.Entity<Product>()
+                .Property(p => p.Weight)
+                .HasPrecision(18, 3);
+
+            modelBuilder.Entity<PurchaseOrderItem>()
+                .Property(poi => poi.UnitPrice)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<Shipment>()
+                .HasOne(s => s.Warehouse)
+                .WithMany()
+                .HasForeignKey(s => s.WarehouseId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<PackingListPallet>()
+                .HasOne(plp => plp.Pallet)
+                .WithMany()
+                .HasForeignKey(plp => plp.PalletId)
+                .OnDelete(DeleteBehavior.NoAction);
         }
 
         public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
