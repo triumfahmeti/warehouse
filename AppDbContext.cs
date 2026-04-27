@@ -46,16 +46,24 @@ namespace Warehouse
 
 
 
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
-        {
-            base.OnModelCreating(modelBuilder);
+       protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    base.OnModelCreating(modelBuilder);
 
-            modelBuilder.Entity<ApplicationUser>()
-                .HasOne(u => u.CreatedByUser)
-                .WithMany()
-                .HasForeignKey(u => u.CreatedById)
-                .OnDelete(DeleteBehavior.Restrict);
-        }
+    // Existing config
+    modelBuilder.Entity<ApplicationUser>()
+        .HasOne(u => u.CreatedByUser)
+        .WithMany()
+        .HasForeignKey(u => u.CreatedById)
+        .OnDelete(DeleteBehavior.Restrict);
+
+    // Fix cascade cycles — restrict all cascades globally
+    foreach (var relationship in modelBuilder.Model.GetEntityTypes()
+        .SelectMany(e => e.GetForeignKeys()))
+    {
+        relationship.DeleteBehavior = DeleteBehavior.Restrict;
+    }
+}
 
         public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
