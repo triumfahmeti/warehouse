@@ -1,7 +1,9 @@
 using Warehouse.DTOs.SupplierDto;
-using Warehouse.Interfaces;
+using Warehouse.Repositories.Interfaces;
+
 using Warehouse.Models;
 using Warehouse.Services.Interfaces;
+
 
 
 namespace Warehouse.Services.Implementations
