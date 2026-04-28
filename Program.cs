@@ -8,6 +8,7 @@ using Warehouse.Services.Interfaces;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Warehouse.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -91,6 +92,8 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IAuthService, AuthService>();
+// Generic + Supplier
+
 
 var app = builder.Build();
 
