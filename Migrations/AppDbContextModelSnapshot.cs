@@ -314,7 +314,14 @@ namespace Warehouse.Migrations
                     b.Property<string>("UpdatedById")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
 
                     b.ToTable("Clients");
                 });
@@ -815,9 +822,8 @@ namespace Warehouse.Migrations
                     b.Property<DateTime>("OrderDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -843,7 +849,7 @@ namespace Warehouse.Migrations
                     b.Property<int>("SalesOrderId")
                         .HasColumnType("int");
 
-                    b.Property<decimal>("UnitPrice")
+                    b.Property<decimal?>("UnitPrice")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
@@ -1073,6 +1079,17 @@ namespace Warehouse.Migrations
                     b.HasOne("Warehouse.Models.ApplicationUser", "User")
                         .WithMany("AuditLogs")
                         .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Warehouse.Models.Client", b =>
+                {
+                    b.HasOne("Warehouse.Models.ApplicationUser", "User")
+                        .WithOne("Client")
+                        .HasForeignKey("Warehouse.Models.Client", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -1321,6 +1338,8 @@ namespace Warehouse.Migrations
             modelBuilder.Entity("Warehouse.Models.ApplicationUser", b =>
                 {
                     b.Navigation("AuditLogs");
+
+                    b.Navigation("Client");
 
                     b.Navigation("Notifications");
 

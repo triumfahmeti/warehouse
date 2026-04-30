@@ -10,5 +10,6 @@ namespace Warehouse.Services.Interfaces
         Task AddStock(int productId, int raftId, int quantity);
         Task RemoveStock(int productId, int raftId, int quantity);
         Task<int> GetAvailableStock(int productId);
+        Task ReserveStock(int salesOrderId);
     }
 }

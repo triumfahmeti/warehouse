@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Warehouse.Enums;
 using Warehouse.Models;
 using Warehouse.Repositories.Interfaces;
 using Warehouse.Services.Interfaces;
@@ -11,10 +12,14 @@ namespace Warehouse.Services.Implementations
     public class InventoryService : IInventoryService
     {
         private readonly IInventoryRepository _inventoryRepository;
+        private readonly ISalesOrderRepository _salesOrderRepository;
+        private readonly AppDbContext _context;
 
-        public InventoryService(IInventoryRepository inventoryRepository)
+        public InventoryService(IInventoryRepository inventoryRepository, ISalesOrderRepository salesOrderRepository, AppDbContext context)
         {
             _inventoryRepository = inventoryRepository;
+            _salesOrderRepository = salesOrderRepository;
+            _context = context;
         }
         public async Task AddStock(int productId, int raftId, int quantity)
         {
@@ -50,6 +55,56 @@ namespace Warehouse.Services.Implementations
         public async Task<int> GetAvailableStock(int productId)
         {
             return await _inventoryRepository.GetAvailableStock(productId);
+        }
+
+        public async Task ReserveStock(int salesOrderId)
+        {
+            var order = await _salesOrderRepository.GetOrderWithItems(salesOrderId);
+
+            if (order == null)
+            {
+                throw new InvalidOperationException("Sales order not found");
+            }
+
+            if (order.Status != SalesOrderStatus.Confirmed)
+            {
+                throw new InvalidOperationException("Order must be in Confirmed status to reserve stock");
+            }
+
+            foreach (var item in order.SalesOrderItems)
+            {
+                var availableStock = await _inventoryRepository.GetAvailableStock(item.ProductId);
+
+                if (availableStock < item.Quantity)
+                {
+                    throw new InvalidOperationException($"Not enough stock for product {item.ProductId}");
+                }
+
+                var inventories = await _inventoryRepository.GetInventoriesByProduct(item.ProductId);
+
+                var remainingQtytoReserve = item.Quantity;
+
+                foreach (var inv in inventories)
+                {
+                    var available = inv.QuantityOnHand - inv.ReservedQuantity;
+
+                    if (available <= 0)
+                        continue;
+
+                    var toReserve = Math.Min(available, remainingQtytoReserve);
+
+                    inv.ReservedQuantity += toReserve;
+
+                    await _inventoryRepository.UpdateAsync(inv);
+
+                    remainingQtytoReserve -= toReserve;
+
+                    if (remainingQtytoReserve <= 0)
+                        break;
+
+
+                }
+            }
         }
     }
 }

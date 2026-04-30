@@ -29,5 +29,14 @@ namespace Warehouse.Repositories.Implementations
                 .Where(i => i.ProductId == productId)
                 .SumAsync(i => i.QuantityOnHand - i.ReservedQuantity);
         }
+
+        public async Task<List<Inventory>> GetInventoriesByProduct(int productId)
+        {
+            return await _context.Inventories
+                .Where(i => i.ProductId == productId)
+                .ToListAsync();
+        }
+
+
     }
 }
