@@ -13,6 +13,6 @@ namespace Warehouse.Models
         public Warehouse Warehouse { get; set; }
         public int MaxCapacity { get; set; }
         public ICollection<Inventory> Inventories { get; set; }
-        public ICollection<Pallet> Pallets { get; set; }
+        // public ICollection<Pallet> Pallets { get; set; }
     }
 }
