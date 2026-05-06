@@ -11,10 +11,12 @@ namespace Warehouse.Services.Implementations
     public class SupplierService : ISupplierService
     {
         private readonly ISupplierRepository _repo;
+        private readonly AppDbContext _context;
 
-        public SupplierService(ISupplierRepository repo)
+        public SupplierService(ISupplierRepository repo, AppDbContext context)
         {
             _repo = repo;
+            _context = context;
         }
 
         public async Task<IEnumerable<SupplierDto>> GetAllAsync()
@@ -43,6 +45,7 @@ namespace Warehouse.Services.Implementations
             };
 
             await _repo.AddAsync(supplier);
+            await _context.SaveChangesAsync();
             return MapToDto(supplier);
         }
 
@@ -61,6 +64,7 @@ namespace Warehouse.Services.Implementations
             supplier.Country = dto.Country;
 
             await _repo.UpdateAsync(supplier);
+            await _context.SaveChangesAsync();
         }
 
         public async Task DeleteAsync(int id)
@@ -70,6 +74,7 @@ namespace Warehouse.Services.Implementations
                 throw new Exception("Supplier not found");
 
             await _repo.DeleteAsync(id);
+            await _context.SaveChangesAsync();
         }
 
         private static SupplierDto MapToDto(Supplier s) => new SupplierDto

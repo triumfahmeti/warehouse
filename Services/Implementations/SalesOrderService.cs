@@ -42,6 +42,7 @@ namespace Warehouse.Services.Implementations
             };
 
             await _salesOrderRepository.AddAsync(order);
+            await _context.SaveChangesAsync();
             return order.Id;
         }
 
@@ -74,6 +75,7 @@ namespace Warehouse.Services.Implementations
                 orderItem.UnitPrice = itemDto.UnitPrice;
             }
             await _salesOrderRepository.UpdateAsync(order);
+            await _context.SaveChangesAsync();
         }
 
         public async Task ConfirmOrder(int salesOrderId)
@@ -110,6 +112,8 @@ namespace Warehouse.Services.Implementations
                 await _salesOrderRepository.UpdateAsync(order);
 
                 await _inventoryService.ReserveStock(salesOrderId);
+
+                await _context.SaveChangesAsync();
 
                 await transaction.CommitAsync();
             }

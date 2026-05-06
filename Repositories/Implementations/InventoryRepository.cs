@@ -37,6 +37,14 @@ namespace Warehouse.Repositories.Implementations
                 .ToListAsync();
         }
 
+        public async Task<int> ReserveStockAtomicAsync(int inventoryId, int quantityToReserve)
+        {
+            return await _context.Database.ExecuteSqlRawAsync(@"
+                UPDATE Inventories 
+                SET ReservedQuantity = ReservedQuantity + {0} 
+                WHERE Id = {1} AND (QuantityOnHand - ReservedQuantity) >= {0}",
+                quantityToReserve, inventoryId);
+        }
 
     }
 }
