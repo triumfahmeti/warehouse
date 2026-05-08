@@ -1,0 +1,45 @@
+using Microsoft.AspNetCore.Mvc;
+using Warehouse.DTOs.Client;
+using Warehouse.Services.Interfaces;
+
+namespace Warehouse.Controllers
+{
+    [ApiController]
+    [Route("api/[controller]")]
+    public class ClientsController : ControllerBase
+    {
+        private readonly IClientService _clientService;
+
+        public ClientsController(IClientService clientService)
+        {
+            _clientService = clientService;
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Create([FromBody] UpsertClientDto dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var id = await _clientService.CreateClient(dto.FullName, dto.Email, dto.PhoneNumber, dto.Address);
+            return CreatedAtAction(nameof(GetOrders), new { id }, new { id });
+        }
+
+        [HttpPut("{id:int}")]
+        public async Task<IActionResult> Update(int id, [FromBody] UpsertClientDto dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            await _clientService.UpdateClient(id, dto.FullName, dto.Email, dto.PhoneNumber, dto.Address);
+            return NoContent();
+        }
+
+        [HttpGet("{id:int}/orders")]
+        public async Task<IActionResult> GetOrders(int id)
+        {
+            var orders = await _clientService.GetClientOrders(id);
+            return Ok(orders);
+        }
+    }
+}

@@ -32,6 +32,8 @@ namespace Warehouse
         public DbSet<Product> Products { get; set; }
         public DbSet<Inventory> Inventories { get; set; }
         public DbSet<Supplier> Suppliers { get; set; }
+        public DbSet<Client> Clients { get; set; }
+        public DbSet<SalesOrder> SalesOrders { get; set; }
         public DbSet<PurchaseOrder> PurchaseOrders { get; set; }
         public DbSet<PurchaseOrderItem> PurchaseOrderItems { get; set; }
         public DbSet<Shipment> Shippments { get; set; }
