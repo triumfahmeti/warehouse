@@ -43,6 +43,10 @@ namespace Warehouse
         public DbSet<PackingList> PackingLists { get; set; }
         public DbSet<PackingListPallet> PackingListPallets { get; set; }
         public DbSet<Raft> Rafts { get; set; }
+        public DbSet<Client> Clients { get; set; }
+        public DbSet<SalesOrder> SalesOrders { get; set; }
+        public DbSet<SalesOrderItem> SalesOrderItems { get; set; }
+
 
 
 
@@ -57,6 +61,46 @@ namespace Warehouse
                 .WithMany()
                 .HasForeignKey(u => u.CreatedById)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Inventory>()
+                .HasIndex(i => new { i.ProductId, i.RaftId })
+                .IsUnique();
+
+            modelBuilder.Entity<Product>()
+                .Property(p => p.Length)
+                .HasPrecision(18, 3);
+
+            modelBuilder.Entity<Product>()
+                .Property(p => p.Width)
+                .HasPrecision(18, 3);
+
+            modelBuilder.Entity<Product>()
+                .Property(p => p.Height)
+                .HasPrecision(18, 3);
+
+            modelBuilder.Entity<Product>()
+                .Property(p => p.Weight)
+                .HasPrecision(18, 3);
+
+            modelBuilder.Entity<PurchaseOrderItem>()
+                .Property(poi => poi.UnitPrice)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<SalesOrderItem>()
+                .Property(poi => poi.UnitPrice)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<Shipment>()
+                .HasOne(s => s.Warehouse)
+                .WithMany()
+                .HasForeignKey(s => s.WarehouseId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<PackingListPallet>()
+                .HasOne(plp => plp.Pallet)
+                .WithMany()
+                .HasForeignKey(plp => plp.PalletId)
+                .OnDelete(DeleteBehavior.NoAction);
         }
 
         public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

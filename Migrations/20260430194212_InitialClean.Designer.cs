@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Warehouse;
 
@@ -11,9 +12,11 @@ using Warehouse;
 namespace Warehouse.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260430194212_InitialClean")]
+    partial class InitialClean
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -287,10 +290,7 @@ namespace Warehouse.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Address")
-<<<<<<< HEAD
-=======
                         .IsRequired()
->>>>>>> origin/main
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreatedAt")
@@ -303,20 +303,12 @@ namespace Warehouse.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-<<<<<<< HEAD
-                    b.Property<string>("FullName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("PhoneNumber")
-=======
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Phone")
                         .IsRequired()
->>>>>>> origin/main
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -325,10 +317,6 @@ namespace Warehouse.Migrations
                     b.Property<string>("UpdatedById")
                         .HasColumnType("nvarchar(max)");
 
-<<<<<<< HEAD
-                    b.HasKey("Id");
-
-=======
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
@@ -338,7 +326,6 @@ namespace Warehouse.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
->>>>>>> origin/main
                     b.ToTable("Clients");
                 });
 
@@ -422,18 +409,11 @@ namespace Warehouse.Migrations
 
                     b.HasKey("Id");
 
-<<<<<<< HEAD
-                    b.HasIndex("ProductId");
-
-                    b.HasIndex("RaftId");
-
-=======
                     b.HasIndex("RaftId");
 
                     b.HasIndex("ProductId", "RaftId")
                         .IsUnique();
 
->>>>>>> origin/main
                     b.ToTable("Inventories");
                 });
 
@@ -636,19 +616,12 @@ namespace Warehouse.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("Height")
-<<<<<<< HEAD
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("Length")
-                        .HasColumnType("decimal(18,2)");
-=======
                         .HasPrecision(18, 3)
                         .HasColumnType("decimal(18,3)");
 
                     b.Property<decimal>("Length")
                         .HasPrecision(18, 3)
                         .HasColumnType("decimal(18,3)");
->>>>>>> origin/main
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -663,19 +636,12 @@ namespace Warehouse.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("Weight")
-<<<<<<< HEAD
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("Width")
-                        .HasColumnType("decimal(18,2)");
-=======
                         .HasPrecision(18, 3)
                         .HasColumnType("decimal(18,3)");
 
                     b.Property<decimal>("Width")
                         .HasPrecision(18, 3)
                         .HasColumnType("decimal(18,3)");
->>>>>>> origin/main
 
                     b.HasKey("Id");
 
@@ -740,10 +706,7 @@ namespace Warehouse.Migrations
                         .HasColumnType("int");
 
                     b.Property<decimal>("UnitPrice")
-<<<<<<< HEAD
-=======
                         .HasPrecision(18, 2)
->>>>>>> origin/main
                         .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
@@ -859,35 +822,11 @@ namespace Warehouse.Migrations
                     b.Property<int>("ClientId")
                         .HasColumnType("int");
 
-<<<<<<< HEAD
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedById")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("OrderDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal>("TotalAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UpdatedById")
-                        .HasColumnType("nvarchar(max)");
-=======
                     b.Property<DateTime>("OrderDate")
                         .HasColumnType("datetime2");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
->>>>>>> origin/main
 
                     b.HasKey("Id");
 
@@ -896,8 +835,6 @@ namespace Warehouse.Migrations
                     b.ToTable("SalesOrders");
                 });
 
-<<<<<<< HEAD
-=======
             modelBuilder.Entity("Warehouse.Models.SalesOrderItem", b =>
                 {
                     b.Property<int>("Id")
@@ -928,7 +865,6 @@ namespace Warehouse.Migrations
                     b.ToTable("SalesOrderItems");
                 });
 
->>>>>>> origin/main
             modelBuilder.Entity("Warehouse.Models.Setting", b =>
                 {
                     b.Property<int>("Id")
@@ -1224,11 +1160,7 @@ namespace Warehouse.Migrations
                     b.HasOne("Warehouse.Models.Pallet", "Pallet")
                         .WithMany()
                         .HasForeignKey("PalletId")
-<<<<<<< HEAD
-                        .OnDelete(DeleteBehavior.Cascade)
-=======
                         .OnDelete(DeleteBehavior.NoAction)
->>>>>>> origin/main
                         .IsRequired();
 
                     b.Navigation("PackingList");
@@ -1348,8 +1280,6 @@ namespace Warehouse.Migrations
                     b.Navigation("Client");
                 });
 
-<<<<<<< HEAD
-=======
             modelBuilder.Entity("Warehouse.Models.SalesOrderItem", b =>
                 {
                     b.HasOne("Warehouse.Models.Product", "Product")
@@ -1369,7 +1299,6 @@ namespace Warehouse.Migrations
                     b.Navigation("SalesOrder");
                 });
 
->>>>>>> origin/main
             modelBuilder.Entity("Warehouse.Models.Shipment", b =>
                 {
                     b.HasOne("Warehouse.Models.PackingList", "PackingList")
@@ -1381,11 +1310,7 @@ namespace Warehouse.Migrations
                     b.HasOne("Warehouse.Models.Warehouse", "Warehouse")
                         .WithMany()
                         .HasForeignKey("WarehouseId")
-<<<<<<< HEAD
-                        .OnDelete(DeleteBehavior.Cascade)
-=======
                         .OnDelete(DeleteBehavior.NoAction)
->>>>>>> origin/main
                         .IsRequired();
 
                     b.Navigation("PackingList");
@@ -1456,14 +1381,11 @@ namespace Warehouse.Migrations
                     b.Navigation("Pallets");
                 });
 
-<<<<<<< HEAD
-=======
             modelBuilder.Entity("Warehouse.Models.SalesOrder", b =>
                 {
                     b.Navigation("SalesOrderItems");
                 });
 
->>>>>>> origin/main
             modelBuilder.Entity("Warehouse.Models.Warehouse", b =>
                 {
                     b.Navigation("Rafts");
