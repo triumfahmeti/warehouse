@@ -101,10 +101,8 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IAuthService, AuthService>();
-<<<<<<< HEAD
 builder.Services.AddScoped<IClientRepository, ClientRepository>();
 builder.Services.AddScoped<IClientService, ClientService>();
-=======
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 builder.Services.AddScoped<ISalesOrderRepository, SalesOrderRepository>();
 builder.Services.AddScoped<IInventoryRepository, InventoryRepository>();
