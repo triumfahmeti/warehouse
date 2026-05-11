@@ -109,7 +109,8 @@ builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepositor
 builder.Services.AddScoped<ISalesOrderRepository, SalesOrderRepository>();
 builder.Services.AddScoped<IInventoryRepository, InventoryRepository>();
 builder.Services.AddScoped<IInventoryService, InventoryService>();
->>>>>>> origin/main
+builder.Services.AddScoped<IPurchaseOrderRepository, PurchaseOrderRepository>();
+builder.Services.AddScoped<IPurchaseOrderService, PurchaseOrderService>();
 
 var app = builder.Build();
 

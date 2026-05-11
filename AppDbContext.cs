@@ -90,6 +90,10 @@ namespace Warehouse
                 .Property(poi => poi.UnitPrice)
                 .HasPrecision(18, 2);
 
+            modelBuilder.Entity<PurchaseOrder>()
+                .Property(po => po.Status)
+                .HasConversion<string>();
+
             modelBuilder.Entity<Shipment>()
                 .HasOne(s => s.Warehouse)
                 .WithMany()
