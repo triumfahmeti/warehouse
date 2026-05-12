@@ -39,3 +39,17 @@ warehouse/
 
 # ASP.NET Core static assets cache
 wwwroot/lib/
+
+# Docker local/dev files
+Dockerfile
+docker-compose.yml
+docker-compose.*.yml
+.docker/
+
+# Local database files
+*.db
+*.sqlite
+*.sqlite3
+*.mdf
+*.ldf
+*.db-journal
