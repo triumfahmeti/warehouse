@@ -46,5 +46,14 @@ namespace Warehouse.Repositories.Implementations
                 quantityToReserve, inventoryId);
         }
 
+        public async Task<int> ReleaseReservedStockAtomicAsync(int inventoryId, int quantityToRelease)
+        {
+            return await _context.Database.ExecuteSqlRawAsync(@"
+                UPDATE Inventories 
+                SET ReservedQuantity = ReservedQuantity - {0} 
+                WHERE Id = {1} AND ReservedQuantity >= {0}",
+                quantityToRelease, inventoryId);
+        }
+
     }
 }
