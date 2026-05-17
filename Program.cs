@@ -88,6 +88,7 @@ builder.Services.AddSingleton(sp =>
 });
 
 var app = builder.Build();
+//test
 var mongoClient = new MongoClient(
     builder.Configuration["MongoDb:ConnectionString"]
 );
