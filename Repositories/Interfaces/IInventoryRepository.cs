@@ -13,5 +13,6 @@ namespace Warehouse.Repositories.Interfaces
         Task<int> GetAvailableStock(int productId);
         Task<List<Inventory>> GetInventoriesByProduct(int productId);
         Task<int> ReserveStockAtomicAsync(int inventoryId, int quantityToReserve);
+        Task<int> ReleaseReservedStockAtomicAsync(int inventoryId, int quantityToRelease);
     }
 }
