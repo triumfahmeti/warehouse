@@ -13,6 +13,7 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Warehouse.Repositories.Implementations;
 using Warehouse.Repositories.Interfaces;
+using MongoDB.Driver;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -68,6 +69,41 @@ builder.Services.AddIdentity<ApplicationUser, ApplicationRole>()
     .AddEntityFrameworkStores<AppDbContext>()
     .AddDefaultTokenProviders();
 
+    // mongodb connection
+
+builder.Services.AddSingleton<IMongoClient>(sp =>
+{
+    var configuration = sp.GetRequiredService<IConfiguration>();
+    var connectionString = configuration["MongoDb:ConnectionString"];
+
+    return new MongoClient(connectionString);
+});
+
+builder.Services.AddSingleton(sp =>
+{
+    var configuration = sp.GetRequiredService<IConfiguration>();
+    var client = sp.GetRequiredService<IMongoClient>();
+
+    return client.GetDatabase(configuration["MongoDb:DatabaseName"]);
+});
+
+var app = builder.Build();
+var mongoClient = new MongoClient(
+    builder.Configuration["MongoDb:ConnectionString"]
+);
+
+try
+{
+    var databases = mongoClient.ListDatabaseNames().ToList();
+
+    Console.WriteLine("MongoDB Connected!");
+}
+catch (Exception ex)
+{
+    Console.WriteLine("Mongo Error:");
+    Console.WriteLine(ex.Message);
+}
+
 
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = jwtSettings["SecretKey"]
@@ -117,6 +153,22 @@ builder.Services.AddScoped<ISettingsRepository, SettingsRepository>();
 builder.Services.AddScoped<ISettingsService, SettingsService>();
 var app = builder.Build();
 
+builder.Services.AddSingleton<IMongoClient>(sp =>
+{
+    var configuration = sp.GetRequiredService<IConfiguration>();
+    var connectionString = configuration["MongoDb:ConnectionString"];
+
+    return new MongoClient(connectionString);
+});
+
+builder.Services.AddSingleton(sp =>
+{
+    var configuration = sp.GetRequiredService<IConfiguration>();
+    var client = sp.GetRequiredService<IMongoClient>();
+
+    return client.GetDatabase(configuration["MongoDb:DatabaseName"]);
+});
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -139,6 +191,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
 
 app.Run();
 

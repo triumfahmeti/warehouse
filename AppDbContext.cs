@@ -43,12 +43,7 @@ namespace Warehouse
         public DbSet<PackingList> PackingLists { get; set; }
         public DbSet<PackingListPallet> PackingListPallets { get; set; }
         public DbSet<Raft> Rafts { get; set; }
-<<<<<<< HEAD
-       // public DbSet<Client> Clients { get; set; }
-      //  public DbSet<SalesOrder> SalesOrders { get; set; }
-=======
 
->>>>>>> 21e702320e42bc9d0f45f103683687d1269cb892
         public DbSet<SalesOrderItem> SalesOrderItems { get; set; }
 
 
