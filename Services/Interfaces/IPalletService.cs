@@ -1,0 +1,14 @@
+using Warehouse.DTOs.Pallet;
+ 
+namespace Warehouse.Services.Interfaces
+{
+    public interface IPalletService
+    {
+        Task<IEnumerable<PalletDto>> GetAllAsync();
+        Task<PalletDto?> GetByIdAsync(int id);
+        Task<PalletDto> AddAsync(CreateEditPalletDto dto);
+        Task UpdateAsync(int id, CreateEditPalletDto dto);
+        Task DeleteAsync(int id);
+    }
+}
+ 
