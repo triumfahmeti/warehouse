@@ -1,19 +1,4 @@
-using System;
-<<<<<<< HEAD
 
-namespace Warehouse.Models
-{
-    public class SalesOrder : BaseEntity
-    {
-        public int Id { get; set; }
-        public int ClientId { get; set; }
-        public Client Client { get; set; } = null!;
-        public DateTime OrderDate { get; set; } = DateTime.UtcNow;
-        public string Status { get; set; } = "Pending";
-        public decimal TotalAmount { get; set; }
-    }
-}
-=======
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -31,4 +16,4 @@ namespace Warehouse.Models
         public ICollection<SalesOrderItem> SalesOrderItems { get; set; }
     }
 }
->>>>>>> origin/main
+

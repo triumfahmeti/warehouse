@@ -36,15 +36,15 @@ namespace Warehouse
         public DbSet<SalesOrder> SalesOrders { get; set; }
         public DbSet<PurchaseOrder> PurchaseOrders { get; set; }
         public DbSet<PurchaseOrderItem> PurchaseOrderItems { get; set; }
-        public DbSet<Shipment> Shippments { get; set; }
+        public DbSet<Shipment> Shipments { get; set; }
         // public DbSet<ShipmentItem> ShipmentItems { get; set; }
         public DbSet<Pallet> Pallets { get; set; }
         public DbSet<PalletItem> PalletItems { get; set; }
         public DbSet<PackingList> PackingLists { get; set; }
         public DbSet<PackingListPallet> PackingListPallets { get; set; }
         public DbSet<Raft> Rafts { get; set; }
-        public DbSet<Client> Clients { get; set; }
-        public DbSet<SalesOrder> SalesOrders { get; set; }
+       // public DbSet<Client> Clients { get; set; }
+      //  public DbSet<SalesOrder> SalesOrders { get; set; }
         public DbSet<SalesOrderItem> SalesOrderItems { get; set; }
 
 

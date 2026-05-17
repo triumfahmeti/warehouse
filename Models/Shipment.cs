@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Warehouse.Enums;
+
 
 namespace Warehouse.Models
 {
@@ -14,7 +16,9 @@ namespace Warehouse.Models
         public int PackingListId { get; set; }
         public PackingList PackingList { get; set; }
 
-        public string ShipmentStatus { get; set; } // Consider using an enum for ShipmentStatus for better type safety
+        public ShipmentStatus Status { get; set; } = ShipmentStatus.Draft;
+        //  public DateTime? ShippedAt { get; set; }
+        // public DateTime? DeliveredAt { get; set; }
         public string? Notes { get; set; }
 
 
