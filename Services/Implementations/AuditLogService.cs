@@ -1,7 +1,4 @@
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Warehouse.DTOs.Audit;
+using Warehouse.DTOs.AuditLogDto;
 using Warehouse.Models;
 using Warehouse.Repositories.Interfaces;
 using Warehouse.Services.Interfaces;
@@ -13,15 +10,29 @@ namespace Warehouse.Services.Implementations
         private readonly IAuditLogRepository _auditLogRepository;
         private readonly AppDbContext _context;
 
-        public AuditLogService(IAuditLogRepository auditLogRepository, AppDbContext context)
+        public AuditLogService(
+            IAuditLogRepository auditLogRepository,
+            AppDbContext context)
         {
             _auditLogRepository = auditLogRepository;
             _context = context;
         }
 
-        public async Task<AuditLogResponseDto> LogAction(AuditLogCreateDto dto)
+        public async Task<List<AuditLogDto>> GetAllAsync()
         {
-            var log = new AuditLog
+            var list = await _auditLogRepository.GetAllWithDetails();
+            return list.Select(a => ToDto(a)).ToList();
+        }
+
+        public async Task<AuditLogDto?> GetByIdAsync(int id)
+        {
+            var auditLog = await _auditLogRepository.GetWithDetails(id);
+            return auditLog == null ? null : ToDto(auditLog);
+        }
+
+        public async Task<AuditLogDto> CreateAsync(CreateEditAuditLogDto dto)
+        {
+            var auditLog = new AuditLog
             {
                 UserId = dto.UserId,
                 Action = dto.Action,
@@ -32,41 +43,50 @@ namespace Warehouse.Services.Implementations
                 IpAddress = dto.IpAddress
             };
 
-            await _auditLogRepository.AddAsync(log);
+            await _auditLogRepository.AddAsync(auditLog);
             await _context.SaveChangesAsync();
 
-            return Map(log);
+            return ToDto(auditLog);
         }
 
-        public async Task<List<AuditLogResponseDto>> GetLogsByEntity(string entity, int entityId)
+        public async Task UpdateAsync(int id, CreateEditAuditLogDto dto)
         {
-            var logs = await _auditLogRepository.GetLogsByEntityAsync(entity, entityId);
-            return logs.Select(Map).ToList();
+            var auditLog = await _auditLogRepository.GetByIdAsync(id)
+                ?? throw new InvalidOperationException("AuditLog not found");
+
+            auditLog.UserId = dto.UserId;
+            auditLog.Action = dto.Action;
+            auditLog.Entity = dto.Entity;
+            auditLog.EntityId = dto.EntityId;
+            auditLog.OldValue = dto.OldValue;
+            auditLog.NewValue = dto.NewValue;
+            auditLog.IpAddress = dto.IpAddress;
+
+            await _auditLogRepository.UpdateAsync(auditLog);
+            await _context.SaveChangesAsync();
         }
 
-        public async Task<List<AuditLogResponseDto>> GetLogsByUser(string userId)
+        public async Task DeleteAsync(int id)
         {
-            var logs = await _auditLogRepository.GetLogsByUserAsync(userId);
-            return logs.Select(Map).ToList();
+            var auditLog = await _auditLogRepository.GetByIdAsync(id)
+                ?? throw new InvalidOperationException("AuditLog not found");
+
+            await _auditLogRepository.DeleteAsync(auditLog);
+            await _context.SaveChangesAsync();
         }
 
-        public async Task<List<AuditLogResponseDto>> GetAllLogs()
+        private static AuditLogDto ToDto(AuditLog a) => new()
         {
-            var logs = await _auditLogRepository.GetAllLogsAsync();
-            return logs.Select(Map).ToList();
-        }
-
-        private static AuditLogResponseDto Map(AuditLog l) => new AuditLogResponseDto
-        {
-            Id = l.Id,
-            UserId = l.UserId,
-            Action = l.Action,
-            Entity = l.Entity,
-            EntityId = l.EntityId,
-            OldValue = l.OldValue,
-            NewValue = l.NewValue,
-            IpAddress = l.IpAddress,
-            CreatedAt = l.CreatedAt
+            Id = a.Id,
+            UserId = a.UserId,
+            UserName = a.User?.UserName ?? "",
+            Action = a.Action,
+            Entity = a.Entity,
+            EntityId = a.EntityId,
+            OldValue = a.OldValue,
+            NewValue = a.NewValue,
+            IpAddress = a.IpAddress,
+            CreatedAt = a.CreatedAt
         };
     }
 }
