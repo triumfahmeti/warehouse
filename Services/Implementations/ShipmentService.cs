@@ -1,3 +1,4 @@
+using Warehouse.DTOs.ShipmentDto;
 using Warehouse.Enums;
 using Warehouse.Models;
 using Warehouse.Repositories.Interfaces;
@@ -21,21 +22,27 @@ namespace Warehouse.Services.Implementations
             _context = context;
         }
 
-        public async Task<List<Shipment>> GetAllAsync()
-            => await _shipmentRepository.GetAllWithDetails();
-
-        public async Task<Shipment?> GetByIdAsync(int id)
-            => await _shipmentRepository.GetWithDetails(id);
-
-        public async Task<Shipment> CreateAsync(int packingListId, int warehouseId, string? notes)
+        public async Task<List<ShipmentDto>> GetAllAsync()
         {
-            var pl = await _packingListRepository.GetByIdAsync(packingListId)
+            var list = await _shipmentRepository.GetAllWithDetails();
+            return list.Select(s => ToDto(s)).ToList();
+        }
+
+        public async Task<ShipmentDto?> GetByIdAsync(int id)
+        {
+            var shipment = await _shipmentRepository.GetWithDetails(id);
+            return shipment == null ? null : ToDto(shipment);
+        }
+
+        public async Task<ShipmentDto> CreateAsync(CreateEditShipmentDto dto)
+        {
+            var pl = await _packingListRepository.GetByIdAsync(dto.PackingListId)
                 ?? throw new InvalidOperationException("PackingList not found");
 
             if (pl.Status != PackingListStatus.Ready)
                 throw new InvalidOperationException("PackingList must be in Ready status");
 
-            var existing = await _shipmentRepository.GetByPackingList(packingListId);
+            var existing = await _shipmentRepository.GetByPackingList(dto.PackingListId);
             if (existing != null)
                 throw new InvalidOperationException("A shipment already exists for this packing list");
 
@@ -44,15 +51,30 @@ namespace Warehouse.Services.Implementations
             var shipment = new Shipment
             {
                 ShipmentNumber = number,
-                PackingListId = packingListId,
-                WarehouseId = warehouseId,
-                Notes = notes,
+                PackingListId = dto.PackingListId,
+                WarehouseId = dto.WarehouseId,
+                Notes = dto.Notes,
                 Status = ShipmentStatus.Draft
             };
 
             await _shipmentRepository.AddAsync(shipment);
             await _context.SaveChangesAsync();
-            return shipment;
+            return ToDto(shipment);
+        }
+
+        public async Task UpdateAsync(int id, CreateEditShipmentDto dto)
+        {
+            var shipment = await _shipmentRepository.GetByIdAsync(id)
+                ?? throw new InvalidOperationException("Shipment not found");
+
+            if (shipment.Status is ShipmentStatus.Shipped or ShipmentStatus.Delivered)
+                throw new InvalidOperationException("Cannot edit a shipped or delivered shipment");
+
+            shipment.WarehouseId = dto.WarehouseId;
+            shipment.Notes = dto.Notes;
+
+            await _shipmentRepository.UpdateAsync(shipment);
+            await _context.SaveChangesAsync();
         }
 
         public async Task MarkAsShippedAsync(int id)
@@ -64,9 +86,6 @@ namespace Warehouse.Services.Implementations
                 throw new InvalidOperationException("Shipment must be in Ready status to ship");
 
             shipment.Status = ShipmentStatus.Shipped;
-
-
-            // Shëno PackingList si Shipped gjithashtu
             shipment.PackingList.Status = PackingListStatus.Shipped;
 
             await _shipmentRepository.UpdateAsync(shipment);
@@ -75,14 +94,13 @@ namespace Warehouse.Services.Implementations
 
         public async Task MarkAsDeliveredAsync(int id)
         {
-            var shipment = await _shipmentRepository.GetWithDetails(id)
+            var shipment = await _shipmentRepository.GetByIdAsync(id)
                 ?? throw new InvalidOperationException("Shipment not found");
 
             if (shipment.Status != ShipmentStatus.Shipped)
                 throw new InvalidOperationException("Shipment must be Shipped before marking as Delivered");
 
             shipment.Status = ShipmentStatus.Delivered;
-          
 
             await _shipmentRepository.UpdateAsync(shipment);
             await _context.SaveChangesAsync();
@@ -94,11 +112,24 @@ namespace Warehouse.Services.Implementations
                 ?? throw new InvalidOperationException("Shipment not found");
 
             if (shipment.Status is ShipmentStatus.Shipped or ShipmentStatus.Delivered)
-                throw new InvalidOperationException("Cannot cancel a shipment that is already shipped or delivered");
+                throw new InvalidOperationException("Cannot cancel a shipped or delivered shipment");
 
             shipment.Status = ShipmentStatus.Cancelled;
+
             await _shipmentRepository.UpdateAsync(shipment);
             await _context.SaveChangesAsync();
         }
+
+        private static ShipmentDto ToDto(Shipment s) => new()
+        {
+            Id = s.Id,
+            ShipmentNumber = s.ShipmentNumber,
+            Status = s.Status.ToString(),
+            Notes = s.Notes,
+            WarehouseId = s.WarehouseId,
+            WarehouseName = s.Warehouse?.Name ?? "",
+            PackingListId = s.PackingListId,
+            PackingListNumber = s.PackingList?.PackingListNumber ?? "",
+        };
     }
 }

@@ -1,3 +1,4 @@
+using Warehouse.DTOs.PackingListDto;
 using Warehouse.Models;
 
 namespace Warehouse.Services.Interfaces
@@ -6,7 +7,8 @@ namespace Warehouse.Services.Interfaces
     {
         Task<List<PackingList>> GetAllAsync();
         Task<PackingList?> GetByIdAsync(int id);
-        Task<PackingList> CreateAsync(int salesOrderId, int warehouseId, List<int> palletIds, string? notes);
+        Task<PackingList> CreateAsync(CreateEditPackingListDto dto);
+        Task UpdateAsync(int id, CreateEditPackingListDto dto);
         Task MarkAsReadyAsync(int id);
         Task CancelAsync(int id);
     }
