@@ -32,7 +32,7 @@ namespace Warehouse.Controllers
         {
             var result = await _fileService.DownloadFile(id);
             if (result == null) return NotFound();
-            return File(result.Value.data, result.Value.contentType, result.Value.fileName);
+            return base.File(result.Value.data, result.Value.contentType, result.Value.fileName);
         }
 
         [HttpGet]

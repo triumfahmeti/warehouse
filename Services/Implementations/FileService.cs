@@ -5,11 +5,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Warehouse.DTOs.File;
+using Warehouse.Models;
 using Warehouse.Repositories.Interfaces;
 using Warehouse.Services.Interfaces;
-using FileModel = Warehouse.Models.File;
-using IOFile = System.IO.File;
 
 namespace Warehouse.Services.Implementations
 {
@@ -29,43 +29,73 @@ namespace Warehouse.Services.Implementations
                 Directory.CreateDirectory(_uploadPath);
         }
 
+        private void AddFileLog(File file, string action, string oldValue, string newValue)
+        {
+            _context.AuditLogs.Add(new AuditLog
+            {
+                Action = action,
+                Entity = "File",
+                EntityId = file.Id,
+                OldValue = oldValue,
+                NewValue = newValue
+            });
+        }
+
         public async Task<FileResponseDto> UploadFile(IFormFile file, string entity, int entityId, string uploadedBy)
         {
             if (file == null || file.Length == 0)
                 throw new InvalidOperationException("File is empty");
 
-            var uniqueName = $"{Guid.NewGuid()}_{file.FileName}";
-            var fullPath = Path.Combine(_uploadPath, uniqueName);
+            using var transaction = await _context.Database.BeginTransactionAsync(
+                System.Data.IsolationLevel.Serializable);
 
-            using (var stream = new FileStream(fullPath, FileMode.Create))
+            try
             {
-                await file.CopyToAsync(stream);
+                var uniqueName = $"{Guid.NewGuid()}_{file.FileName}";
+                var fullPath = Path.Combine(_uploadPath, uniqueName);
+
+                using (var stream = new FileStream(fullPath, FileMode.Create))
+                {
+                    await file.CopyToAsync(stream);
+                }
+
+                var fileEntity = new File
+                {
+                    Entity = entity,
+                    EntityId = entityId,
+                    FileName = file.FileName,
+                    FilePath = fullPath,
+                    FileSize = file.Length,
+                    UploadedBy = uploadedBy,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                await _fileRepository.AddAsync(fileEntity);
+                await _context.SaveChangesAsync();
+
+                AddFileLog(fileEntity, "UploadFile", null, $"FileName:{fileEntity.FileName};Size:{fileEntity.FileSize}");
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return Map(fileEntity);
             }
-
-            var fileEntity = new FileModel
+            catch
             {
-                Entity = entity,
-                EntityId = entityId,
-                FileName = file.FileName,
-                FilePath = fullPath,
-                FileSize = file.Length,
-                UploadedBy = uploadedBy
-            };
-
-            await _fileRepository.AddAsync(fileEntity);
-            await _context.SaveChangesAsync();
-
-            return Map(fileEntity);
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
 
         public async Task<(byte[] data, string contentType, string fileName)?> DownloadFile(int id)
         {
-            var file = await _fileRepository.GetByIdAsync(id);
-            if (file == null || !IOFile.Exists(file.FilePath))
+            var file = await _context.Files.FirstOrDefaultAsync(f => f.Id == id);
+            if (file == null || !System.IO.File.Exists(file.FilePath))
                 return null;
 
-            var data = await IOFile.ReadAllBytesAsync(file.FilePath);
+            var data = await System.IO.File.ReadAllBytesAsync(file.FilePath);
             var contentType = GetContentType(file.FileName);
+
             return (data, contentType, file.FileName);
         }
 
@@ -77,24 +107,44 @@ namespace Warehouse.Services.Implementations
 
         public async Task<List<FileResponseDto>> GetFilesByEntity(string entity, int entityId)
         {
-            var files = await _fileRepository.GetFilesByEntityAsync(entity, entityId);
+            var files = await _fileRepository.GetFilesByEntity(entity, entityId);
             return files.Select(Map).ToList();
         }
 
         public async Task<bool> DeleteFile(int id)
         {
-            var file = await _fileRepository.GetByIdAsync(id);
-            if (file == null) return false;
+            using var transaction = await _context.Database.BeginTransactionAsync(
+                System.Data.IsolationLevel.Serializable);
 
-            if (IOFile.Exists(file.FilePath))
-                IOFile.Delete(file.FilePath);
+            try
+            {
+                var file = await _context.Files.FirstOrDefaultAsync(f => f.Id == id);
+                if (file == null)
+                    return false;
 
-            await _fileRepository.DeleteAsync(file);
-            await _context.SaveChangesAsync();
-            return true;
+                var oldValue = $"FileName:{file.FileName};Size:{file.FileSize}";
+
+                if (System.IO.File.Exists(file.FilePath))
+                    System.IO.File.Delete(file.FilePath);
+
+                _context.Files.Remove(file);
+                await _context.SaveChangesAsync();
+
+                AddFileLog(file, "DeleteFile", oldValue, null);
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return true;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
 
-        private static FileResponseDto Map(FileModel f) => new FileResponseDto
+        private static FileResponseDto Map(File f) => new FileResponseDto
         {
             Id = f.Id,
             Entity = f.Entity,

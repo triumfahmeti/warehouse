@@ -1,12 +1,14 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
-using FileModel = Warehouse.Models.File;
+using Warehouse.Models;
 
 namespace Warehouse.Repositories.Interfaces
 {
-    public interface IFileRepository : IGenericRepository<FileModel>
+    public interface IFileRepository : IGenericRepository<File>
     {
-        Task<List<FileModel>> GetAllFilesAsync();
-        Task<List<FileModel>> GetFilesByEntityAsync(string entity, int entityId);
+        Task<List<File>> GetFilesByEntity(string entity, int entityId);
+        Task<List<File>> GetAllFilesAsync();
     }
 }

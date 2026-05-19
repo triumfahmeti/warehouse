@@ -2,12 +2,6 @@ using System;
 
 namespace Warehouse.DTOs.File
 {
-    public class FileUploadDto
-    {
-        public string Entity { get; set; }
-        public int EntityId { get; set; }
-    }
-
     public class FileResponseDto
     {
         public int Id { get; set; }
