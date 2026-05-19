@@ -32,28 +32,28 @@ namespace Warehouse.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateEditShipmentDto dto)
         {
-            var shipment = await _service.CreateAsync(dto);
-            return CreatedAtAction(nameof(GetById), new { id = shipment.Id }, shipment);
+            var id = await _service.CreateShipment(dto);
+            return CreatedAtAction(nameof(GetById), new { id }, id);
         }
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, [FromBody] CreateEditShipmentDto dto)
+        [HttpPatch("{id}/ready")]
+        public async Task<IActionResult> MarkReady(int id)
         {
-            await _service.UpdateAsync(id, dto);
+            await _service.MarkShipmentReady(id);
             return NoContent();
         }
 
         [HttpPatch("{id}/ship")]
-        public async Task<IActionResult> MarkShipped(int id)
+        public async Task<IActionResult> Ship(int id)
         {
-            await _service.MarkAsShippedAsync(id);
+            await _service.Ship(id);
             return NoContent();
         }
 
         [HttpPatch("{id}/deliver")]
-        public async Task<IActionResult> MarkDelivered(int id)
+        public async Task<IActionResult> Deliver(int id)
         {
-            await _service.MarkAsDeliveredAsync(id);
+            await _service.Deliver(id);
             return NoContent();
         }
 

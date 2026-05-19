@@ -10,15 +10,18 @@ namespace Warehouse.Services.Implementations
     {
         private readonly IShipmentRepository _shipmentRepository;
         private readonly IPackingListRepository _packingListRepository;
+        private readonly IInventoryRepository _inventoryRepository;
         private readonly AppDbContext _context;
 
         public ShipmentService(
             IShipmentRepository shipmentRepository,
             IPackingListRepository packingListRepository,
+            IInventoryRepository inventoryRepository,
             AppDbContext context)
         {
             _shipmentRepository = shipmentRepository;
             _packingListRepository = packingListRepository;
+            _inventoryRepository = inventoryRepository;
             _context = context;
         }
 
@@ -34,74 +37,100 @@ namespace Warehouse.Services.Implementations
             return shipment == null ? null : ToDto(shipment);
         }
 
-        public async Task<ShipmentDto> CreateAsync(CreateEditShipmentDto dto)
+        public async Task<int> CreateShipment(CreateEditShipmentDto dto)
         {
-            var pl = await _packingListRepository.GetByIdAsync(dto.PackingListId)
-                ?? throw new InvalidOperationException("PackingList not found");
+            var packingList = await _packingListRepository.GetByIdAsync(dto.PackingListId)
+                ?? throw new InvalidOperationException("Packing list not found");
 
-            if (pl.Status != PackingListStatus.Ready)
-                throw new InvalidOperationException("PackingList must be in Ready status");
-
-            var existing = await _shipmentRepository.GetByPackingList(dto.PackingListId);
-            if (existing != null)
-                throw new InvalidOperationException("A shipment already exists for this packing list");
-
-            var number = $"SHP-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString()[..6].ToUpper()}";
+            if (packingList.Status != PackingListStatus.Ready)
+                throw new InvalidOperationException("Packing list must be Ready");
 
             var shipment = new Shipment
             {
-                ShipmentNumber = number,
                 PackingListId = dto.PackingListId,
                 WarehouseId = dto.WarehouseId,
-                Notes = dto.Notes,
-                Status = ShipmentStatus.Draft
+                ShipmentNumber = $"SHP-{dto.WarehouseId}-{DateTime.UtcNow.Ticks}",
+                Status = ShipmentStatus.Draft,
+                Notes = dto.Notes
             };
 
             await _shipmentRepository.AddAsync(shipment);
             await _context.SaveChangesAsync();
-            return ToDto(shipment);
+            return shipment.Id;
         }
 
-        public async Task UpdateAsync(int id, CreateEditShipmentDto dto)
+        public async Task MarkShipmentReady(int shipmentId)
         {
-            var shipment = await _shipmentRepository.GetByIdAsync(id)
+            var shipment = await _shipmentRepository.GetByIdAsync(shipmentId)
                 ?? throw new InvalidOperationException("Shipment not found");
 
-            if (shipment.Status is ShipmentStatus.Shipped or ShipmentStatus.Delivered)
-                throw new InvalidOperationException("Cannot edit a shipped or delivered shipment");
+            if (shipment.Status != ShipmentStatus.Draft)
+                throw new InvalidOperationException("Shipment must be in Draft status");
 
-            shipment.WarehouseId = dto.WarehouseId;
-            shipment.Notes = dto.Notes;
-
+            shipment.Status = ShipmentStatus.Ready;
             await _shipmentRepository.UpdateAsync(shipment);
             await _context.SaveChangesAsync();
         }
 
-        public async Task MarkAsShippedAsync(int id)
+        public async Task Ship(int shipmentId)
         {
-            var shipment = await _shipmentRepository.GetWithDetails(id)
-                ?? throw new InvalidOperationException("Shipment not found");
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var shipment = await _shipmentRepository.GetWithDetails(shipmentId)
+                    ?? throw new InvalidOperationException("Shipment not found");
 
-            if (shipment.Status != ShipmentStatus.Ready)
-                throw new InvalidOperationException("Shipment must be in Ready status to ship");
+                if (shipment.Status != ShipmentStatus.Ready)
+                    throw new InvalidOperationException("Shipment must be Ready to ship");
 
-            shipment.Status = ShipmentStatus.Shipped;
-            shipment.PackingList.Status = PackingListStatus.Closed;
+                foreach (var pallet in shipment.PackingList.Pallets)
+                {
+                    foreach (var item in pallet.Pallet.Items)
+                    {
+                        var inventories = await _inventoryRepository.GetInventoriesByProduct(item.ProductId);
+                        var remaining = item.Quantity;
 
-            await _shipmentRepository.UpdateAsync(shipment);
-            await _context.SaveChangesAsync();
+                        foreach (var inv in inventories.OrderBy(i => i.Id))
+                        {
+                            if (inv.QuantityOnHand <= 0)
+                                continue;
+
+                            var toDeduct = Math.Min(inv.QuantityOnHand, remaining);
+                            inv.QuantityOnHand -= toDeduct;
+                            await _inventoryRepository.UpdateAsync(inv);
+
+                            remaining -= toDeduct;
+
+                            if (remaining == 0)
+                                break;
+                        }
+
+                        if (remaining > 0)
+                            throw new InvalidOperationException("Stock inconsistency detected");
+                    }
+                }
+
+                shipment.Status = ShipmentStatus.Shipped;
+                await _shipmentRepository.UpdateAsync(shipment);
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
 
-        public async Task MarkAsDeliveredAsync(int id)
+        public async Task Deliver(int shipmentId)
         {
-            var shipment = await _shipmentRepository.GetByIdAsync(id)
+            var shipment = await _shipmentRepository.GetByIdAsync(shipmentId)
                 ?? throw new InvalidOperationException("Shipment not found");
 
             if (shipment.Status != ShipmentStatus.Shipped)
-                throw new InvalidOperationException("Shipment must be Shipped before marking as Delivered");
+                throw new InvalidOperationException("Shipment must be Shipped before delivering");
 
             shipment.Status = ShipmentStatus.Delivered;
-
             await _shipmentRepository.UpdateAsync(shipment);
             await _context.SaveChangesAsync();
         }
@@ -115,7 +144,6 @@ namespace Warehouse.Services.Implementations
                 throw new InvalidOperationException("Cannot cancel a shipped or delivered shipment");
 
             shipment.Status = ShipmentStatus.Cancelled;
-
             await _shipmentRepository.UpdateAsync(shipment);
             await _context.SaveChangesAsync();
         }
@@ -130,6 +158,7 @@ namespace Warehouse.Services.Implementations
             WarehouseName = s.Warehouse?.Name ?? "",
             PackingListId = s.PackingListId,
             PackingListNumber = s.PackingList?.PackingListNumber ?? "",
+            //CreatedAt = s.CreatedAt
         };
     }
 }

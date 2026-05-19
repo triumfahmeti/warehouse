@@ -9,6 +9,8 @@ using Warehouse.Models;
 using Warehouse.Repositories.Interfaces;
 using Warehouse.Services.Interfaces;
 
+
+
 namespace Warehouse.Services.Implementations
 {
     public class PackingListService : IPackingListService
@@ -32,6 +34,66 @@ namespace Warehouse.Services.Implementations
             _packingListPalletRepository = packingListPalletRepository;
             _context = context;
         }
+            public async Task<List<PackingList>> GetAllAsync()
+    {
+        return await _context.PackingLists.ToListAsync();
+    }
+
+    public async Task<PackingList?> GetByIdAsync(int id)
+    {
+        return await _context.PackingLists.FindAsync(id);
+    }
+
+    public async Task<PackingList> CreateAsync(CreateEditPackingListDto dto)
+    {
+        var packingList = new PackingList
+        {
+            WarehouseId = dto.WarehouseId,
+            SalesOrderId = dto.SalesOrderId
+        };
+
+        await _packingListRepository.AddAsync(packingList);
+        await _context.SaveChangesAsync();
+
+        return packingList;
+    }
+
+    public async Task UpdateAsync(int id, CreateEditPackingListDto dto)
+    {
+        var packingList = await _context.PackingLists.FindAsync(id);
+
+        if (packingList == null)
+            throw new Exception("Packing list not found");
+
+        packingList.WarehouseId = dto.WarehouseId;
+        packingList.SalesOrderId = dto.SalesOrderId;
+
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task MarkAsReadyAsync(int id)
+    {
+        var packingList = await _context.PackingLists.FindAsync(id);
+
+        if (packingList == null)
+            throw new Exception("Packing list not found");
+
+        packingList.Status = PackingListStatus.Ready;
+
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task CancelAsync(int id)
+    {
+        var packingList = await _context.PackingLists.FindAsync(id);
+
+        if (packingList == null)
+            throw new Exception("Packing list not found");
+
+        packingList.Status = PackingListStatus.Closed;
+        await _context.SaveChangesAsync();
+    }
+
 
         public async Task<int> CreatePackingList(CreatePackingListDto dto)
         {
@@ -72,7 +134,7 @@ namespace Warehouse.Services.Implementations
                 WarehouseId = dto.WarehouseId,
                 SalesOrderId = dto.SalesOrderId,
                 PackingListNumber = $"PL-{dto.SalesOrderId}-{DateTime.UtcNow.Ticks}",
-                PackingListStatus = PackingListStatus.Draft
+                Status = PackingListStatus.Draft
             };
 
             await _packingListRepository.AddAsync(packingList);
