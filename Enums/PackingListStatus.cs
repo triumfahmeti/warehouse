@@ -2,9 +2,8 @@ namespace Warehouse.Enums
 {
     public enum PackingListStatus
     {
-        Draft,
-        Ready,
-        Shipped,
-        Cancelled
+        Draft = 0,
+        Ready = 1,
+        Closed = 2
     }
 }

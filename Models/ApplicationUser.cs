@@ -15,7 +15,6 @@ namespace Warehouse.Models
         public DateTime? UpdatedAt { get; set; }
         public DateTime? DeletedAt { get; set; }
         public string? CreatedById { get; set; }
-        public Client? Client { get; set; }
         public ApplicationUser CreatedByUser { get; set; }
         public ICollection<RefreshToken> RefreshTokens { get; set; }
         public ICollection<AuditLog> AuditLogs { get; set; }

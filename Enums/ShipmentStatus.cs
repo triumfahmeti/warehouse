@@ -1,9 +1,12 @@
 
-public enum ShipmentStatus
+namespace Warehouse.Enums
 {
-    Draft,
-    Ready,
-    Shipped,
-    Delivered,
-    Cancelled
+    public enum ShipmentStatus
+    {
+        Draft = 0,
+        Ready = 1,
+        Shipped = 2,
+        Delivered = 3,
+        Cancelled = 4
+    }
 }

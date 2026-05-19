@@ -1,4 +1,4 @@
-namespace Warehouse.DTOs.PackingListDto
+namespace Warehouse.DTOs.PackingList
 {
     public class CreateEditPackingListDto
     {

@@ -86,7 +86,7 @@ namespace Warehouse.Services.Implementations
                 throw new InvalidOperationException("Shipment must be in Ready status to ship");
 
             shipment.Status = ShipmentStatus.Shipped;
-            shipment.PackingList.Status = PackingListStatus.Shipped;
+            shipment.PackingList.Status = PackingListStatus.Closed;
 
             await _shipmentRepository.UpdateAsync(shipment);
             await _context.SaveChangesAsync();

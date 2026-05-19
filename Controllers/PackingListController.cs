@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using Warehouse.DTOs.PackingListDto;
+using Warehouse.DTOs.PackingList;
 using Warehouse.Services.Interfaces;
 
 namespace Warehouse.Controllers

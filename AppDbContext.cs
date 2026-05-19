@@ -44,6 +44,8 @@ namespace Warehouse
         public DbSet<PackingListPallet> PackingListPallets { get; set; }
         public DbSet<Raft> Rafts { get; set; }
 
+
+
         public DbSet<SalesOrderItem> SalesOrderItems { get; set; }
 
 
