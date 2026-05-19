@@ -1,14 +1,13 @@
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using Warehouse.DTOs.Audit;
+using Warehouse.DTOs.AuditLogDto;
 
 namespace Warehouse.Services.Interfaces
 {
     public interface IAuditLogService
     {
-        Task<AuditLogResponseDto> LogAction(AuditLogCreateDto dto);
-        Task<List<AuditLogResponseDto>> GetLogsByEntity(string entity, int entityId);
-        Task<List<AuditLogResponseDto>> GetLogsByUser(string userId);
-        Task<List<AuditLogResponseDto>> GetAllLogs();
+        Task<List<AuditLogDto>> GetAllAsync();
+        Task<AuditLogDto?> GetByIdAsync(int id);
+        Task<AuditLogDto> CreateAsync(CreateEditAuditLogDto dto);
+        Task UpdateAsync(int id, CreateEditAuditLogDto dto);
+        Task DeleteAsync(int id);
     }
 }

@@ -1,6 +1,3 @@
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Warehouse.Models;
 using Warehouse.Repositories.Interfaces;
@@ -16,26 +13,18 @@ namespace Warehouse.Repositories.Implementations
             _context = context;
         }
 
-        public async Task<List<AuditLog>> GetLogsByEntityAsync(string entity, int entityId)
+        public async Task<AuditLog?> GetWithDetails(int id)
         {
             return await _context.AuditLogs
-                .Where(l => l.Entity == entity && l.EntityId == entityId)
-                .OrderByDescending(l => l.CreatedAt)
-                .ToListAsync();
+                .Include(a => a.User)
+                .FirstOrDefaultAsync(a => a.Id == id);
         }
 
-        public async Task<List<AuditLog>> GetLogsByUserAsync(string userId)
+        public async Task<List<AuditLog>> GetAllWithDetails()
         {
             return await _context.AuditLogs
-                .Where(l => l.UserId == userId)
-                .OrderByDescending(l => l.CreatedAt)
-                .ToListAsync();
-        }
-
-        public async Task<List<AuditLog>> GetAllLogsAsync()
-        {
-            return await _context.AuditLogs
-                .OrderByDescending(l => l.CreatedAt)
+                .Include(a => a.User)
+                .OrderByDescending(a => a.CreatedAt)
                 .ToListAsync();
         }
     }
