@@ -1,6 +1,6 @@
 using Warehouse.Models;
 using Warehouse.Repositories.Interfaces;
-
+using Warehouse.Services.Interfaces;
 namespace Warehouse.Repositories.Interfaces
 {
     public interface IAuditLogRepository : IGenericRepository<AuditLog>
