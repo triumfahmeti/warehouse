@@ -71,7 +71,7 @@ namespace Warehouse.Services.Implementations
             var auditLog = await _auditLogRepository.GetByIdAsync(id)
                 ?? throw new InvalidOperationException("AuditLog not found");
 
-            await _auditLogRepository.DeleteAsync(auditLog);
+            await _auditLogRepository.DeleteAsync(auditLog.Id);
             await _context.SaveChangesAsync();
         }
 

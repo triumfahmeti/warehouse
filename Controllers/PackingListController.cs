@@ -15,25 +15,36 @@ namespace Warehouse.Controllers
             _service = service;
         }
 
+        private static PackingListDto ToDto(Warehouse.Models.PackingList pl) => new()
+        {
+            Id = pl.Id,
+            PackingListNumber = pl.PackingListNumber,
+            Status = pl.Status.ToString(),
+            Notes = pl.Notes,
+            SalesOrderId = pl.SalesOrderId,
+            WarehouseId = pl.WarehouseId,
+            WarehouseName = pl.Warehouse?.Name ?? ""
+        };
+
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
             var list = await _service.GetAllAsync();
-            return Ok(list.Select(pl => pl.ToDto()));
+            return Ok(list.Select(pl => ToDto(pl)));
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
             var pl = await _service.GetByIdAsync(id);
-            return pl == null ? NotFound() : Ok(pl.ToDto());
+            return pl == null ? NotFound() : Ok(ToDto(pl));
         }
 
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateEditPackingListDto dto)
         {
             var pl = await _service.CreateAsync(dto);
-            return CreatedAtAction(nameof(GetById), new { id = pl.Id }, pl.ToDto());
+            return CreatedAtAction(nameof(GetById), new { id = pl.Id }, ToDto(pl));
         }
 
         [HttpPut("{id}")]

@@ -11,12 +11,8 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-<<<<<<< HEAD
-using Warehouse.Repositories.Implementations;
-using Warehouse.Repositories.Interfaces;
+
 using MongoDB.Driver;
-=======
->>>>>>> a5e04a6a14f250ef8a18993aa85ff04180b746b3
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -90,7 +86,7 @@ builder.Services.AddSingleton(sp =>
     return client.GetDatabase(configuration["MongoDb:DatabaseName"]);
 });
 
-var app = builder.Build();
+
 //test
 var mongoClient = new MongoClient(
     builder.Configuration["MongoDb:ConnectionString"]
@@ -157,26 +153,14 @@ builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<IProductService, ProductService>();
 
+builder.Services.AddScoped<IPalletRepository, PalletRepository>();
+builder.Services.AddScoped<IPackingListRepository, PackingListRepository>();
+
 builder.Services.AddScoped<IPalletService, PalletService>();
 builder.Services.AddScoped<IPackingListService, PackingListService>();
 
 var app = builder.Build();
 
-builder.Services.AddSingleton<IMongoClient>(sp =>
-{
-    var configuration = sp.GetRequiredService<IConfiguration>();
-    var connectionString = configuration["MongoDb:ConnectionString"];
-
-    return new MongoClient(connectionString);
-});
-
-builder.Services.AddSingleton(sp =>
-{
-    var configuration = sp.GetRequiredService<IConfiguration>();
-    var client = sp.GetRequiredService<IMongoClient>();
-
-    return client.GetDatabase(configuration["MongoDb:DatabaseName"]);
-});
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
