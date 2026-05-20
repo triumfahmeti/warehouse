@@ -25,7 +25,7 @@ namespace Warehouse
         public DbSet<RolePermission> RolePermissions { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
-        public DbSet<Notification> Notifications { get; set; }
+        //public DbSet<Notification> Notifications { get; set; }
         public DbSet<Setting> Settings { get; set; }
         public DbSet<Warehouse.Models.File> Files { get; set; }
         public DbSet<Warehouse.Models.Warehouse> Warehouses { get; set; }

@@ -2,19 +2,24 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
+
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace Warehouse.Models
 {
     public class Notification
     {
-        public int Id { get; set; }
+        [BsonId]
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string Id { get; set; } = null!;
 
-        public string UserId { get; set; }
-        public ApplicationUser User { get; set; }
-
-        public string Type { get; set; }
-        public string Title { get; set; }
-        public string Message { get; set; }
+        public string UserId { get; set; } = null!;
+        public string Type { get; set; } = null!;
+        public string Title { get; set; } = null!;
+        public string Message { get; set; } = null!;
 
         public bool IsRead { get; set; } = false;
 

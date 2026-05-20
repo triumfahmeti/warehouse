@@ -152,10 +152,15 @@ builder.Services.AddScoped<IAuditLogRepository, AuditLogRepository>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<IProductService, ProductService>();
-
+builder.Services.AddScoped<IFileRepository, FileRepository>();
+builder.Services.AddScoped<IFileService, FileService>();
+builder.Services.AddScoped<ISettingRepository, SettingRepository>();
+builder.Services.AddScoped<ISettingService, SettingService>();
 builder.Services.AddScoped<IPalletRepository, PalletRepository>();
 builder.Services.AddScoped<IPackingListRepository, PackingListRepository>();
-
+builder.Services.Configure<MongoDbSettings>(
+    builder.Configuration.GetSection("MongoDb"));
+builder.Services.AddSingleton<INotificationService, NotificationService>();
 builder.Services.AddScoped<IPalletService, PalletService>();
 builder.Services.AddScoped<IPackingListService, PackingListService>();
 
