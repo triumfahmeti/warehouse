@@ -31,6 +31,18 @@ namespace Warehouse.Services.Implementations
             return raft == null ? null : MapToDto(raft);
         }
 
+        public async Task<IEnumerable<RaftDto>> GetByWarehouseIdAsync(int warehouseId)
+        {
+            var rafts = await _repo.GetByWarehouseId(warehouseId);
+            return rafts.Select(MapToDto);
+        }
+
+        public async Task<RaftDto?> GetByRaftNumberAsync(string raftNumber)
+        {
+            var raft = await _repo.GetByRaftNumber(raftNumber);
+            return raft == null ? null : MapToDto(raft);
+        }
+
         public async Task<RaftDto> AddAsync(CreateEditRaftDto dto)
         {
             await ValidateDtoAsync(dto);

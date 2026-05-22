@@ -31,6 +31,18 @@ namespace Warehouse.Services.Implementations
             return item == null ? null : MapToDto(item);
         }
 
+        public async Task<IEnumerable<PalletItemDto>> GetByPalletIdAsync(int palletId)
+        {
+            var items = await _repo.GetByPalletId(palletId);
+            return items.Select(MapToDto);
+        }
+
+        public async Task<IEnumerable<PalletItemDto>> GetByProductIdAsync(int productId)
+        {
+            var items = await _repo.GetByProductId(productId);
+            return items.Select(MapToDto);
+        }
+
         public async Task<PalletItemDto> AddAsync(CreateEditPalletItemDto dto)
         {
             var item = new PalletItem

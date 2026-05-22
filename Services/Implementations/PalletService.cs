@@ -37,6 +37,12 @@ namespace Warehouse.Services.Implementations
             return pallet == null ? null : MapToDto(pallet);
         }
 
+        public async Task<PalletDto?> GetByPalletCodeAsync(string palletCode)
+        {
+            var pallet = await _repo.GetByPalletCode(palletCode);
+            return pallet == null ? null : MapToDto(pallet);
+        }
+
         public async Task<PalletDto> AddAsync(CreateEditPalletDto dto)
         {
             var pallet = new Pallet

@@ -30,6 +30,21 @@ namespace Warehouse.Controllers
             return Ok(raft);
         }
 
+        [HttpGet("warehouse/{warehouseId}")]
+        public async Task<IActionResult> GetByWarehouseId(int warehouseId)
+        {
+            var rafts = await _service.GetByWarehouseIdAsync(warehouseId);
+            return Ok(rafts);
+        }
+
+        [HttpGet("number/{raftNumber}")]
+        public async Task<IActionResult> GetByRaftNumber(string raftNumber)
+        {
+            var raft = await _service.GetByRaftNumberAsync(raftNumber);
+            if (raft == null) return NotFound();
+            return Ok(raft);
+        }
+
         [HttpPost]
         public async Task<IActionResult> Create(CreateEditRaftDto dto)
         {
