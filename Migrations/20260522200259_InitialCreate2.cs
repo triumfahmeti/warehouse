@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Warehouse.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class InitialCreate2 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -332,27 +332,26 @@ namespace Warehouse.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Notifications",
+                name: "Notification",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    UserId = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Type = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Title = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Message = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     IsRead = table.Column<bool>(type: "bit", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ApplicationUserId = table.Column<string>(type: "nvarchar(450)", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Notifications", x => x.Id);
+                    table.PrimaryKey("PK_Notification", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Notifications_AspNetUsers_UserId",
-                        column: x => x.UserId,
+                        name: "FK_Notification_AspNetUsers_ApplicationUserId",
+                        column: x => x.ApplicationUserId,
                         principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -491,7 +490,7 @@ namespace Warehouse.Migrations
                     WarehouseId = table.Column<int>(type: "int", nullable: false),
                     SalesOrderId = table.Column<int>(type: "int", nullable: false),
                     Notes = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    PackingListStatus = table.Column<int>(type: "int", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
                     CreatedById = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     UpdatedById = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -636,7 +635,7 @@ namespace Warehouse.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Shippments",
+                name: "Shipments",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
@@ -644,7 +643,7 @@ namespace Warehouse.Migrations
                     ShipmentNumber = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     WarehouseId = table.Column<int>(type: "int", nullable: false),
                     PackingListId = table.Column<int>(type: "int", nullable: false),
-                    ShipmentStatus = table.Column<int>(type: "int", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
                     Notes = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     CreatedById = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     UpdatedById = table.Column<string>(type: "nvarchar(max)", nullable: true),
@@ -653,15 +652,15 @@ namespace Warehouse.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Shippments", x => x.Id);
+                    table.PrimaryKey("PK_Shipments", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Shippments_PackingLists_PackingListId",
+                        name: "FK_Shipments_PackingLists_PackingListId",
                         column: x => x.PackingListId,
                         principalTable: "PackingLists",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_Shippments_Warehouses_WarehouseId",
+                        name: "FK_Shipments_Warehouses_WarehouseId",
                         column: x => x.WarehouseId,
                         principalTable: "Warehouses",
                         principalColumn: "Id");
@@ -785,9 +784,9 @@ namespace Warehouse.Migrations
                 column: "RaftId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Notifications_UserId",
-                table: "Notifications",
-                column: "UserId");
+                name: "IX_Notification_ApplicationUserId",
+                table: "Notification",
+                column: "ApplicationUserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_PackingListPallets_PackingListId",
@@ -880,13 +879,13 @@ namespace Warehouse.Migrations
                 column: "ClientId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Shippments_PackingListId",
-                table: "Shippments",
+                name: "IX_Shipments_PackingListId",
+                table: "Shipments",
                 column: "PackingListId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Shippments_WarehouseId",
-                table: "Shippments",
+                name: "IX_Shipments_WarehouseId",
+                table: "Shipments",
                 column: "WarehouseId");
         }
 
@@ -918,7 +917,7 @@ namespace Warehouse.Migrations
                 name: "Inventories");
 
             migrationBuilder.DropTable(
-                name: "Notifications");
+                name: "Notification");
 
             migrationBuilder.DropTable(
                 name: "PackingListPallets");
@@ -942,7 +941,7 @@ namespace Warehouse.Migrations
                 name: "Settings");
 
             migrationBuilder.DropTable(
-                name: "Shippments");
+                name: "Shipments");
 
             migrationBuilder.DropTable(
                 name: "Pallets");

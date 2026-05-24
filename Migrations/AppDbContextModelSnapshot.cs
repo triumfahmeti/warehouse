@@ -407,11 +407,11 @@ namespace Warehouse.Migrations
 
             modelBuilder.Entity("Warehouse.Models.Notification", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    b.Property<string>("ApplicationUserId")
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -433,13 +433,13 @@ namespace Warehouse.Migrations
 
                     b.Property<string>("UserId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("ApplicationUserId");
 
-                    b.ToTable("Notifications");
+                    b.ToTable("Notification");
                 });
 
             modelBuilder.Entity("Warehouse.Models.PackingList", b =>
@@ -463,10 +463,10 @@ namespace Warehouse.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("PackingListStatus")
+                    b.Property<int>("SalesOrderId")
                         .HasColumnType("int");
 
-                    b.Property<int>("SalesOrderId")
+                    b.Property<int>("Status")
                         .HasColumnType("int");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -928,7 +928,7 @@ namespace Warehouse.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("ShipmentStatus")
+                    b.Property<int>("Status")
                         .HasColumnType("int");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -946,7 +946,7 @@ namespace Warehouse.Migrations
 
                     b.HasIndex("WarehouseId");
 
-                    b.ToTable("Shippments");
+                    b.ToTable("Shipments");
                 });
 
             modelBuilder.Entity("Warehouse.Models.Supplier", b =>
@@ -1128,13 +1128,9 @@ namespace Warehouse.Migrations
 
             modelBuilder.Entity("Warehouse.Models.Notification", b =>
                 {
-                    b.HasOne("Warehouse.Models.ApplicationUser", "User")
+                    b.HasOne("Warehouse.Models.ApplicationUser", null)
                         .WithMany("Notifications")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
+                        .HasForeignKey("ApplicationUserId");
                 });
 
             modelBuilder.Entity("Warehouse.Models.PackingList", b =>

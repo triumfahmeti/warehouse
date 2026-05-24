@@ -49,7 +49,10 @@ namespace Warehouse.Services.Implementations
         var packingList = new PackingList
         {
             WarehouseId = dto.WarehouseId,
-            SalesOrderId = dto.SalesOrderId
+            SalesOrderId = dto.SalesOrderId,
+            Notes = dto.Notes,
+            PackingListNumber = $"PL-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString()[..6].ToUpper()}",
+            Status = PackingListStatus.Draft
         };
 
         await _packingListRepository.AddAsync(packingList);
@@ -131,9 +134,10 @@ namespace Warehouse.Services.Implementations
 
             var packingList = new PackingList
             {
-                WarehouseId = dto.WarehouseId,
+               WarehouseId = dto.WarehouseId,
                 SalesOrderId = dto.SalesOrderId,
-                PackingListNumber = $"PL-{dto.SalesOrderId}-{DateTime.UtcNow.Ticks}",
+                Notes = dto.Notes,
+                PackingListNumber = $"PL-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString()[..6].ToUpper()}",
                 Status = PackingListStatus.Draft
             };
 

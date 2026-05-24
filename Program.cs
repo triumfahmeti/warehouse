@@ -169,7 +169,8 @@ builder.Services.AddSingleton<INotificationService, NotificationService>();
 builder.Services.AddScoped<IPalletService, PalletService>();
 builder.Services.AddScoped<IPalletItemService, PalletItemService>();
 builder.Services.AddScoped<IPackingListService, PackingListService>();
-
+builder.Services.AddScoped<IShipmentRepository, ShipmentRepository>();
+builder.Services.AddScoped<IShipmentService, ShipmentService>();
 var app = builder.Build();
 
 

@@ -1,7 +1,6 @@
 using Warehouse.DTOs.Pallet;
-
 using System.Threading.Tasks;
-using Warehouse.DTOs.Pallet;
+
 
 namespace Warehouse.Services.Interfaces
 {
@@ -14,6 +13,7 @@ namespace Warehouse.Services.Interfaces
         Task UpdateAsync(int id, CreateEditPalletDto dto);
         Task DeleteAsync(int id);
         Task<int> CreatePalletFromOrder(CreatePalletDto dto);
+        Task<List<int>> CreatePalletsFromOrderSplit(CreatePalletSplitDto dto);
     }
 }
  

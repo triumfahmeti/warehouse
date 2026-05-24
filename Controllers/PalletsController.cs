@@ -65,5 +65,12 @@ namespace Warehouse.Controllers
             await _service.DeleteAsync(id);
             return NoContent();
         }
+
+        [HttpPost("from-order-split")]
+        public async Task<IActionResult> CreateFromOrderSplit([FromBody] CreatePalletSplitDto dto)
+        {
+            var palletIds = await _service.CreatePalletsFromOrderSplit(dto);
+            return Ok(new { palletIds });
+        }
     }
 }
