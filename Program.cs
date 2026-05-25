@@ -13,6 +13,8 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 using MongoDB.Driver;
+using Microsoft.AspNetCore.SignalR;
+using Warehouse.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,6 +25,7 @@ builder.Services.AddControllers()
     {
         options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
     });
+builder.Services.AddSignalR();//per real time e kom shtu 
 builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
 
@@ -189,6 +192,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.MapHub<NotificationHub>("/notificationHub");
 
 
 app.Run();
