@@ -6,6 +6,8 @@ namespace Warehouse.DTOs.PackingList
     {
         public int WarehouseId { get; set; }
         public int SalesOrderId { get; set; }
+                public string? Notes { get; set; }
+
         public List<int> PalletIds { get; set; } = new List<int>();
     }
 }

@@ -32,7 +32,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(option =>
 {
     option.CustomSchemaIds(type => type.FullName!.Replace("+", ".", StringComparison.Ordinal));
-    option.SwaggerDoc("v1", new OpenApiInfo { Title = "Smis API", Version = "v1" });
+    option.SwaggerDoc("v1", new OpenApiInfo { Title = "Warehouse API", Version = "v1" });
     option.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         In = ParameterLocation.Header,
@@ -145,6 +145,10 @@ builder.Services.AddScoped<IClientService, ClientService>();
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 builder.Services.AddScoped<ISupplierRepository, SupplierRepository>();
 builder.Services.AddScoped<ISupplierService, SupplierService>();
+builder.Services.AddScoped<IWarehouseRepository, WarehouseRepository>();
+builder.Services.AddScoped<IWarehouseService, WarehouseService>();
+builder.Services.AddScoped<IRaftRepository, RaftRepository>();
+builder.Services.AddScoped<IRaftService, RaftService>();
 builder.Services.AddScoped<ISalesOrderRepository, SalesOrderRepository>();
 builder.Services.AddScoped<ISalesOrderService, SalesOrderService>();
 builder.Services.AddScoped<IInventoryRepository, InventoryRepository>();
@@ -160,13 +164,16 @@ builder.Services.AddScoped<IFileService, FileService>();
 builder.Services.AddScoped<ISettingRepository, SettingRepository>();
 builder.Services.AddScoped<ISettingService, SettingService>();
 builder.Services.AddScoped<IPalletRepository, PalletRepository>();
+builder.Services.AddScoped<IPalletItemRepository, PalletItemRepository>();
 builder.Services.AddScoped<IPackingListRepository, PackingListRepository>();
 builder.Services.Configure<MongoDbSettings>(
     builder.Configuration.GetSection("MongoDb"));
 builder.Services.AddSingleton<INotificationService, NotificationService>();
 builder.Services.AddScoped<IPalletService, PalletService>();
+builder.Services.AddScoped<IPalletItemService, PalletItemService>();
 builder.Services.AddScoped<IPackingListService, PackingListService>();
-
+builder.Services.AddScoped<IShipmentRepository, ShipmentRepository>();
+builder.Services.AddScoped<IShipmentService, ShipmentService>();
 var app = builder.Build();
 
 

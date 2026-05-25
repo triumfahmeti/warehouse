@@ -31,8 +31,22 @@ namespace Warehouse.Services.Implementations
             return raft == null ? null : MapToDto(raft);
         }
 
+        public async Task<IEnumerable<RaftDto>> GetByWarehouseIdAsync(int warehouseId)
+        {
+            var rafts = await _repo.GetByWarehouseId(warehouseId);
+            return rafts.Select(MapToDto);
+        }
+
+        public async Task<RaftDto?> GetByRaftNumberAsync(string raftNumber)
+        {
+            var raft = await _repo.GetByRaftNumber(raftNumber);
+            return raft == null ? null : MapToDto(raft);
+        }
+
         public async Task<RaftDto> AddAsync(CreateEditRaftDto dto)
         {
+            await ValidateDtoAsync(dto);
+
             var raft = new Raft
             {
                 RaftNumber = dto.RaftNumber,
@@ -47,6 +61,8 @@ namespace Warehouse.Services.Implementations
 
         public async Task UpdateAsync(int id, CreateEditRaftDto dto)
         {
+            await ValidateDtoAsync(dto);
+
             var raft = await _repo.GetByIdAsync(id);
             if (raft == null)
                 throw new Exception("Raft not found");
@@ -67,6 +83,19 @@ namespace Warehouse.Services.Implementations
 
             await _repo.DeleteAsync(id);
             await _context.SaveChangesAsync();
+        }
+
+        private async Task ValidateDtoAsync(CreateEditRaftDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.RaftNumber))
+                throw new Exception("Raft number is required");
+
+            if (dto.MaxCapacity <= 0)
+                throw new Exception("Max capacity must be greater than zero");
+
+            var warehouse = await _context.Warehouses.FindAsync(dto.WarehouseId);
+            if (warehouse == null)
+                throw new Exception("Warehouse not found");
         }
 
         private static RaftDto MapToDto(Raft r) => new RaftDto
