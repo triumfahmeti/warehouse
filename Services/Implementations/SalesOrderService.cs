@@ -8,6 +8,9 @@ using Warehouse.Enums;
 using Warehouse.Models;
 using Warehouse.Repositories.Interfaces;
 using Warehouse.Services.Interfaces;
+using Microsoft.AspNetCore.SignalR;
+using Warehouse.Hubs;
+using Warehouse.DTOs.NotificationDto;
 
 namespace Warehouse.Services.Implementations
 {
@@ -18,15 +21,25 @@ namespace Warehouse.Services.Implementations
 
         private readonly IInventoryService _inventoryService;
         private readonly AppDbContext _context;
+        private readonly INotificationService _notificationService;
+        private readonly IHubContext<NotificationHub> _hubContext;
+       public SalesOrderService(
+    ISalesOrderRepository salesOrderRepository,
+    IInventoryRepository inventoryRepository,
+    IInventoryService inventoryService,
+    AppDbContext context,
+    INotificationService notificationService,
+    IHubContext<NotificationHub> hubContext)
+{
+    _salesOrderRepository = salesOrderRepository;
+    _inventoryRepository = inventoryRepository;
 
-        public SalesOrderService(ISalesOrderRepository salesOrderRepository,IInventoryRepository inventoryRepository, IInventoryService inventoryService, AppDbContext context)
-        {
-            _salesOrderRepository = salesOrderRepository;
-            _inventoryRepository = inventoryRepository;
+    _inventoryService = inventoryService;
+    _context = context;
 
-            _inventoryService = inventoryService;
-            _context = context;
-        }
+    _notificationService = notificationService;
+    _hubContext = hubContext;
+}
 
         public async Task<int> CreateOrder(int clientId, List<CreateOrderItemDto> items)
         {
@@ -48,7 +61,17 @@ namespace Warehouse.Services.Implementations
 
             await _salesOrderRepository.AddAsync(order);
             await _context.SaveChangesAsync();
-            return order.Id;
+            Console.WriteLine("ORDER SAVED");
+            var notification = await _notificationService.CreateAsync(new CreateEditNotificationDto
+            {
+                UserId = "admin",
+                Type = "SalesOrder",
+                Title = "New Order",
+                Message = $"Customer {clientId} created a new order with ID {order.Id}"
+            });
+
+            await _hubContext.Clients.All.SendAsync("ReceiveNotification", notification);
+                        return order.Id;
         }
 
         public async Task SetPrices(int salesOrderId, List<SetPriceDto> items)

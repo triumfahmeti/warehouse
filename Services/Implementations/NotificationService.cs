@@ -4,7 +4,6 @@ using Warehouse.DTOs.NotificationDto;
 using Warehouse.Models;
 using Warehouse.Enums;
 using Warehouse.Services.Interfaces;
-using Warehouse.Repositories.Interfaces;
 
 namespace Warehouse.Services.Implementations
 {
@@ -12,11 +11,8 @@ namespace Warehouse.Services.Implementations
     {
         private readonly IMongoCollection<Notification> _notifications;
 
-        public NotificationService(IOptions<MongoDbSettings> mongoSettings)
+        public NotificationService(IMongoDatabase database, IOptions<MongoDbSettings> mongoSettings)
         {
-            var client = new MongoClient(mongoSettings.Value.ConnectionString);
-            var database = client.GetDatabase(mongoSettings.Value.DatabaseName);
-
             _notifications = database.GetCollection<Notification>(
                 mongoSettings.Value.NotificationsCollectionName);
         }

@@ -11,10 +11,10 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-
+using Warehouse.Hubs;
 using MongoDB.Driver;
 using Microsoft.AspNetCore.SignalR;
-using Warehouse.Hubs;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -88,24 +88,6 @@ builder.Services.AddSingleton(sp =>
 
     return client.GetDatabase(configuration["MongoDb:DatabaseName"]);
 });
-
-
-//test
-var mongoClient = new MongoClient(
-    builder.Configuration["MongoDb:ConnectionString"]
-);
-
-try
-{
-    var databases = mongoClient.ListDatabaseNames().ToList();
-
-    Console.WriteLine("MongoDB Connected!");
-}
-catch (Exception ex)
-{
-    Console.WriteLine("Mongo Error:");
-    Console.WriteLine(ex.Message);
-}
 
 
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
