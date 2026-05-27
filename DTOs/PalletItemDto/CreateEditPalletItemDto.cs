@@ -5,5 +5,6 @@ namespace Warehouse.DTOs.PalletItem
         public int PalletId { get; set; }
         public int ProductId { get; set; }
         public int Quantity { get; set; }
+
     }
 }

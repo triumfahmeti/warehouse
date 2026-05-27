@@ -48,8 +48,10 @@ namespace Warehouse.Services.Implementations
             var item = new PalletItem
             {
                 PalletId = dto.PalletId,
+
                 ProductId = dto.ProductId,
                 Quantity = dto.Quantity
+
             };
 
             await _repo.AddAsync(item);

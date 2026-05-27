@@ -48,7 +48,9 @@ namespace Warehouse.Services.Implementations
             var pallet = new Pallet
             {
                 PalletCode = dto.PalletCode,
-                PackingType = Enum.Parse<PackagingType>(dto.PackingType!) // string → enum
+                PackingType = Enum.Parse<PackagingType>(dto.PackingType!), // string → enum
+                RaftId = dto.RaftId,
+                 SalesOrderId = dto.SalesOrderId
             };
 
             await _repo.AddAsync(pallet);
@@ -63,6 +65,7 @@ namespace Warehouse.Services.Implementations
 
             pallet.PalletCode = dto.PalletCode;
             pallet.PackingType = Enum.Parse<PackagingType>(dto.PackingType!); // string → enum
+            pallet.RaftId = dto.RaftId;
 
             await _repo.UpdateAsync(pallet);
             await _context.SaveChangesAsync();
