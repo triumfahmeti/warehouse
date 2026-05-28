@@ -9,7 +9,7 @@ namespace Warehouse.Services.Interfaces
 {
     public interface IAuthService
     {
-        Task<string> RegisterAsync(RegisterDto dto, string? currentUserId);
+        Task<string> RegisterAsync(RegisterDto dto, string? currentUserId, IList<string> currentUserRoles);
         Task<AuthResponseDto> LoginAsync(LoginDto dto);
 
         Task<RefreshToken> SaveRefreshTokenAsync(string userId, string token);
