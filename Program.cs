@@ -7,17 +7,13 @@ using Warehouse.Repositories.Implementations;
 using Warehouse.Repositories.Interfaces;
 using Warehouse.Services.Implementations;
 using Warehouse.Services.Interfaces;
+using Warehouse.Hubs;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Warehouse.Hubs;
+
 using MongoDB.Driver;
-using Microsoft.AspNetCore.SignalR;
-using Warehouse.Hubs;
-using Warehouse.Data;
-using Microsoft.AspNetCore.Authorization;
-using Warehouse.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,7 +24,6 @@ builder.Services.AddControllers()
     {
         options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
     });
-builder.Services.AddSignalR();//per real time e kom shtu 
 builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
 
@@ -70,17 +65,11 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
-{
-    options.User.RequireUniqueEmail = true;
-
-    options.Lockout.MaxFailedAccessAttempts = 10;
-    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
-})
+builder.Services.AddIdentity<ApplicationUser, ApplicationRole>()
     .AddEntityFrameworkStores<AppDbContext>()
     .AddDefaultTokenProviders();
 
-// mongodb connection
+    // mongodb connection
 
 builder.Services.AddSingleton<IMongoClient>(sp =>
 {
@@ -97,6 +86,24 @@ builder.Services.AddSingleton(sp =>
 
     return client.GetDatabase(configuration["MongoDb:DatabaseName"]);
 });
+
+
+//test
+var mongoClient = new MongoClient(
+    builder.Configuration["MongoDb:ConnectionString"]
+);
+
+try
+{
+    var databases = mongoClient.ListDatabaseNames().ToList();
+
+    Console.WriteLine("MongoDB Connected!");
+}
+catch (Exception ex)
+{
+    Console.WriteLine("Mongo Error:");
+    Console.WriteLine(ex.Message);
+}
 
 
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
@@ -157,28 +164,17 @@ builder.Services.AddScoped<ISettingService, SettingService>();
 builder.Services.AddScoped<IPalletRepository, PalletRepository>();
 builder.Services.AddScoped<IPalletItemRepository, PalletItemRepository>();
 builder.Services.AddScoped<IPackingListRepository, PackingListRepository>();
+builder.Services.Configure<MongoDbSettings>(
+    builder.Configuration.GetSection("MongoDb"));
+builder.Services.AddSingleton<INotificationService, NotificationService>();
 builder.Services.AddScoped<IPalletService, PalletService>();
 builder.Services.AddScoped<IPalletItemService, PalletItemService>();
 builder.Services.AddScoped<IPackingListService, PackingListService>();
-builder.Services.AddScoped<IShipmentRepository, ShipmentRepository>();
-builder.Services.AddScoped<IShipmentService, ShipmentService>();
-builder.Services.AddScoped<IReportService, ReportService>();
 
-builder.Services.Configure<MongoDbSettings>(
-    builder.Configuration.GetSection("MongoDb"));
-
-builder.Services.AddSingleton<INotificationService, NotificationService>();
-builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
-builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
-
+builder.Services.AddSignalR();
 
 var app = builder.Build();
 
-// Seed roles + permissions
-using (var scope = app.Services.CreateScope())
-{
-    await DataSeeder.SeedAsync(scope.ServiceProvider);
-}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -201,11 +197,7 @@ if (!app.Environment.IsDevelopment())
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapHub<NotificationHub>("/notificationHub");
 app.MapControllers();
 
-app.MapHub<NotificationHub>("/notificationHub");
-
-
 app.Run();
-
-
