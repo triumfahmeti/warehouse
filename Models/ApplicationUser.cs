@@ -19,6 +19,7 @@ namespace Warehouse.Models
         public ICollection<RefreshToken> RefreshTokens { get; set; }
         public ICollection<AuditLog> AuditLogs { get; set; }
         public ICollection<Notification> Notifications { get; set; }
+        public ICollection<UserRoles> UserRoles { get; set; } = new List<UserRoles>();
 
     }
 }

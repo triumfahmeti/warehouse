@@ -31,7 +31,7 @@ namespace Warehouse.Services.Implementations
 
 
         }
-        public async Task<string> RegisterAsync(RegisterDto dto, string? currentUserId)
+        public async Task<string> RegisterAsync(RegisterDto dto, string? currentUserId, IList<string> currentUserRoles)
         {
             // if (string.IsNullOrWhiteSpace(currentUserId))
             //     return "Creator user ID is required.";
@@ -39,6 +39,17 @@ namespace Warehouse.Services.Implementations
             var existingUser = await _userManager.FindByEmailAsync(dto.Email);
             if (existingUser != null)
                 return "Email already in use.";
+
+            var restrictedRoles = new[] { "Admin", "Manager" };
+            if (restrictedRoles.Contains(dto.Role, StringComparer.OrdinalIgnoreCase)
+                && !currentUserRoles.Contains("Admin"))
+            {
+                return "Only Admin can create users with this role.";
+            }
+
+            var validRoles = new[] { "Admin", "Manager", "Worker", "Client" };
+            if (!validRoles.Contains(dto.Role))
+                return "Invalid role specified.";
 
             var user = new ApplicationUser
             {
@@ -74,14 +85,12 @@ namespace Warehouse.Services.Implementations
         public async Task<AuthResponseDto> LoginAsync(LoginDto dto)
         {
             var user = await _userManager.FindByEmailAsync(dto.Email);
-            if (user == null)
-                throw new Exception("Invalid email.");
+            if (user == null || !await _userManager.CheckPasswordAsync(user, dto.Password))
+                throw new Exception("Invalid email or password.");
+            if (!user.IsActive)
+                throw new Exception("Account is deactivated.");
 
-            var passwordValid = await _userManager.CheckPasswordAsync(user, dto.Password);
-            if (!passwordValid)
-                throw new Exception("Invalid  password.");
 
-            // In a real application, you would generate a JWT token here
             var accessToken = await GenerateJwtToken(user);
             var refreshToken = GenerateRefreshToken();
             await SaveRefreshTokenAsync(user.Id, refreshToken);
@@ -110,28 +119,46 @@ namespace Warehouse.Services.Implementations
             if (Encoding.UTF8.GetByteCount(secretKey) < 16)
                 throw new InvalidOperationException("JwtSettings:SecretKey must be at least 16 bytes for HS256.");
 
+            var permissions = await _context.UserRoles
+                .Where(ur => ur.UserId == user.Id)
+                .Join(_context.RolePermissions,
+                        ur => ur.RoleId,
+                        rp => rp.RoleId,
+                        (ur, rp) => rp.PermissionId)
+                .Join(_context.Permissions,
+                        permId => permId,
+                        p => p.Id,
+                        (permId, p) => p.Name)
+                .Distinct()
+                .ToListAsync();
+
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id),
                 new Claim(ClaimTypes.Email, user.Email ?? string.Empty),
-
             };
+
             foreach (var role in roles)
             {
                 claims.Add(new Claim(ClaimTypes.Role, role));
             }
 
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
 
+            foreach (var permission in permissions)
+            {
+                claims.Add(new Claim("permission", permission));
+            }
+
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
             var expirationMinutes = int.Parse(jwtSettings["AccessTokenExpirationMinutes"]!);
             var token = new JwtSecurityToken(
                 issuer: jwtSettings["Issuer"],
-            audience: jwtSettings["Audience"],
-            claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(expirationMinutes),
-            signingCredentials: creds
+                audience: jwtSettings["Audience"],
+                claims: claims,
+                expires: DateTime.UtcNow.AddMinutes(expirationMinutes),
+                signingCredentials: creds
             );
 
             return new JwtSecurityTokenHandler().WriteToken(token);

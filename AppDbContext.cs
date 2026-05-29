@@ -106,11 +106,77 @@ namespace Warehouse
                 .WithMany()
                 .HasForeignKey(plp => plp.PalletId)
                 .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<UserRoles>(b =>
+        {
+            b.HasOne(ur => ur.User)
+                .WithMany(u => u.UserRoles)
+                .HasForeignKey(ur => ur.UserId)
+                .IsRequired();
+
+            b.HasOne(ur => ur.Role)
+                .WithMany(r => r.UserRoles)
+                .HasForeignKey(ur => ur.RoleId)
+                .IsRequired();
+        });
+
+            modelBuilder.Entity<Permission>(b =>
+        {
+            b.HasIndex(p => p.Name).IsUnique();
+            b.Property(p => p.Name).HasMaxLength(100).IsRequired();
+            b.Property(p => p.Description).HasMaxLength(250);
+        });
+
+            modelBuilder.Entity<RolePermission>(b =>
+        {
+            b.HasIndex(rp => new { rp.RoleId, rp.PermissionId }).IsUnique();
+
+            b.HasOne(rp => rp.Role)
+                .WithMany(r => r.RolePermissions)
+                .HasForeignKey(rp => rp.RoleId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            b.HasOne(rp => rp.Permission)
+                .WithMany(p => p.RolePermissions)
+                .HasForeignKey(rp => rp.PermissionId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+            foreach (var entityType in modelBuilder.Model.GetEntityTypes()
+        .Where(t => typeof(BaseEntity).IsAssignableFrom(t.ClrType)))
+            {
+                modelBuilder.Entity(entityType.ClrType)
+                    .HasOne(typeof(ApplicationUser), "CreatedBy")
+                    .WithMany()
+                    .HasForeignKey("CreatedById")
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                modelBuilder.Entity(entityType.ClrType)
+                    .HasOne(typeof(ApplicationUser), "UpdatedBy")
+                    .WithMany()
+                    .HasForeignKey("UpdatedById")
+                    .OnDelete(DeleteBehavior.SetNull);
+            }
+
+
         }
 
         public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
-            var userId = _httpContextAccessor?.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            ApplyAuditInfo();
+            return await base.SaveChangesAsync(cancellationToken);
+        }
+
+        public override int SaveChanges()
+        {
+            ApplyAuditInfo();
+            return base.SaveChanges();
+        }
+
+        private void ApplyAuditInfo()
+        {
+            var userId = _httpContextAccessor?.HttpContext?.User?
+                .FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
             foreach (var entry in ChangeTracker.Entries<BaseEntity>())
             {
@@ -119,15 +185,16 @@ namespace Warehouse
                     entry.Entity.CreatedAt = DateTime.UtcNow;
                     entry.Entity.CreatedById = userId;
                 }
-
-                if (entry.State == EntityState.Modified)
+                else if (entry.State == EntityState.Modified)
                 {
                     entry.Entity.UpdatedAt = DateTime.UtcNow;
                     entry.Entity.UpdatedById = userId;
+
+                    // Mbrojtja CreatedAt/CreatedById nga modifikimi
+                    entry.Property(nameof(BaseEntity.CreatedAt)).IsModified = false;
+                    entry.Property(nameof(BaseEntity.CreatedById)).IsModified = false;
                 }
             }
-
-            return await base.SaveChangesAsync(cancellationToken);
         }
     }
 

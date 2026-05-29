@@ -9,5 +9,7 @@ namespace Warehouse.Models
     public class UserRoles : IdentityUserRole<string>
     {
         public DateTime AssignedAt { get; set; } = DateTime.UtcNow;
+        public ApplicationUser User { get; set; } = null!;
+        public ApplicationRole Role { get; set; } = null!;
     }
 }
