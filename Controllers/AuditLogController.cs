@@ -49,5 +49,17 @@ namespace Warehouse.Controllers
             await _service.DeleteAsync(id);
             return NoContent();
         }
+
+        [HttpGet("filter")]
+        public async Task<IActionResult> Filter(
+            [FromQuery] string? userId,
+            [FromQuery] DateTime? fromDate,
+            [FromQuery] DateTime? toDate,
+            [FromQuery] string? action,
+            [FromQuery] string? entity)
+        {
+            var list = await _service.GetFilteredAsync(userId, fromDate, toDate, action, entity);
+            return Ok(list);
+        }
     }
 }

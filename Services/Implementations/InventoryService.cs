@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Warehouse.DTOs.Inventory;
 using Warehouse.Enums;
@@ -16,12 +18,14 @@ namespace Warehouse.Services.Implementations
         private readonly IInventoryRepository _inventoryRepository;
         private readonly ISalesOrderRepository _salesOrderRepository;
         private readonly AppDbContext _context;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public InventoryService(IInventoryRepository inventoryRepository, ISalesOrderRepository salesOrderRepository, AppDbContext context)
+        public InventoryService(IInventoryRepository inventoryRepository, ISalesOrderRepository salesOrderRepository, AppDbContext context, IHttpContextAccessor httpContextAccessor)
         {
             _inventoryRepository = inventoryRepository;
             _salesOrderRepository = salesOrderRepository;
             _context = context;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         private static string BuildStateString(int quantityOnHand, int reservedQuantity)
@@ -31,10 +35,21 @@ namespace Warehouse.Services.Implementations
 
         private void AddInventoryLog(Inventory inventory, string action, int? quantityDelta, int oldQoh, int oldReserved, int newQoh, int newReserved)
         {
+            var userId = _httpContextAccessor?.HttpContext?.User?
+                .FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            // UserId eshte i detyrueshem (NOT NULL + FK). Pa nje user te identifikuar
+            // nuk e shkruajme logun, qe te mos deshtoje ruajtja.
+            if (string.IsNullOrEmpty(userId))
+                return;
+
+            var ip = _httpContextAccessor?.HttpContext?.Connection?.RemoteIpAddress?.ToString() ?? "unknown";
             var actionText = quantityDelta.HasValue ? $"{action} (delta: {quantityDelta.Value})" : action;
 
             _context.AuditLogs.Add(new AuditLog
             {
+                UserId = userId,
+                IpAddress = ip,
                 Action = actionText,
                 Entity = "Inventory",
                 EntityId = inventory.Id,

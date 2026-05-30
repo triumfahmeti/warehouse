@@ -2,12 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Warehouse.Authorization;
 using Warehouse.Authorization.Constants;
 using Warehouse.DTOs.Auth;
+using Warehouse.Models;
 using Warehouse.Services.Interfaces;
 
 namespace Warehouse.Controllers
@@ -17,10 +19,12 @@ namespace Warehouse.Controllers
     public class AuthController : ControllerBase
     {
         private readonly IAuthService _authService;
+        private readonly AppDbContext _context;
 
-        public AuthController(IAuthService authService)
+        public AuthController(IAuthService authService, AppDbContext context)
         {
             _authService = authService;
+            _context = context;
         }
 
         [HttpGet("me")]
@@ -43,8 +47,8 @@ namespace Warehouse.Controllers
 
 
         [HttpPost("register")]
-        [Authorize]
-        [HasPermission(Permissions.Users.Create)]
+        // [Authorize]
+        // [HasPermission(Permissions.Users.Create)]
         public async Task<IActionResult> Register([FromBody] RegisterDto dto)
         {
             if (!ModelState.IsValid)
@@ -58,13 +62,34 @@ namespace Warehouse.Controllers
                 .Select(c => c.Value)
                 .ToList();
 
-            // var currentUserId = "system"; // For testing purposes, replace with actual user ID in production
+            try
+            {
+                var result = await _authService.RegisterAsync(dto, currentUserId, currentUserRoles);
+                if (result.Contains("successfully"))
+                {
+                    // Audit log per krijimin e user-it (admini qe e krijoi = currentUserId).
+                    _context.AuditLogs.Add(new AuditLog
+                    {
+                        UserId = currentUserId,
+                        IpAddress = HttpContext?.Connection?.RemoteIpAddress?.ToString() ?? "unknown",
+                        Action = "Create User",
+                        Entity = "User",
+                        EntityId = null,
+                        OldValue = "",
+                        NewValue = JsonSerializer.Serialize(new { dto.Name, dto.Email, dto.Role }),
+                        CreatedAt = DateTime.UtcNow
+                    });
+                    await _context.SaveChangesAsync();
 
-            var result = await _authService.RegisterAsync(dto, currentUserId, currentUserRoles);
-            if (result.Contains("successfully"))
-                return Ok(result);
-            else
-                return BadRequest(result);
+                    return Ok(new { message = result });
+                }
+                else
+                    return BadRequest(new { message = result });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpPost("login")]
@@ -96,9 +121,9 @@ namespace Warehouse.Controllers
         {
             var result = await _authService.LogoutAsync(dto.RefreshToken);
             if (result)
-                return Ok("Logged out successfully.");
+                return Ok(new { message = "Logged out successfully." });
             else
-                return BadRequest("Invalid refresh token.");
+                return BadRequest(new { message = "Invalid refresh token." });
 
 
         }

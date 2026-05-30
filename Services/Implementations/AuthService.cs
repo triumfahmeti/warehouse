@@ -56,6 +56,7 @@ namespace Warehouse.Services.Implementations
                 UserName = dto.Email,
                 Email = dto.Email,
                 Name = dto.Name,
+                IsActive = true,
                 CreatedById = currentUserId,
                 CreatedAt = DateTime.UtcNow
             };
@@ -78,6 +79,22 @@ namespace Warehouse.Services.Implementations
                     return string.Join("; ", createRoleResult.Errors.Select(e => e.Description));
             }
             await _userManager.AddToRoleAsync(user, dto.Role);
+
+            if (dto.Role == "Client")
+            {
+                var client = new Client
+                {
+                    FullName = dto.Name,
+                    Email = dto.Email,
+                    PhoneNumber = dto.PhoneNumber,
+                    Address = dto.Address,
+                    UserId = user.Id,
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedById = currentUserId
+                };
+                _context.Clients.Add(client);
+                await _context.SaveChangesAsync();
+            }
             return "User registered successfully.";
 
         }
@@ -196,6 +213,7 @@ namespace Warehouse.Services.Implementations
                 UserId = userId,
                 CreatedAt = DateTime.UtcNow,
                 ExpiresAt = DateTime.UtcNow.AddDays(expirationDays),
+                // ExpiresAt = DateTime.UtcNow.AddMinutes(double.Parse(expirationDays)), per testm te refresh tokenit me kohe te shkurter
                 RevokedAt = null
             };
 

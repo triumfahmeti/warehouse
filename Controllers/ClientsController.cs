@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Warehouse.DTOs.Client;
 using Warehouse.Services.Interfaces;
@@ -40,6 +41,43 @@ namespace Warehouse.Controllers
         {
             var orders = await _clientService.GetClientOrders(id);
             return Ok(orders);
+        }
+
+        [HttpGet("my-orders")]
+        public async Task<IActionResult> GetMyOrders()
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            try
+            {
+                var orders = await _clientService.GetMyOrdersAsync(userId);
+                return Ok(orders);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+        }
+
+        // GET /api/client-portal/my-stats
+        [HttpGet("my-stats")]
+        public async Task<IActionResult> GetMyStats()
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            try
+            {
+                var stats = await _clientService.GetMyStatsAsync(userId);
+                return Ok(stats);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
         }
     }
 }

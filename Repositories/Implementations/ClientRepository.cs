@@ -18,6 +18,23 @@ namespace Warehouse.Repositories.Implementations
             return await _context.Clients.FindAsync(id);
         }
 
+        public async Task<Client?> GetClientByUserIdAsync(string userId)
+        {
+            return await _context.Clients
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.UserId == userId);
+        }
+
+        public async Task<List<SalesOrder>> GetOrdersByUserIdAsync(string userId)
+        {
+            return await _context.SalesOrders
+                .AsNoTracking()
+                .Include(o => o.SalesOrderItems)
+                .Where(o => o.Client.UserId == userId)
+                .OrderByDescending(o => o.OrderDate)
+                .ToListAsync();
+        }
+
         public async Task<Client?> GetWithOrdersAsync(int id)
         {
             return await _context.Clients

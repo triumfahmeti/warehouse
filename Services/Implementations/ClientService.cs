@@ -1,3 +1,5 @@
+using Warehouse.DTOs.Client;
+using Warehouse.Enums;
 using Warehouse.Models;
 using Warehouse.Repositories.Interfaces;
 using Warehouse.Services.Interfaces;
@@ -57,6 +59,57 @@ namespace Warehouse.Services.Implementations
             return client.SalesOrders
                 .OrderByDescending(o => o.CreatedAt)
                 .ToList();
+        }
+
+        public async Task<List<MyOrderDto>> GetMyOrdersAsync(string userId)
+        {
+            // Verifikim që ekziston profili Client për këtë user
+            var client = await _clientRepository.GetClientByUserIdAsync(userId);
+            if (client == null)
+                throw new InvalidOperationException("Client profile not found for this user.");
+
+            var orders = await _clientRepository.GetOrdersByUserIdAsync(userId);
+
+            return orders.Select(o => new MyOrderDto
+            {
+                Id = o.Id,
+                Number = $"SO-{o.OrderDate.Year}-{o.Id:D4}",
+                Status = o.Status,
+                TotalAmount = o.TotalAmount,
+                LineItemsCount = o.SalesOrderItems?.Count ?? 0,
+                TotalQuantity = o.SalesOrderItems?.Sum(i => i.Quantity) ?? 0,
+                OrderDate = o.OrderDate
+            }).ToList();
+        }
+
+        public async Task<MyStatsDto> GetMyStatsAsync(string userId)
+        {
+            var client = await _clientRepository.GetClientByUserIdAsync(userId);
+            if (client == null)
+                throw new InvalidOperationException("Client profile not found for this user.");
+
+            var orders = await _clientRepository.GetOrdersByUserIdAsync(userId);
+
+            // Përshtate sipas vlerave të enum-it tënd SalesOrderStatus
+            var activeStatuses = new[]
+            {
+                SalesOrderStatus.New,
+                SalesOrderStatus.Confirmed,
+                SalesOrderStatus.Processing
+    };
+
+            var distribution = orders
+                .GroupBy(o => o.Status.ToString())   // enum → string për dictionary
+                .ToDictionary(g => g.Key, g => g.Count());
+
+            return new MyStatsDto
+            {
+                TotalOrders = orders.Count,
+                ActiveOrders = orders.Count(o => activeStatuses.Contains(o.Status)),
+                InTransit = 0,
+                TotalSpent = orders.Sum(o => o.TotalAmount),  // TotalAmount, jo Total
+                StatusDistribution = distribution
+            };
         }
     }
 }

@@ -51,18 +51,41 @@ namespace Warehouse.Data
         });
 
             // Default admin user
-            if (await userMgr.FindByEmailAsync("admin@warehouse.com") == null)
+            var adminUser = await userMgr.FindByEmailAsync("admin@warehouse.com");
+            if (adminUser == null)
             {
-                var admin = new ApplicationUser
+                adminUser = new ApplicationUser
                 {
                     UserName = "admin@warehouse.com",
                     Email = "admin@warehouse.com",
                     Name = "System Admin",
-                    EmailConfirmed = true
+                    EmailConfirmed = true,
+                    IsActive = true
                 };
-                await userMgr.CreateAsync(admin, "Admin@123456");
-                await userMgr.AddToRoleAsync(admin, "Admin");
+                var createAdminResult = await userMgr.CreateAsync(adminUser, "Admin@123456");
+                if (!createAdminResult.Succeeded)
+                    throw new InvalidOperationException(string.Join("; ", createAdminResult.Errors.Select(e => e.Description)));
             }
+
+            adminUser.EmailConfirmed = true;
+            adminUser.IsActive = true;
+            adminUser.UserName = "admin@warehouse.com";
+            adminUser.Email = "admin@warehouse.com";
+
+            var updateAdminResult = await userMgr.UpdateAsync(adminUser);
+            if (!updateAdminResult.Succeeded)
+                throw new InvalidOperationException(string.Join("; ", updateAdminResult.Errors.Select(e => e.Description)));
+
+            if (!await userMgr.CheckPasswordAsync(adminUser, "Admin@123456"))
+            {
+                var resetToken = await userMgr.GeneratePasswordResetTokenAsync(adminUser);
+                var resetResult = await userMgr.ResetPasswordAsync(adminUser, resetToken, "Admin@123456");
+                if (!resetResult.Succeeded)
+                    throw new InvalidOperationException(string.Join("; ", resetResult.Errors.Select(e => e.Description)));
+            }
+
+            if (!await userMgr.IsInRoleAsync(adminUser, "Admin"))
+                await userMgr.AddToRoleAsync(adminUser, "Admin");
         }
 
         private static async Task AssignPermissions(AppDbContext db, string roleName, IEnumerable<string> perms)

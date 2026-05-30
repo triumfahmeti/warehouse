@@ -56,13 +56,12 @@ builder.Services.AddSwaggerGen(option =>
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll",
-        policy =>
-        {
-            policy.AllowAnyOrigin()
-                  .AllowAnyMethod()
-                  .AllowAnyHeader();
-        });
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173")
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
 });
 
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -184,7 +183,7 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.UseCors("AllowAll");
+app.UseCors("AllowFrontend");
 
 app.UseSwagger();
 app.UseSwaggerUI(options =>

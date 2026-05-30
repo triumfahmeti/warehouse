@@ -1,0 +1,203 @@
+/* Reset minimal. Stilizimi kryesor bëhet me inline styles + design tokens
+   te src/theme/colors.js. Këtu mbajmë vetëm bazat. */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* ===== RESPONSIVE ===== */
+
+/* Page wrapper */
+.page-content {
+  padding: 32px;
+}
+
+/* PageHeader */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.page-header-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+/* Table horizontal scroll on mobile */
+.table-scroll-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Shipments hero */
+.shipment-hero {
+  padding: 20px;
+  margin-bottom: 24px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.shipment-stats {
+  display: flex;
+  gap: 24px;
+}
+
+/* Sidebar */
+.sidebar-responsive {
+  flex-shrink: 0;
+  transition: transform 0.25s ease;
+}
+
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 99;
+}
+
+.menu-toggle {
+  display: none !important;
+}
+
+.topbar-search {
+  display: flex;
+}
+
+/* Dashboard grids */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.flow-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.bottom-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 16px;
+}
+
+.dashboard-page {
+  padding: 32px;
+}
+
+.hero-heading {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+/* Tablet */
+@media (max-width: 768px) {
+  .sidebar-responsive {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    z-index: 100;
+    transform: translateX(-100%);
+  }
+  .sidebar-responsive.open {
+    transform: translateX(0);
+  }
+  .sidebar-overlay.visible {
+    display: block;
+  }
+  .menu-toggle {
+    display: flex !important;
+  }
+  .topbar-search {
+    display: none !important;
+  }
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .bottom-grid {
+    grid-template-columns: 1fr;
+  }
+  .dashboard-page {
+    padding: 16px;
+  }
+
+  /* Page content */
+  .page-content {
+    padding: 16px;
+  }
+
+  /* PageHeader - stack vertically */
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .page-header-actions {
+    width: 100%;
+  }
+
+  /* Shipments hero - stack vertically */
+  .shipment-hero {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .shipment-stats {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  /* Table - horizontal scroll + center content */
+  .table-scroll-wrapper {
+    border-radius: 12px;
+    overflow-x: auto;
+  }
+  .table-scroll-wrapper > div {
+    min-width: 500px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 540px) {
+  .flow-row {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+  }
+  .flow-arrow {
+    display: none;
+  }
+  .hero-heading {
+    font-size: 20px !important;
+  }
+  .kpi-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+}

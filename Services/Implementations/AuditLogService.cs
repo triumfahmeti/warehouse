@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Warehouse.DTOs.AuditLogDto;
 using Warehouse.Models;
 using Warehouse.Repositories.Interfaces;
@@ -75,11 +76,34 @@ namespace Warehouse.Services.Implementations
             await _context.SaveChangesAsync();
         }
 
+        public async Task<List<AuditLogDto>> GetFilteredAsync(string? userId, DateTime? fromDate, DateTime? toDate, string? action, string? entity)
+        {
+            var query = _context.AuditLogs.Include(a => a.User).AsQueryable();
+
+            if (!string.IsNullOrEmpty(userId))
+                query = query.Where(a => a.UserId == userId);
+
+            if (fromDate.HasValue)
+                query = query.Where(a => a.CreatedAt >= fromDate.Value);
+
+            if (toDate.HasValue)
+                query = query.Where(a => a.CreatedAt < toDate.Value.AddDays(1));
+
+            if (!string.IsNullOrEmpty(action))
+                query = query.Where(a => a.Action.Contains(action));
+
+            if (!string.IsNullOrEmpty(entity))
+                query = query.Where(a => a.Entity.Contains(entity));
+
+            var logs = await query.OrderByDescending(a => a.CreatedAt).Take(200).ToListAsync();
+            return logs.Select(a => ToDto(a)).ToList();
+        }
+
         private static AuditLogDto ToDto(AuditLog a) => new()
         {
             Id = a.Id,
             UserId = a.UserId,
-            UserName = a.User?.UserName ?? "",
+            UserName = a.User?.Name ?? a.User?.UserName ?? "",
             Action = a.Action,
             Entity = a.Entity,
             EntityId = a.EntityId,

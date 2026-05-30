@@ -12,8 +12,8 @@ using Warehouse;
 namespace Warehouse.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260526210457_Permissions26Maj")]
-    partial class Permissions26Maj
+    [Migration("20260529234534_AddUserIdToClient")]
+    partial class AddUserIdToClient
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -296,7 +296,7 @@ namespace Warehouse.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("CreatedById")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("Email")
                         .IsRequired()
@@ -313,9 +313,20 @@ namespace Warehouse.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("UpdatedById")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("UpdatedById");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasFilter("[UserId] IS NOT NULL");
 
                     b.ToTable("Clients");
                 });
@@ -375,7 +386,7 @@ namespace Warehouse.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("CreatedById")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTime>("LastUpdated")
                         .HasColumnType("datetime2");
@@ -396,11 +407,15 @@ namespace Warehouse.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("UpdatedById")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CreatedById");
+
                     b.HasIndex("RaftId");
+
+                    b.HasIndex("UpdatedById");
 
                     b.HasIndex("ProductId", "RaftId")
                         .IsUnique();
@@ -457,7 +472,7 @@ namespace Warehouse.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("CreatedById")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("Notes")
                         .HasColumnType("nvarchar(max)");
@@ -476,14 +491,18 @@ namespace Warehouse.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("UpdatedById")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("WarehouseId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CreatedById");
+
                     b.HasIndex("SalesOrderId");
+
+                    b.HasIndex("UpdatedById");
 
                     b.HasIndex("WarehouseId");
 
@@ -525,7 +544,7 @@ namespace Warehouse.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("CreatedById")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("PackingType")
                         .HasColumnType("int");
@@ -544,13 +563,17 @@ namespace Warehouse.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("UpdatedById")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
 
                     b.HasIndex("RaftId");
 
                     b.HasIndex("SalesOrderId");
+
+                    b.HasIndex("UpdatedById");
 
                     b.ToTable("Pallets");
                 });
@@ -664,7 +687,7 @@ namespace Warehouse.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("CreatedById")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTime?>("ExpectedDeliveryDate")
                         .HasColumnType("datetime2");
@@ -683,11 +706,15 @@ namespace Warehouse.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("UpdatedById")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CreatedById");
+
                     b.HasIndex("SupplierId");
+
+                    b.HasIndex("UpdatedById");
 
                     b.ToTable("PurchaseOrders");
                 });
@@ -734,7 +761,7 @@ namespace Warehouse.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("CreatedById")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("MaxCapacity")
                         .HasColumnType("int");
@@ -747,12 +774,16 @@ namespace Warehouse.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("UpdatedById")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("WarehouseId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("UpdatedById");
 
                     b.HasIndex("WarehouseId");
 
@@ -831,7 +862,7 @@ namespace Warehouse.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("CreatedById")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTime>("OrderDate")
                         .HasColumnType("datetime2");
@@ -840,17 +871,22 @@ namespace Warehouse.Migrations
                         .HasColumnType("int");
 
                     b.Property<decimal>("TotalAmount")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("UpdatedById")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("ClientId");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("UpdatedById");
 
                     b.ToTable("SalesOrders");
                 });
@@ -925,7 +961,7 @@ namespace Warehouse.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("CreatedById")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("Notes")
                         .HasColumnType("nvarchar(max)");
@@ -944,14 +980,18 @@ namespace Warehouse.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("UpdatedById")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("WarehouseId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CreatedById");
+
                     b.HasIndex("PackingListId");
+
+                    b.HasIndex("UpdatedById");
 
                     b.HasIndex("WarehouseId");
 
@@ -982,7 +1022,7 @@ namespace Warehouse.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("CreatedById")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("Email")
                         .HasColumnType("nvarchar(max)");
@@ -998,9 +1038,13 @@ namespace Warehouse.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("UpdatedById")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("UpdatedById");
 
                     b.ToTable("Suppliers");
                 });
@@ -1107,6 +1151,30 @@ namespace Warehouse.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Warehouse.Models.Client", b =>
+                {
+                    b.HasOne("Warehouse.Models.ApplicationUser", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("Warehouse.Models.ApplicationUser", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("Warehouse.Models.ApplicationUser", "User")
+                        .WithOne()
+                        .HasForeignKey("Warehouse.Models.Client", "UserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("UpdatedBy");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Warehouse.Models.File", b =>
                 {
                     b.HasOne("Warehouse.Models.ApplicationUser", "User")
@@ -1118,6 +1186,11 @@ namespace Warehouse.Migrations
 
             modelBuilder.Entity("Warehouse.Models.Inventory", b =>
                 {
+                    b.HasOne("Warehouse.Models.ApplicationUser", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("Warehouse.Models.Product", "Product")
                         .WithMany()
                         .HasForeignKey("ProductId")
@@ -1130,9 +1203,18 @@ namespace Warehouse.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Warehouse.Models.ApplicationUser", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("CreatedBy");
+
                     b.Navigation("Product");
 
                     b.Navigation("Raft");
+
+                    b.Navigation("UpdatedBy");
                 });
 
             modelBuilder.Entity("Warehouse.Models.Notification", b =>
@@ -1144,11 +1226,21 @@ namespace Warehouse.Migrations
 
             modelBuilder.Entity("Warehouse.Models.PackingList", b =>
                 {
+                    b.HasOne("Warehouse.Models.ApplicationUser", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("Warehouse.Models.SalesOrder", "SalesOrder")
                         .WithMany()
                         .HasForeignKey("SalesOrderId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("Warehouse.Models.ApplicationUser", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("Warehouse.Models.Warehouse", "Warehouse")
                         .WithMany()
@@ -1156,7 +1248,11 @@ namespace Warehouse.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("CreatedBy");
+
                     b.Navigation("SalesOrder");
+
+                    b.Navigation("UpdatedBy");
 
                     b.Navigation("Warehouse");
                 });
@@ -1182,6 +1278,11 @@ namespace Warehouse.Migrations
 
             modelBuilder.Entity("Warehouse.Models.Pallet", b =>
                 {
+                    b.HasOne("Warehouse.Models.ApplicationUser", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("Warehouse.Models.Raft", "Raft")
                         .WithMany("Pallets")
                         .HasForeignKey("RaftId")
@@ -1194,9 +1295,18 @@ namespace Warehouse.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Warehouse.Models.ApplicationUser", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("CreatedBy");
+
                     b.Navigation("Raft");
 
                     b.Navigation("SalesOrder");
+
+                    b.Navigation("UpdatedBy");
                 });
 
             modelBuilder.Entity("Warehouse.Models.PalletItem", b =>
@@ -1220,13 +1330,27 @@ namespace Warehouse.Migrations
 
             modelBuilder.Entity("Warehouse.Models.PurchaseOrder", b =>
                 {
+                    b.HasOne("Warehouse.Models.ApplicationUser", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("Warehouse.Models.Supplier", "Supplier")
                         .WithMany()
                         .HasForeignKey("SupplierId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Warehouse.Models.ApplicationUser", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("CreatedBy");
+
                     b.Navigation("Supplier");
+
+                    b.Navigation("UpdatedBy");
                 });
 
             modelBuilder.Entity("Warehouse.Models.PurchaseOrderItem", b =>
@@ -1250,11 +1374,25 @@ namespace Warehouse.Migrations
 
             modelBuilder.Entity("Warehouse.Models.Raft", b =>
                 {
+                    b.HasOne("Warehouse.Models.ApplicationUser", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("Warehouse.Models.ApplicationUser", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("Warehouse.Models.Warehouse", "Warehouse")
                         .WithMany("Rafts")
                         .HasForeignKey("WarehouseId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("UpdatedBy");
 
                     b.Navigation("Warehouse");
                 });
@@ -1297,7 +1435,21 @@ namespace Warehouse.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Warehouse.Models.ApplicationUser", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("Warehouse.Models.ApplicationUser", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.Navigation("Client");
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("UpdatedBy");
                 });
 
             modelBuilder.Entity("Warehouse.Models.SalesOrderItem", b =>
@@ -1321,11 +1473,21 @@ namespace Warehouse.Migrations
 
             modelBuilder.Entity("Warehouse.Models.Shipment", b =>
                 {
+                    b.HasOne("Warehouse.Models.ApplicationUser", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("Warehouse.Models.PackingList", "PackingList")
                         .WithMany()
                         .HasForeignKey("PackingListId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("Warehouse.Models.ApplicationUser", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("Warehouse.Models.Warehouse", "Warehouse")
                         .WithMany()
@@ -1333,9 +1495,30 @@ namespace Warehouse.Migrations
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
+                    b.Navigation("CreatedBy");
+
                     b.Navigation("PackingList");
 
+                    b.Navigation("UpdatedBy");
+
                     b.Navigation("Warehouse");
+                });
+
+            modelBuilder.Entity("Warehouse.Models.Supplier", b =>
+                {
+                    b.HasOne("Warehouse.Models.ApplicationUser", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("Warehouse.Models.ApplicationUser", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("UpdatedBy");
                 });
 
             modelBuilder.Entity("Warehouse.Models.UserRoles", b =>

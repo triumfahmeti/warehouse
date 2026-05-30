@@ -9,5 +9,6 @@ namespace Warehouse.Services.Interfaces
         Task<AuditLogDto> CreateAsync(CreateEditAuditLogDto dto);
         Task UpdateAsync(int id, CreateEditAuditLogDto dto);
         Task DeleteAsync(int id);
+        Task<List<AuditLogDto>> GetFilteredAsync(string? userId, DateTime? fromDate, DateTime? toDate, string? action, string? entity);
     }
 }
