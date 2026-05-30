@@ -107,9 +107,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Activity row */}
-      <div style={{
-        display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 24,
-      }}>
+      <div className="admin-stat-grid">
         <StatTile icon={<Truck size={18} />} label="Total Shipments" value={stats.totalShipments} color={colors.accent} />
         <StatTile icon={<Activity size={18} />} label="Audit Log Entries" value={stats.totalAuditLogs} color={colors.info} />
         <StatTile icon={<UserCheck size={18} />} label="Active / Total" value={`${stats.activeUsers} / ${stats.totalUsers}`} color={colors.success} />

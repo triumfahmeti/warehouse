@@ -137,8 +137,8 @@ export default function AuditLogsPage() {
       ) : error ? (
         <div style={{ padding: 40, textAlign: "center", color: colors.danger, fontFamily: "var(--font-mono)" }}>{error}</div>
       ) : (
-        <div style={{ background: colors.surface, border: `1px solid ${colors.border}`, borderRadius: 12, overflow: "hidden" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <div style={{ background: colors.surface, border: `1px solid ${colors.border}`, borderRadius: 12, overflowX: "auto" }}>
+          <table style={{ width: "100%", minWidth: 820, borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ background: colors.bg }}>
                 {["#", "User", "Action", "Entity", "Entity ID", "IP Address", "Date", ""].map(h => (

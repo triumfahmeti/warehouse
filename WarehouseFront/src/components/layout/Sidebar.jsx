@@ -1,9 +1,10 @@
+import { X } from "lucide-react";
 import { colors } from "../../theme/colors";
 import { navItems, getVisibleNavItems, getVisibleGroups } from "./navItems";
 import NavLink from "./NavLink";
 import { useAuth } from "../../auth/AuthContext";
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen = false, onClose }) {
   const { user } = useAuth();
   const userRoles = user?.roles || [];
 
@@ -13,6 +14,7 @@ export default function Sidebar() {
 
   return (
     <aside
+      className={`sidebar-responsive${isOpen ? " open" : ""}`}
       style={{
         width: 240,
         height: "100vh",
@@ -34,6 +36,29 @@ export default function Sidebar() {
           gap: 10,
         }}
       >
+        {/* Buton mbyllje — vetëm mobile */}
+        <button
+          className="sidebar-close"
+          onClick={onClose}
+          aria-label="Close menu"
+          style={{
+            all: "unset",
+            position: "absolute",
+            top: 18,
+            right: 16,
+            cursor: "pointer",
+            width: 30,
+            height: 30,
+            borderRadius: 8,
+            alignItems: "center",
+            justifyContent: "center",
+            border: `1px solid ${colors.border}`,
+            background: colors.bg,
+            color: colors.text,
+          }}
+        >
+          <X size={16} />
+        </button>
         <div
           style={{
             width: 28,
@@ -92,14 +117,16 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Navigimi i filtruar */}
+      {/* Navigimi i filtruar. Klikimi i një linku mbyll sidebar-in në mobile. */}
       <nav
+        onClick={onClose}
         style={{
           flex: 1,
           padding: "0 12px",
           display: "flex",
           flexDirection: "column",
           gap: 1,
+          overflowY: "auto",
         }}
       >
         {visibleGroups.map((group, gi) => (

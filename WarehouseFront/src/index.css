@@ -78,6 +78,10 @@ body {
   display: none !important;
 }
 
+.sidebar-close {
+  display: none !important;
+}
+
 .topbar-search {
   display: flex;
 }
@@ -101,6 +105,21 @@ body {
   display: grid;
   grid-template-columns: 1.4fr 1fr;
   gap: 16px;
+}
+
+/* Admin dashboard stat tiles (3 në desktop) */
+.admin-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+/* System settings create form (2 kolona në desktop) */
+.settings-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }
 
 .dashboard-page {
@@ -133,6 +152,9 @@ body {
   .menu-toggle {
     display: flex !important;
   }
+  .sidebar-close {
+    display: flex !important;
+  }
   .topbar-search {
     display: none !important;
   }
@@ -140,6 +162,12 @@ body {
     grid-template-columns: repeat(2, 1fr);
   }
   .bottom-grid {
+    grid-template-columns: 1fr;
+  }
+  .admin-stat-grid {
+    grid-template-columns: 1fr;
+  }
+  .settings-form-grid {
     grid-template-columns: 1fr;
   }
   .dashboard-page {

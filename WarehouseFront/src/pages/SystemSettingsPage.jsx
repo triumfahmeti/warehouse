@@ -103,7 +103,7 @@ export default function SystemSettingsPage() {
       )}
 
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
+      <div className="page-header" style={{ marginBottom: 24 }}>
         <div>
           <div style={{ fontSize: 11, color: colors.textMuted, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>
             Administration
@@ -112,14 +112,16 @@ export default function SystemSettingsPage() {
             System Settings
           </h1>
         </div>
-        <button onClick={() => setShowCreate(v => !v)} style={{
-          display: "flex", alignItems: "center", gap: 6,
-          background: showCreate ? colors.border : colors.text, color: showCreate ? colors.text : colors.surface,
-          border: "none", borderRadius: 8, padding: "9px 16px",
-          fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "var(--font-sans)",
-        }}>
-          {showCreate ? <><X size={15} /> Cancel</> : <><Plus size={15} /> Add Setting</>}
-        </button>
+        <div className="page-header-actions">
+          <button onClick={() => setShowCreate(v => !v)} style={{
+            display: "flex", alignItems: "center", gap: 6,
+            background: showCreate ? colors.border : colors.text, color: showCreate ? colors.text : colors.surface,
+            border: "none", borderRadius: 8, padding: "9px 16px",
+            fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "var(--font-sans)",
+          }}>
+            {showCreate ? <><X size={15} /> Cancel</> : <><Plus size={15} /> Add Setting</>}
+          </button>
+        </div>
       </div>
 
       {/* Create form */}
@@ -127,7 +129,7 @@ export default function SystemSettingsPage() {
         <div style={{ background: colors.surface, border: `1px solid ${colors.border}`, borderRadius: 12, padding: 20, marginBottom: 20 }}>
           <h3 style={{ margin: "0 0 16px", fontSize: 14, fontWeight: 600, color: colors.text, fontFamily: "var(--font-sans)" }}>New Setting</h3>
           <form onSubmit={handleCreate}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div className="settings-form-grid">
               <Field label="Key">
                 <input required style={inputStyle} value={createForm.key} onChange={e => setCreateForm(f => ({ ...f, key: e.target.value }))} placeholder="setting.key" />
               </Field>
@@ -156,8 +158,8 @@ export default function SystemSettingsPage() {
       ) : error ? (
         <div style={{ padding: 40, textAlign: "center", color: colors.danger, fontFamily: "var(--font-mono)" }}>{error}</div>
       ) : (
-        <div style={{ background: colors.surface, border: `1px solid ${colors.border}`, borderRadius: 12, overflow: "hidden" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <div style={{ background: colors.surface, border: `1px solid ${colors.border}`, borderRadius: 12, overflowX: "auto" }}>
+          <table style={{ width: "100%", minWidth: 680, borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ background: colors.bg }}>
                 {["Key", "Value", "Description", "Updated At", "Actions"].map(h => (

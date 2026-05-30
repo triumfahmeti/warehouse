@@ -174,7 +174,7 @@ export default function UserManagementPage() {
       )}
 
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
+      <div className="page-header" style={{ marginBottom: 24 }}>
         <div>
           <div style={{ fontSize: 11, color: colors.textMuted, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>
             Administration
@@ -183,14 +183,16 @@ export default function UserManagementPage() {
             User Management
           </h1>
         </div>
-        <button onClick={() => setCreateModal(true)} style={{
-          display: "flex", alignItems: "center", gap: 6,
-          background: colors.text, color: colors.surface,
-          border: "none", borderRadius: 8, padding: "9px 16px",
-          fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "var(--font-sans)",
-        }}>
-          <Plus size={15} /> Create User
-        </button>
+        <div className="page-header-actions">
+          <button onClick={() => setCreateModal(true)} style={{
+            display: "flex", alignItems: "center", gap: 6,
+            background: colors.text, color: colors.surface,
+            border: "none", borderRadius: 8, padding: "9px 16px",
+            fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "var(--font-sans)",
+          }}>
+            <Plus size={15} /> Create User
+          </button>
+        </div>
       </div>
 
       {/* Table */}
@@ -199,8 +201,8 @@ export default function UserManagementPage() {
       ) : error ? (
         <div style={{ padding: 40, textAlign: "center", color: colors.danger, fontFamily: "var(--font-mono)" }}>{error}</div>
       ) : (
-        <div style={{ background: colors.surface, border: `1px solid ${colors.border}`, borderRadius: 12, overflow: "hidden" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <div style={{ background: colors.surface, border: `1px solid ${colors.border}`, borderRadius: 12, overflowX: "auto" }}>
+          <table style={{ width: "100%", minWidth: 760, borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ background: colors.bg }}>
                 {["Name", "Email", "Roles", "Status", "Created", "Last Login", "Actions"].map(h => (
