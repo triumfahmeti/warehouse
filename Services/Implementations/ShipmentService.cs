@@ -1,5 +1,9 @@
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.SignalR;
+using Warehouse.DTOs.NotificationDto;
 using Warehouse.DTOs.ShipmentDto;
 using Warehouse.Enums;
+using Warehouse.Hubs;
 using Warehouse.Models;
 using Warehouse.Repositories.Interfaces;
 using Warehouse.Services.Interfaces;
@@ -12,17 +16,26 @@ namespace Warehouse.Services.Implementations
         private readonly IPackingListRepository _packingListRepository;
         private readonly IInventoryRepository _inventoryRepository;
         private readonly AppDbContext _context;
+        private readonly INotificationService _notificationService;
+        private readonly IHubContext<NotificationHub> _hubContext;
+        private readonly UserManager<ApplicationUser> _userManager;
 
         public ShipmentService(
             IShipmentRepository shipmentRepository,
             IPackingListRepository packingListRepository,
             IInventoryRepository inventoryRepository,
-            AppDbContext context)
+            AppDbContext context,
+            INotificationService notificationService,
+            IHubContext<NotificationHub> hubContext,
+            UserManager<ApplicationUser> userManager)
         {
             _shipmentRepository = shipmentRepository;
             _packingListRepository = packingListRepository;
             _inventoryRepository = inventoryRepository;
             _context = context;
+            _notificationService = notificationService;
+            _hubContext = hubContext;
+            _userManager = userManager;
         }
 
         public async Task<List<ShipmentDto>> GetAllAsync()
@@ -98,7 +111,6 @@ namespace Warehouse.Services.Implementations
                             var toDeduct = Math.Min(inv.QuantityOnHand, remaining);
                             inv.QuantityOnHand -= toDeduct;
                             await _inventoryRepository.UpdateAsync(inv);
-
                             remaining -= toDeduct;
 
                             if (remaining == 0)
@@ -114,6 +126,18 @@ namespace Warehouse.Services.Implementations
                 await _shipmentRepository.UpdateAsync(shipment);
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
+
+                // Njoftim te te gjithe Employee-t: dergesa u nis
+                var employees = await _userManager.GetUsersInRoleAsync("Employee");
+                foreach (var employee in employees)
+                {
+                    await SendNotification(
+                        userId: employee.Id,
+                        type: "Shipment",
+                        title: "Shipment Shipped",
+                        message: $"Shipment {shipment.ShipmentNumber} has been shipped successfully."
+                    );
+                }
             }
             catch
             {
@@ -133,6 +157,18 @@ namespace Warehouse.Services.Implementations
             shipment.Status = ShipmentStatus.Delivered;
             await _shipmentRepository.UpdateAsync(shipment);
             await _context.SaveChangesAsync();
+
+            // Njoftim te te gjithe Employee-t: dergesa u dorezua
+            var employees = await _userManager.GetUsersInRoleAsync("Employee");
+            foreach (var employee in employees)
+            {
+                await SendNotification(
+                    userId: employee.Id,
+                    type: "Shipment",
+                    title: "Shipment Delivered",
+                    message: $"Shipment {shipment.ShipmentNumber} has been delivered."
+                );
+            }
         }
 
         public async Task CancelAsync(int id)
@@ -148,6 +184,19 @@ namespace Warehouse.Services.Implementations
             await _context.SaveChangesAsync();
         }
 
+        private async Task SendNotification(string userId, string type, string title, string message)
+        {
+            var notification = await _notificationService.CreateAsync(new CreateEditNotificationDto
+            {
+                UserId = userId,
+                Type = type,
+                Title = title,
+                Message = message
+            });
+
+            await _hubContext.Clients.All.SendAsync("ReceiveNotification", notification);
+        }
+
         private static ShipmentDto ToDto(Shipment s) => new()
         {
             Id = s.Id,
@@ -158,7 +207,6 @@ namespace Warehouse.Services.Implementations
             WarehouseName = s.Warehouse?.Name ?? "",
             PackingListId = s.PackingListId,
             PackingListNumber = s.PackingList?.PackingListNumber ?? "",
-            //CreatedAt = s.CreatedAt
         };
     }
 }
