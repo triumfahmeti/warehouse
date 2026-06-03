@@ -209,19 +209,26 @@ export default function SalesOrdersPage() {
               Choose products and quantities. A manager will set the prices, then you can confirm the order.
             </p>
             <label style={labelStyle}>Items</label>
-            {lines.map((l, i) => (
-              <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 32px', gap: 8, marginBottom: 8, alignItems: 'center' }}>
-                <select required style={inputStyle} value={l.productId} onChange={e => setLine(i, { productId: e.target.value })}>
-                  <option value="" disabled>Product...</option>
-                  {products.map(p => <option key={p.id} value={p.id} disabled={p.stock <= 0}>{p.name} ({p.stock} in stock)</option>)}
-                </select>
-                <input required type="number" min="1" placeholder="Qty" style={inputStyle} value={l.quantity} onChange={e => setLine(i, { quantity: e.target.value })} />
-                <button type="button" onClick={() => removeLine(i)} title="Remove" disabled={lines.length === 1}
-                  style={{ all: 'unset', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 7, cursor: lines.length === 1 ? 'not-allowed' : 'pointer', color: colors.textMuted, opacity: lines.length === 1 ? 0.4 : 1 }}>
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            ))}
+            {lines.map((l, i) => {
+              const sel = products.find(p => p.id === Number(l.productId));
+              const maxQty = sel ? (sel.availableToOrder ?? 0) : undefined;
+              return (
+                <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 32px', gap: 8, marginBottom: 8, alignItems: 'center' }}>
+                  <select required style={inputStyle} value={l.productId} onChange={e => setLine(i, { productId: e.target.value })}>
+                    <option value="" disabled>Product...</option>
+                    {products.map(p => {
+                      const avail = p.availableToOrder ?? 0;
+                      return <option key={p.id} value={p.id} disabled={avail <= 0}>{p.name} ({avail} available)</option>;
+                    })}
+                  </select>
+                  <input required type="number" min="1" max={maxQty} placeholder="Qty" style={inputStyle} value={l.quantity} onChange={e => setLine(i, { quantity: e.target.value })} />
+                  <button type="button" onClick={() => removeLine(i)} title="Remove" disabled={lines.length === 1}
+                    style={{ all: 'unset', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 7, cursor: lines.length === 1 ? 'not-allowed' : 'pointer', color: colors.textMuted, opacity: lines.length === 1 ? 0.4 : 1 }}>
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              );
+            })}
             <button type="button" onClick={addLine} style={{ all: 'unset', display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 4, fontSize: 13, color: colors.text, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
               <Plus size={14} /> Add item
             </button>

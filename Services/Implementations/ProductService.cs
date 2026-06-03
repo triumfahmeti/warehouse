@@ -22,16 +22,26 @@ namespace Warehouse.Services.Implementations
         {
             var products = await _repository.GetAllAsync();
 
-            // Sasia e disponueshme per produkt (shuma neper rafte).
+            // Stoku fizik i lire per produkt (QuantityOnHand − Reserved, neper rafte).
             var stockMap = await _context.Inventories
                 .GroupBy(i => i.ProductId)
                 .Select(g => new { ProductId = g.Key, Available = g.Sum(i => i.QuantityOnHand - i.ReservedQuantity) })
                 .ToDictionaryAsync(x => x.ProductId, x => x.Available);
 
+            // Demanda e porosive ende te pakonfirmuara (status New) — kane "zene" stok pa rezervuar.
+            var pendingMap = await _context.SalesOrderItems
+                .Where(soi => soi.SalesOrder.Status == SalesOrderStatus.New)
+                .GroupBy(soi => soi.ProductId)
+                .Select(g => new { ProductId = g.Key, Demand = g.Sum(x => x.Quantity) })
+                .ToDictionaryAsync(x => x.ProductId, x => x.Demand);
+
             return products.Select(p =>
             {
                 var dto = ToDto(p);
-                dto.Stock = stockMap.TryGetValue(p.Id, out var s) ? s : 0;
+                var physical = stockMap.TryGetValue(p.Id, out var s) ? s : 0;
+                var pending = pendingMap.TryGetValue(p.Id, out var d) ? d : 0;
+                dto.Stock = physical;
+                dto.AvailableToOrder = Math.Max(0, physical - pending);
                 return dto;
             }).ToList();
         }
