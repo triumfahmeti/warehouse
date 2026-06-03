@@ -16,5 +16,6 @@ namespace Warehouse.DTOs.Product
         public decimal Height { get; set; }
         public decimal Weight { get; set; }
         public string Type { get; set; } = null!;
+        public int Stock { get; set; }   // sasia e disponueshme (QuantityOnHand − Reserved) ne te gjitha raftet
     }
 }

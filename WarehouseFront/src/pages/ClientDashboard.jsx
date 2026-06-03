@@ -18,6 +18,10 @@ import KpiCard from "../components/ui/KpiCard";
 import StatusBadge from "../components/ui/StatusBadge";
 import { PrimaryButton } from "../components/ui/Button";
 
+// Statuset e SalesOrder vijnë si numra nga MyOrderDto (enum) — i kthejmë në emër.
+const SO_STATUS = ["New", "Confirmed", "Processing", "Completed", "Cancelled"];
+const statusName = (s) => (typeof s === "number" ? (SO_STATUS[s] ?? String(s)) : s);
+
 // Dashboard i dedikuar për rolin Client.
 // - KPIs nga backend (me fallback nga mock nëse endpoint nuk ekziston)
 // - Lista (Recent Orders, Active Shipments) nga mock data për fillim
@@ -37,8 +41,8 @@ export default function ClientDashboard() {
         setStats(statsData);
         setOrders(ordersData);
       })
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
+      .catch((e) => setStatsError(e.message))
+      .finally(() => setStatsLoading(false));
   }, []);
 
   // Fallback: kalkulim lokal nëse API dështoi
@@ -301,10 +305,11 @@ export default function ClientDashboard() {
                     marginTop: 2,
                   }}
                 >
-                  €{o.total.toFixed(2)} · {o.date}
+                  €{(o.totalAmount ?? 0).toFixed(2)} ·{" "}
+                  {o.orderDate ? new Date(o.orderDate).toLocaleDateString("sq-AL") : ""}
                 </div>
               </div>
-              <StatusBadge status={o.status} />
+              <StatusBadge status={statusName(o.status)} />
             </div>
           ))}
         </div>

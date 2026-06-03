@@ -42,10 +42,16 @@ namespace Warehouse.Controllers
 
             var lastLoginMap = lastLogins.ToDictionary(x => x.UserId, x => (DateTime?)x.LastLogin);
 
+            // Rekordet Client (telefoni/adresa jetojne aty per user-at me rol Client).
+            var clientMap = await _context.Clients
+                .Where(c => c.UserId != null)
+                .ToDictionaryAsync(c => c.UserId!, c => c);
+
             var result = new List<UserDto>();
             foreach (var user in users)
             {
                 var roles = await _userManager.GetRolesAsync(user);
+                clientMap.TryGetValue(user.Id, out var client);
                 result.Add(new UserDto
                 {
                     Id = user.Id,
@@ -54,7 +60,9 @@ namespace Warehouse.Controllers
                     IsActive = user.IsActive,
                     CreatedAt = user.CreatedAt,
                     Roles = roles.ToList(),
-                    LastLoginAt = lastLoginMap.TryGetValue(user.Id, out var ll) ? ll : null
+                    LastLoginAt = lastLoginMap.TryGetValue(user.Id, out var ll) ? ll : null,
+                    PhoneNumber = client?.PhoneNumber,
+                    Address = client?.Address
                 });
             }
 
@@ -86,7 +94,18 @@ namespace Warehouse.Controllers
             if (!result.Succeeded)
                 return BadRequest(new { message = string.Join("; ", result.Errors.Select(e => e.Description)) });
 
-            var newValue = JsonSerializer.Serialize(new { dto.Name, dto.Email, dto.PhoneNumber });
+            // Per user-at Client, telefoni/adresa ruhen te rekordi Client i lidhur.
+            var client = await _context.Clients.FirstOrDefaultAsync(c => c.UserId == user.Id);
+            if (client != null)
+            {
+                client.FullName = dto.Name;
+                client.Email = dto.Email;
+                client.PhoneNumber = dto.PhoneNumber;
+                client.Address = dto.Address;
+                await _context.SaveChangesAsync();
+            }
+
+            var newValue = JsonSerializer.Serialize(new { dto.Name, dto.Email, dto.PhoneNumber, dto.Address });
             await LogUserActionAsync("Update User", user, oldValue, newValue);
 
             return NoContent();

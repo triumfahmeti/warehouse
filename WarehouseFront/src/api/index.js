@@ -10,19 +10,19 @@
 import { http } from './client';
 
 export const warehousesApi = {
-  getAll: () => http.get('/warehouse'),
-  getById: id => http.get(`/warehouse/${id}`),
-  create: data => http.post('/warehouse', data),
-  update: (id, data) => http.put(`/warehouse/${id}`, data),
-  remove: id => http.del(`/warehouse/${id}`),
+  getAll: () => http.get('/warehouses'),
+  getById: id => http.get(`/warehouses/${id}`),
+  create: data => http.post('/warehouses', data),
+  update: (id, data) => http.put(`/warehouses/${id}`, data),
+  remove: id => http.del(`/warehouses/${id}`),
 };
 
 export const raftsApi = {
-  getAll: () => http.get('/raft'),
-  getById: id => http.get(`/raft/${id}`),
-  create: data => http.post('/raft', data),
-  update: (id, data) => http.put(`/raft/${id}`, data),
-  remove: id => http.del(`/raft/${id}`),
+  getAll: () => http.get('/rafts'),
+  getById: id => http.get(`/rafts/${id}`),
+  create: data => http.post('/rafts', data),
+  update: (id, data) => http.put(`/rafts/${id}`, data),
+  remove: id => http.del(`/rafts/${id}`),
 };
 
 export const productsApi = {
@@ -40,20 +40,41 @@ export const inventoryApi = {
 };
 
 export const clientsApi = {
-  getAll: () => http.get('/client'),
-  getById: id => http.get(`/client/${id}`),
-  create: data => http.post('/client', data),
-  update: (id, data) => http.put(`/client/${id}`, data),
-  remove: id => http.del(`/client/${id}`),
+  getAll: () => http.get('/clients'),
+  create: data => http.post('/clients', data),
+  update: (id, data) => http.put(`/clients/${id}`, data),
+  getOrders: id => http.get(`/clients/${id}/orders`),
   getMyOrders: () => http.get('/clients/my-orders'),
   getMyStats: () => http.get('/clients/my-stats'),
 };
 
 export const salesOrdersApi = {
-  getAll: () => http.get('/salesorder'),
+  getAll: () => http.get('/salesorder'),                 // Manager/Admin: të gjitha
+  getMine: () => http.get('/salesorder/mine'),           // Client: të vetat
   getById: id => http.get(`/salesorder/${id}`),
-  create: data => http.post('/salesorder', data),
-  update: (id, data) => http.put(`/salesorder/${id}`, data),
+  create: items => http.post('/salesorder', { items }),  // Client krijon (pa çmim)
+  setPrices: (id, items) => http.patch(`/salesorder/${id}/set-prices`, items), // Manager
+  confirm: id => http.patch(`/salesorder/${id}/confirm`),// Client konfirmon
+  cancel: id => http.patch(`/salesorder/${id}/cancel`),  // Manager (cilendo) ose Client (te veten)
+};
+
+export const suppliersApi = {
+  getAll: () => http.get('/suppliers'),
+  getById: id => http.get(`/suppliers/${id}`),
+  create: data => http.post('/suppliers', data),
+  update: (id, data) => http.put(`/suppliers/${id}`, data),
+  remove: id => http.del(`/suppliers/${id}`),
+};
+
+// Purchase Orders — porositë drejt supplier-ëve.
+// Flow: create (Pending) → approve (Approved) → receive me raft për çdo item (Received) → close.
+export const purchaseOrdersApi = {
+  getAll: () => http.get('/purchaseorders'),
+  getById: id => http.get(`/purchaseorders/${id}`),
+  create: data => http.post('/purchaseorders', data),
+  receive: (id, data) => http.post(`/purchaseorders/${id}/receive`, data),
+  cancel: id => http.post(`/purchaseorders/${id}/cancel`),
+  close: id => http.post(`/purchaseorders/${id}/close`),
 };
 
 export const palletsApi = {

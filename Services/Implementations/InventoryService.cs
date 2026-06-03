@@ -57,8 +57,46 @@ namespace Warehouse.Services.Implementations
                 NewValue = BuildStateString(newQoh, newReserved)
             });
         }
+        public async Task<List<InventoryDto>> GetAllAsync()
+        {
+            return await _context.Inventories
+                .Include(i => i.Product)
+                .Include(i => i.Raft).ThenInclude(r => r.Warehouse)
+                .OrderBy(i => i.Raft.RaftNumber)
+                .Select(i => new InventoryDto
+                {
+                    Id = i.Id,
+                    ProductId = i.ProductId,
+                    ProductName = i.Product.Name,
+                    Sku = i.Product.SKU,
+                    RaftId = i.RaftId,
+                    RaftNumber = i.Raft.RaftNumber,
+                    WarehouseName = i.Raft.Warehouse.Name,
+                    QuantityOnHand = i.QuantityOnHand,
+                    ReservedQuantity = i.ReservedQuantity,
+                    AvailableQuantity = i.QuantityOnHand - i.ReservedQuantity
+                })
+                .ToListAsync();
+        }
+
         public async Task AddStock(int productId, int raftId, int quantity)
         {
+            // Kontroll kapaciteti: shuma e QuantityOnHand ne raft + sasia e re nuk duhet ta kaloje MaxCapacity.
+            var raft = await _context.Rafts.FindAsync(raftId);
+            if (raft == null)
+                throw new InvalidOperationException("Raft not found");
+
+            var currentUsed = await _context.Inventories
+                .Where(i => i.RaftId == raftId)
+                .SumAsync(i => i.QuantityOnHand);
+
+            if (currentUsed + quantity > raft.MaxCapacity)
+            {
+                var available = raft.MaxCapacity - currentUsed;
+                throw new InvalidOperationException(
+                    $"Raft '{raft.RaftNumber}' does not have enough capacity. Available: {available} of {raft.MaxCapacity}, requested: {quantity}.");
+            }
+
             var inventory = await _inventoryRepository.GetInventoryByProductAndRaft(productId, raftId);
             if (inventory == null)
             {

@@ -1,7 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Search,
-  Download,
   Eye,
   X,
   Mail,
@@ -10,24 +9,51 @@ import {
   ShoppingCart,
 } from "lucide-react";
 import { colors } from "../theme/colors";
-import { mockData } from "../data/mockData";
+import { clientsApi } from "../api";
+import PageHeader from "../components/ui/PageHeader";
 import Table from "../components/ui/Table";
 
 export default function ClientsPage() {
+  const [clients, setClients] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [query, setQuery] = useState("");
   const [detail, setDetail] = useState(null);
+  const [showFilter, setShowFilter] = useState(false);
+  const [sortBy, setSortBy] = useState(""); // '' | orders-desc | orders-asc | name-asc | name-desc
+
+  // Lidhja me API-në: mapojmë fushat e DTO-së në formën që pret tabela.
+  useEffect(() => {
+    (async () => {
+      try {
+        const data = await clientsApi.getAll();
+        setClients(data.map((c) => ({
+          id: c.id,
+          name: c.fullName,
+          email: c.email,
+          phone: c.phoneNumber,
+          address: c.address,
+          orders: c.ordersCount,
+        })));
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
   // Filtrim sipas emrit, email-it ose telefonit.
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return mockData.clients;
-    return mockData.clients.filter(
+    if (!q) return clients;
+    return clients.filter(
       (c) =>
-        c.name.toLowerCase().includes(q) ||
-        c.email.toLowerCase().includes(q) ||
+        (c.name || "").toLowerCase().includes(q) ||
+        (c.email || "").toLowerCase().includes(q) ||
         (c.phone || "").toLowerCase().includes(q),
     );
-  }, [query]);
+  }, [query, clients]);
 
   // Export i listës aktuale (të filtruar) si CSV.
   const exportCsv = () => {
@@ -53,93 +79,72 @@ export default function ClientsPage() {
     URL.revokeObjectURL(url);
   };
 
+  const toggleFilter = () => {
+    setShowFilter((v) => {
+      if (v) { setQuery(""); setSortBy(""); } // mbyllja pastron kërkimin + renditjen
+      return !v;
+    });
+  };
+
+  // Renditje sipas porosive ose emrit (kopje që të mos mutohet 'filtered').
+  const sorted = [...filtered];
+  const comparators = {
+    "orders-desc": (a, b) => b.orders - a.orders,
+    "orders-asc": (a, b) => a.orders - b.orders,
+    "name-asc": (a, b) => (a.name || "").localeCompare(b.name || ""),
+    "name-desc": (a, b) => (b.name || "").localeCompare(a.name || ""),
+  };
+  if (comparators[sortBy]) sorted.sort(comparators[sortBy]);
+
   return (
     <div className="page-content">
-      {/* Header: titull + numërues + search + export (pa New Client) */}
-      <div className="page-header">
-        <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-          <h2
-            style={{
-              margin: 0,
-              fontSize: 18,
-              fontWeight: 600,
-              color: colors.text,
-              fontFamily: "var(--font-sans)",
-              letterSpacing: "-0.02em",
-            }}
-          >
-            Clients
-          </h2>
-          <span
-            style={{
-              fontSize: 12,
-              color: colors.textMuted,
-              fontFamily: "var(--font-mono)",
-            }}
-          >
-            {filtered.length} / {mockData.clients.length}
-          </span>
-        </div>
-        <div
-          className="page-header-actions"
-          style={{ display: "flex", gap: 8, alignItems: "center" }}
-        >
-          {/* Search */}
-          <div
-            style={{
-              position: "relative",
-              display: "flex",
-              alignItems: "center",
-            }}
-          >
-            <Search
-              size={14}
-              color={colors.textMuted}
-              style={{ position: "absolute", left: 10, pointerEvents: "none" }}
-            />
+      <PageHeader
+        title="Clients"
+        count={sorted.length}
+        onFilter={toggleFilter}
+        onExport={exportCsv}
+        filterActive={showFilter}
+      />
+
+      {/* Shiriti i filtrit: kërkim + renditje */}
+      {showFilter && (
+        <div style={{ marginBottom: 16, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+          <div style={{ position: "relative", flex: 1, minWidth: 220, maxWidth: 320 }}>
+            <Search size={14} color={colors.textMuted} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
             <input
+              autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search Clients..."
-              style={{
-                padding: "7px 12px 7px 30px",
-                borderRadius: 8,
-                border: `1px solid ${colors.border}`,
-                background: colors.surface,
-                color: colors.text,
-                fontSize: 13,
-                fontFamily: "var(--font-sans)",
-                outline: "none",
-                width: 200,
-              }}
+              placeholder="Search by name, email or phone..."
+              style={{ width: "100%", padding: "8px 12px 8px 32px", borderRadius: 8, border: `1px solid ${colors.border}`, background: colors.surface, color: colors.text, fontSize: 13, fontFamily: "var(--font-sans)", outline: "none", boxSizing: "border-box" }}
             />
           </div>
-          {/* Export */}
-          <button
-            onClick={exportCsv}
-            style={{
-              all: "unset",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "7px 12px",
-              borderRadius: 8,
-              background: colors.surface,
-              border: `1px solid ${colors.border}`,
-              color: colors.text,
-              fontSize: 13,
-              fontWeight: 500,
-              cursor: "pointer",
-              fontFamily: "var(--font-sans)",
-            }}
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            style={{ padding: "8px 12px", borderRadius: 8, border: `1px solid ${colors.border}`, background: colors.surface, color: colors.text, fontSize: 13, fontFamily: "var(--font-sans)", outline: "none", cursor: "pointer" }}
           >
-            <Download size={13} /> Export CSV
-          </button>
+            <option value="">Sort by: Default</option>
+            <option value="orders-desc">Orders (high → low)</option>
+            <option value="orders-asc">Orders (low → high)</option>
+            <option value="name-asc">Name (A → Z)</option>
+            <option value="name-desc">Name (Z → A)</option>
+          </select>
         </div>
-      </div>
+      )}
 
+      {loading ? (
+        <div style={{ padding: 40, textAlign: "center", color: colors.textMuted, fontFamily: "var(--font-mono)", fontSize: 13 }}>
+          Loading...
+        </div>
+      ) : error ? (
+        <div style={{ padding: 40, textAlign: "center", color: colors.danger, fontFamily: "var(--font-mono)", fontSize: 13 }}>
+          {error}
+        </div>
+      ) : (
+        <>
       <Table
-        rows={filtered}
+        rows={sorted}
         columns={[
           {
             key: "id",
@@ -274,7 +279,7 @@ export default function ClientsPage() {
         ]}
       />
 
-      {filtered.length === 0 && (
+      {sorted.length === 0 && (
         <div
           style={{
             padding: 32,
@@ -284,8 +289,10 @@ export default function ClientsPage() {
             fontSize: 13,
           }}
         >
-          Asnjë klient nuk u gjet për "{query}".
+          No clients found{query ? ` for "${query}"` : ""}.
         </div>
+      )}
+        </>
       )}
 
       {/* Detajet e klientit */}

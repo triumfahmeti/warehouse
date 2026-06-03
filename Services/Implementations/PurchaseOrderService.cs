@@ -26,7 +26,47 @@ namespace Warehouse.Services.Implementations
             _context = context;
         }
 
-        public async Task<int> CreatePurchaseOrder(int supplierId, List<CreatePurchaseOrderItemDto> items)
+        public async Task<List<PurchaseOrderDto>> GetAllAsync()
+        {
+            var orders = await _context.PurchaseOrders
+                .Include(o => o.Supplier)
+                .Include(o => o.Items).ThenInclude(i => i.Product)
+                .OrderByDescending(o => o.OrderDate)
+                .ToListAsync();
+
+            return orders.Select(MapToDto).ToList();
+        }
+
+        public async Task<PurchaseOrderDto?> GetByIdAsync(int purchaseOrderId)
+        {
+            var order = await _context.PurchaseOrders
+                .Include(o => o.Supplier)
+                .Include(o => o.Items).ThenInclude(i => i.Product)
+                .FirstOrDefaultAsync(o => o.Id == purchaseOrderId);
+
+            return order == null ? null : MapToDto(order);
+        }
+
+        private static PurchaseOrderDto MapToDto(PurchaseOrder o) => new PurchaseOrderDto
+        {
+            Id = o.Id,
+            SupplierId = o.SupplierId,
+            SupplierName = o.Supplier?.Name,
+            OrderDate = o.OrderDate,
+            ExpectedDeliveryDate = o.ExpectedDeliveryDate,
+            Status = o.Status.ToString(),
+            TotalAmount = o.Items?.Sum(i => i.Quantity * i.UnitPrice) ?? 0,
+            Items = o.Items?.Select(i => new PurchaseOrderItemDto
+            {
+                Id = i.Id,
+                ProductId = i.ProductId,
+                ProductName = i.Product?.Name,
+                Quantity = i.Quantity,
+                UnitPrice = i.UnitPrice
+            }).ToList() ?? new List<PurchaseOrderItemDto>()
+        };
+
+        public async Task<int> CreatePurchaseOrder(int supplierId, DateTime? expectedDeliveryDate, List<CreatePurchaseOrderItemDto> items)
         {
             if (items == null || items.Count == 0)
             {
@@ -52,6 +92,7 @@ namespace Warehouse.Services.Implementations
             var order = new PurchaseOrder
             {
                 SupplierId = supplierId,
+                ExpectedDeliveryDate = expectedDeliveryDate,
                 Status = PurchaseOrderStatus.Pending,
                 Items = items.Select(i => new PurchaseOrderItem
                 {
@@ -64,30 +105,6 @@ namespace Warehouse.Services.Implementations
             await _purchaseOrderRepository.AddAsync(order);
             await _context.SaveChangesAsync();
             return order.Id;
-        }
-
-        public async Task ApprovePurchaseOrder(int purchaseOrderId)
-        {
-            var order = await _purchaseOrderRepository.GetOrderWithItems(purchaseOrderId);
-
-            if (order == null)
-            {
-                throw new InvalidOperationException("Purchase order not found");
-            }
-
-            if (order.Status != PurchaseOrderStatus.Pending)
-            {
-                throw new InvalidOperationException("Only pending orders can be approved");
-            }
-
-            if (order.Items == null || !order.Items.Any())
-            {
-                throw new InvalidOperationException("Purchase order has no items");
-            }
-
-            order.Status = PurchaseOrderStatus.Approved;
-            await _purchaseOrderRepository.UpdateAsync(order);
-            await _context.SaveChangesAsync();
         }
 
         public async Task ReceivePurchaseOrder(int purchaseOrderId, List<ReceivePurchaseOrderItemDto> items)
@@ -104,9 +121,9 @@ namespace Warehouse.Services.Implementations
                     throw new InvalidOperationException("Purchase order not found");
                 }
 
-                if (order.Status != PurchaseOrderStatus.Approved)
+                if (order.Status != PurchaseOrderStatus.Pending)
                 {
-                    throw new InvalidOperationException("Only approved orders can be received");
+                    throw new InvalidOperationException("Only pending orders can be received");
                 }
 
                 order.Status = PurchaseOrderStatus.Received;
@@ -173,9 +190,9 @@ namespace Warehouse.Services.Implementations
                 throw new InvalidOperationException("Purchase order not found");
             }
 
-            if (order.Status != PurchaseOrderStatus.Approved)
+            if (order.Status != PurchaseOrderStatus.Pending)
             {
-                throw new InvalidOperationException("Only approved orders can add received stock");
+                throw new InvalidOperationException("Only pending orders can add received stock");
             }
 
             if (order.Items == null || !order.Items.Any())

@@ -10,7 +10,8 @@ const outlineBtn = {
 };
 
 // Header i faqes: titull + numërues + butona Filter/Export + action opsional.
-export default function PageHeader({ title, count, action }) {
+// onFilter/onExport jane opsionale; nese nuk kalohen, butonat mbeten inerte (si me pare).
+export default function PageHeader({ title, count, action, onFilter, onExport, filterActive }) {
   return (
     <div className="page-header">
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
@@ -23,8 +24,13 @@ export default function PageHeader({ title, count, action }) {
         }}>{count} total</span>
       </div>
       <div className="page-header-actions">
-        <button style={outlineBtn}><Filter size={13} /> Filter</button>
-        <button style={outlineBtn}><Download size={13} /> Export</button>
+        <button
+          onClick={onFilter}
+          style={{ ...outlineBtn, ...(filterActive ? { background: colors.text, color: colors.surface, borderColor: colors.text } : {}) }}
+        >
+          <Filter size={13} /> Filter
+        </button>
+        <button style={outlineBtn} onClick={onExport}><Download size={13} /> Export</button>
         {action}
       </div>
     </div>

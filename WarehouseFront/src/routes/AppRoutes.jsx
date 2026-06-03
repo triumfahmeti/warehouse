@@ -8,6 +8,8 @@ import WarehousesPage from "../pages/WarehousesPage";
 import RaftsPage from "../pages/RaftsPage";
 import ProductsPage from "../pages/ProductsPage";
 import InventoryPage from "../pages/InventoryPage";
+import PurchaseOrdersPage from "../pages/PurchaseOrdersPage";
+import SuppliersPage from "../pages/SuppliersPage";
 import ClientsPage from "../pages/ClientsPage";
 import SalesOrdersPage from "../pages/SalesOrdersPage";
 import PalletsPage from "../pages/PalletsPage";
@@ -36,11 +38,13 @@ export default function AppRoutes() {
           <Route path="/" element={<DashboardPage />} />
           <Route path="/shipments" element={<ShipmentsPage />} />
           <Route path="/sales-orders" element={<SalesOrdersPage />} />
+          <Route path="/products" element={<ProductsPage />} />
 
           {/* Vetëm Admin + Manager */}
           <Route element={<RoleRoute allowedRoles={["Admin", "Manager"]} />}>
             <Route path="/warehouses" element={<WarehousesPage />} />
             <Route path="/rafts" element={<RaftsPage />} />
+            <Route path="/suppliers" element={<SuppliersPage />} />
             <Route path="/clients" element={<ClientsPage />} />
           </Route>
 
@@ -50,8 +54,8 @@ export default function AppRoutes() {
               <RoleRoute allowedRoles={["Admin", "Manager", "Worker"]} />
             }
           >
-            <Route path="/products" element={<ProductsPage />} />
             <Route path="/inventory" element={<InventoryPage />} />
+            <Route path="/purchase-orders" element={<PurchaseOrdersPage />} />
             <Route path="/pallets" element={<PalletsPage />} />
             <Route path="/packing-lists" element={<PackingListsPage />} />
           </Route>

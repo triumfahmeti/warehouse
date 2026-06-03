@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -94,6 +95,11 @@ namespace Warehouse
             modelBuilder.Entity<Product>()
                 .Property(p => p.Weight)
                 .HasPrecision(18, 3);
+
+            // Ruajme ProductType si string ne DB (kolona mbetet nvarchar, lexueshme).
+            modelBuilder.Entity<Product>()
+                .Property(p => p.Type)
+                .HasConversion<string>();
 
             modelBuilder.Entity<PurchaseOrderItem>()
                 .Property(poi => poi.UnitPrice)
@@ -199,6 +205,12 @@ namespace Warehouse
         private static readonly HashSet<string> AuditIgnoredProps = new()
         {
             "CreatedAt", "CreatedById", "UpdatedAt", "UpdatedById"
+        };
+
+        // Serializojme enum-et si emra (psh. "Received") jo si numra ("2") qe audit-i te jete i lexueshem.
+        private static readonly JsonSerializerOptions AuditJsonOptions = new()
+        {
+            Converters = { new JsonStringEnumConverter() }
         };
 
         public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
@@ -328,7 +340,7 @@ namespace Warehouse
                 dict[p.Metadata.Name] = original ? p.OriginalValue : p.CurrentValue;
             }
 
-            return JsonSerializer.Serialize(dict);
+            return JsonSerializer.Serialize(dict, AuditJsonOptions);
         }
 
         private static int? TryGetId(EntityEntry entry)

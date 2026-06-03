@@ -104,7 +104,9 @@ namespace Warehouse.Services.Implementations
             RaftNumber = r.RaftNumber,
             WarehouseId = r.WarehouseId,
             WarehouseName = r.Warehouse?.Name,
-            MaxCapacity = r.MaxCapacity
+            MaxCapacity = r.MaxCapacity,
+            // Inventories perfshihet ne GetAllWithDetails/GetWithDetails; ndryshe mbetet liste boshe -> 0.
+            UsedCapacity = r.Inventories?.Sum(i => i.QuantityOnHand) ?? 0
         };
     }
 }

@@ -14,6 +14,13 @@ namespace Warehouse.Controllers
             _service = service;
         }
 
+        [HttpGet]
+        public async Task<IActionResult> GetAll()
+        {
+            var inventory = await _service.GetAllAsync();
+            return Ok(inventory);
+        }
+
         [HttpPost("add-stock")]
         public async Task<IActionResult> AddStock([FromBody] AddStockRequest request)
         {

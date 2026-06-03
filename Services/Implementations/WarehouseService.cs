@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Warehouse.DTOs.WarehouseDto;
 using Warehouse.Repositories.Interfaces;
 using Warehouse.Services.Interfaces;
@@ -17,8 +18,33 @@ namespace Warehouse.Services.Implementations
 
         public async Task<IEnumerable<WarehouseDto>> GetAllAsync()
         {
-            var warehouses = await _warehouseRepository.GetAllAsync();
-            return warehouses.Select(MapToDto);
+            // Llogaritja behet ne DB: per cdo depo, shuma e MaxCapacity te rafteve
+            // dhe shuma e QuantityOnHand te inventarit ne ato rafte.
+            var warehouses = await _context.Warehouses
+                .Select(w => new WarehouseDto
+                {
+                    Id = w.Id,
+                    Name = w.Name,
+                    Location = w.Location,
+                    Phone = w.Phone,
+                    Email = w.Email,
+                    RaftCount = w.Rafts.Count,
+                    MaxCapacity = w.Rafts.Sum(r => (int?)r.MaxCapacity) ?? 0,
+                    UsedCapacity = w.Rafts
+                        .SelectMany(r => r.Inventories)
+                        .Sum(i => (int?)i.QuantityOnHand) ?? 0
+                })
+                .ToListAsync();
+
+            // Perqindja llogaritet ne memorie (Math.Round/Min nuk perkthehen ne SQL).
+            foreach (var w in warehouses)
+            {
+                w.Utilization = w.MaxCapacity > 0
+                    ? (int)Math.Round(Math.Min(100d, (double)w.UsedCapacity / w.MaxCapacity * 100d))
+                    : 0;
+            }
+
+            return warehouses;
         }
 
         public async Task<WarehouseDto?> GetByIdAsync(int id)

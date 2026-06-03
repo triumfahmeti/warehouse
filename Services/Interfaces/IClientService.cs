@@ -5,6 +5,7 @@ namespace Warehouse.Services.Interfaces
 {
     public interface IClientService
     {
+        Task<List<ClientListDto>> GetAllAsync();
         Task<int> CreateClient(string fullName, string email, string? phoneNumber, string? address);
         Task UpdateClient(int id, string fullName, string email, string? phoneNumber, string? address);
         Task<List<SalesOrder>> GetClientOrders(int clientId);

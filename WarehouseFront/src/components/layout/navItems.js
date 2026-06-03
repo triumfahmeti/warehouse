@@ -1,6 +1,6 @@
 import {
   Package, Warehouse as WarehouseIcon, Layers, Box, Users, FileText,
-  Truck, ClipboardList, BarChart3, Shield, Activity, Settings, UserCog,
+  Truck, ClipboardList, BarChart3, Shield, Activity, Settings, UserCog, ShoppingCart, Building2,
 } from 'lucide-react';
 
 // Konfigurimi i navigimit. 'roles' tregon cilët role mund ta shohin item-in.
@@ -11,8 +11,10 @@ export const navItems = [
   // Inventory - vetëm staff i brendshëm
   { id: 'warehouses',   label: 'Warehouses',      icon: WarehouseIcon,  path: '/warehouses',         group: 'Inventory',      roles: ['Admin', 'Manager'] },
   { id: 'rafts',        label: 'Rafts',           icon: Layers,         path: '/rafts',              group: 'Inventory',      roles: ['Admin', 'Manager'] },
-  { id: 'products',     label: 'Products',        icon: Package,        path: '/products',           group: 'Inventory',      roles: ['Admin', 'Manager', 'Worker'] },
+  { id: 'products',     label: 'Products',        icon: Package,        path: '/products',           group: 'Inventory',      roles: ['Admin', 'Manager', 'Worker', 'Client'] },
   { id: 'inventory',    label: 'Inventory',       icon: Box,            path: '/inventory',          group: 'Inventory',      roles: ['Admin', 'Manager', 'Worker'] },
+  { id: 'purchaseorders', label: 'Purchase Orders', icon: ShoppingCart, path: '/purchase-orders',   group: 'Inventory',      roles: ['Admin', 'Manager', 'Worker'] },
+  { id: 'suppliers',    label: 'Suppliers',       icon: Building2,      path: '/suppliers',          group: 'Inventory',      roles: ['Admin', 'Manager'] },
   { id: 'clients',      label: 'Clients',         icon: Users,          path: '/clients',            group: 'Inventory',      roles: ['Admin', 'Manager'] },
 
   // Fulfillment

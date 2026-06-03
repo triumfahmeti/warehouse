@@ -1,4 +1,6 @@
+using Microsoft.EntityFrameworkCore;
 using Warehouse.DTOs.Product;
+using Warehouse.Enums;
 using Warehouse.Models;
 using Warehouse.Repositories.Interfaces;
 using Warehouse.Services.Interfaces;
@@ -19,7 +21,19 @@ namespace Warehouse.Services.Implementations
         public async Task<List<ProductDto>> GetAllAsync()
         {
             var products = await _repository.GetAllAsync();
-            return products.Select(p => ToDto(p)).ToList();
+
+            // Sasia e disponueshme per produkt (shuma neper rafte).
+            var stockMap = await _context.Inventories
+                .GroupBy(i => i.ProductId)
+                .Select(g => new { ProductId = g.Key, Available = g.Sum(i => i.QuantityOnHand - i.ReservedQuantity) })
+                .ToDictionaryAsync(x => x.ProductId, x => x.Available);
+
+            return products.Select(p =>
+            {
+                var dto = ToDto(p);
+                dto.Stock = stockMap.TryGetValue(p.Id, out var s) ? s : 0;
+                return dto;
+            }).ToList();
         }
 
         public async Task<ProductDto?> GetByIdAsync(int id)
@@ -55,7 +69,7 @@ namespace Warehouse.Services.Implementations
                 Width = dto.Width,
                 Height = dto.Height,
                 Weight = dto.Weight,
-                Type = dto.Type
+                Type = ParseType(dto.Type)
             };
 
             await _repository.AddAsync(product);
@@ -79,7 +93,7 @@ namespace Warehouse.Services.Implementations
             product.Width = dto.Width;
             product.Height = dto.Height;
             product.Weight = dto.Weight;
-            product.Type = dto.Type;
+            product.Type = ParseType(dto.Type);
 
             await _repository.UpdateAsync(product);
             await _context.SaveChangesAsync();
@@ -104,7 +118,16 @@ namespace Warehouse.Services.Implementations
             Width = p.Width,
             Height = p.Height,
             Weight = p.Weight,
-            Type = p.Type
+            Type = p.Type.ToString()
         };
+
+        // Parsim i sigurt string -> ProductType me mesazh te qarte per vlera te pavlefshme.
+        private static ProductType ParseType(string type)
+        {
+            if (!Enum.TryParse<ProductType>(type, ignoreCase: true, out var parsed) || !Enum.IsDefined(parsed))
+                throw new InvalidOperationException(
+                    $"Invalid product type '{type}'. Allowed: {string.Join(", ", Enum.GetNames<ProductType>())}");
+            return parsed;
+        }
     }
 }

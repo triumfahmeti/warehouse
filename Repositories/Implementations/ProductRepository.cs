@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Warehouse.Enums;
 using Warehouse.Models;
 using Warehouse.Repositories.Interfaces;
 
@@ -21,8 +22,11 @@ namespace Warehouse.Repositories.Implementations
 
         public async Task<List<Product>> GetByType(string type)
         {
+            if (!Enum.TryParse<ProductType>(type, ignoreCase: true, out var parsed))
+                return new List<Product>();
+
             return await _context.Products
-                .Where(p => p.Type == type)
+                .Where(p => p.Type == parsed)
                 .ToListAsync();
         }
     }

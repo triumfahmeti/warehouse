@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, Edit2, UserCheck, UserX, Shield, X, Check } from "lucide-react";
+import { Plus, Edit2, UserCheck, UserX, Shield, X, Check, Filter, Search } from "lucide-react";
 import { colors } from "../theme/colors";
 import { usersApi } from "../api";
 
@@ -47,6 +47,12 @@ const inputStyle = {
   background: colors.bg, color: colors.text, outline: "none", boxSizing: "border-box",
 };
 
+const selectStyle = {
+  padding: "8px 12px", borderRadius: 8, border: `1px solid ${colors.border}`,
+  background: colors.surface, color: colors.text, fontSize: 13,
+  fontFamily: "var(--font-sans)", outline: "none", cursor: "pointer",
+};
+
 function RoleBadge({ role }) {
   const map = {
     Admin: { bg: colors.dangerSoft, fg: colors.danger },
@@ -73,8 +79,14 @@ export default function UserManagementPage() {
   const [rolesModal, setRolesModal] = useState(null);
 
   const [form, setForm] = useState({ name: "", email: "", password: "", role: "Worker", phoneNumber: "", address: "" });
-  const [editForm, setEditForm] = useState({ name: "", email: "", phoneNumber: "" });
+  const [editForm, setEditForm] = useState({ name: "", email: "", phoneNumber: "", address: "" });
   const [saving, setSaving] = useState(false);
+
+  const [showFilter, setShowFilter] = useState(false);
+  const [query, setQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState(""); // '' | active | inactive
+  const [sortBy, setSortBy] = useState(""); // '' | name-asc | name-desc | created-desc | created-asc
 
   const load = () => {
     setLoading(true);
@@ -95,7 +107,13 @@ export default function UserManagementPage() {
     e.preventDefault();
     setSaving(true);
     try {
-      await usersApi.create({ name: form.name, email: form.email, password: form.password, role: form.role, phoneNumber: form.phoneNumber || null, address: form.address || null });
+      // Telefoni dhe adresa i perkasin vetem Client-it; per rolet e tjera nuk i dergojme fare.
+      const payload = { name: form.name, email: form.email, password: form.password, role: form.role };
+      if (form.role === "Client") {
+        if (form.phoneNumber) payload.phoneNumber = form.phoneNumber;
+        if (form.address) payload.address = form.address;
+      }
+      await usersApi.create(payload);
       setCreateModal(false);
       setForm({ name: "", email: "", password: "", role: "Worker", phoneNumber: "", address: "" });
       load();
@@ -159,6 +177,33 @@ export default function UserManagementPage() {
 
   const fmt = d => d ? new Date(d).toLocaleDateString("sq-AL", { day: "2-digit", month: "short", year: "numeric" }) : "—";
 
+  const toggleFilter = () => {
+    setShowFilter(v => {
+      if (v) { setQuery(""); setRoleFilter(""); setStatusFilter(""); setSortBy(""); }
+      return !v;
+    });
+  };
+
+  // Filtrim sipas kërkimit/rolit/statusit + renditje.
+  const displayed = (() => {
+    const q = query.trim().toLowerCase();
+    let list = users.filter(u => {
+      if (q && !(u.name || "").toLowerCase().includes(q) && !(u.email || "").toLowerCase().includes(q)) return false;
+      if (roleFilter && !(u.roles || []).includes(roleFilter)) return false;
+      if (statusFilter === "active" && !u.isActive) return false;
+      if (statusFilter === "inactive" && u.isActive) return false;
+      return true;
+    });
+    const comparators = {
+      "name-asc": (a, b) => (a.name || "").localeCompare(b.name || ""),
+      "name-desc": (a, b) => (b.name || "").localeCompare(a.name || ""),
+      "created-desc": (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
+      "created-asc": (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
+    };
+    if (comparators[sortBy]) list = [...list].sort(comparators[sortBy]);
+    return list;
+  })();
+
   return (
     <div style={{ padding: "0 0 40px" }}>
       {/* Feedback toast */}
@@ -184,6 +229,15 @@ export default function UserManagementPage() {
           </h1>
         </div>
         <div className="page-header-actions">
+          <button onClick={toggleFilter} style={{
+            display: "flex", alignItems: "center", gap: 6,
+            background: showFilter ? colors.text : colors.surface,
+            color: showFilter ? colors.surface : colors.text,
+            border: `1px solid ${showFilter ? colors.text : colors.border}`, borderRadius: 8, padding: "9px 14px",
+            fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "var(--font-sans)",
+          }}>
+            <Filter size={14} /> Filter
+          </button>
           <button onClick={() => setCreateModal(true)} style={{
             display: "flex", alignItems: "center", gap: 6,
             background: colors.text, color: colors.surface,
@@ -194,6 +248,38 @@ export default function UserManagementPage() {
           </button>
         </div>
       </div>
+
+      {/* Shiriti i filtrit */}
+      {showFilter && (
+        <div style={{ marginBottom: 20, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+          <div style={{ position: "relative", flex: 1, minWidth: 220, maxWidth: 320 }}>
+            <Search size={14} color={colors.textMuted} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+            <input
+              autoFocus
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Search by name or email..."
+              style={{ width: "100%", padding: "8px 12px 8px 32px", borderRadius: 8, border: `1px solid ${colors.border}`, background: colors.surface, color: colors.text, fontSize: 13, fontFamily: "var(--font-sans)", outline: "none", boxSizing: "border-box" }}
+            />
+          </div>
+          <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)} style={selectStyle}>
+            <option value="">All roles</option>
+            {ALL_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
+          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={selectStyle}>
+            <option value="">All statuses</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+          <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={selectStyle}>
+            <option value="">Sort by: Default</option>
+            <option value="name-asc">Name (A → Z)</option>
+            <option value="name-desc">Name (Z → A)</option>
+            <option value="created-desc">Created (newest)</option>
+            <option value="created-asc">Created (oldest)</option>
+          </select>
+        </div>
+      )}
 
       {/* Table */}
       {loading ? (
@@ -213,8 +299,15 @@ export default function UserManagementPage() {
               </tr>
             </thead>
             <tbody>
-              {users.map((user, i) => (
-                <tr key={user.id} style={{ borderBottom: i < users.length - 1 ? `1px solid ${colors.border}` : "none" }}>
+              {displayed.length === 0 && (
+                <tr>
+                  <td colSpan={7} style={{ padding: 32, textAlign: "center", color: colors.textMuted, fontFamily: "var(--font-sans)", fontSize: 13 }}>
+                    No users found.
+                  </td>
+                </tr>
+              )}
+              {displayed.map((user, i) => (
+                <tr key={user.id} style={{ borderBottom: i < displayed.length - 1 ? `1px solid ${colors.border}` : "none" }}>
                   <td style={{ padding: "12px 14px", fontSize: 13, fontWeight: 500, color: colors.text, fontFamily: "var(--font-sans)" }}>
                     {user.name}
                   </td>
@@ -241,7 +334,7 @@ export default function UserManagementPage() {
                   </td>
                   <td style={{ padding: "12px 14px" }}>
                     <div style={{ display: "flex", gap: 6 }}>
-                      <IconBtn title="Edit" onClick={() => { setEditModal(user); setEditForm({ name: user.name, email: user.email, phoneNumber: user.phoneNumber || "" }); }}>
+                      <IconBtn title="Edit" onClick={() => { setEditModal(user); setEditForm({ name: user.name, email: user.email, phoneNumber: user.phoneNumber || "", address: user.address || "" }); }}>
                         <Edit2 size={13} />
                       </IconBtn>
                       <IconBtn title="Manage Roles" onClick={() => setRolesModal(user)} color={colors.info}>
@@ -278,17 +371,23 @@ export default function UserManagementPage() {
               <input required type="password" style={inputStyle} value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="Min 6 characters" />
             </Field>
             <Field label="Role">
-              <select required style={inputStyle} value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}>
+              <select required style={inputStyle} value={form.role} onChange={e => {
+                const role = e.target.value;
+                // Telefoni dhe adresa vlejne vetem per Client; i pastrojme per rolet e tjera.
+                setForm(f => ({ ...f, role, ...(role === "Client" ? {} : { phoneNumber: "", address: "" }) }));
+              }}>
                 {ALL_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
             </Field>
-            <Field label="Phone (optional)">
-              <input style={inputStyle} value={form.phoneNumber} onChange={e => setForm(f => ({ ...f, phoneNumber: e.target.value }))} placeholder="+383..." />
-            </Field>
             {form.role === "Client" && (
-              <Field label="Address">
-                <input style={inputStyle} value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="Rruga..." />
-              </Field>
+              <>
+                <Field label="Phone (optional)">
+                  <input style={inputStyle} value={form.phoneNumber} onChange={e => setForm(f => ({ ...f, phoneNumber: e.target.value }))} placeholder="+383..." />
+                </Field>
+                <Field label="Address (optional)">
+                  <input style={inputStyle} value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="Rruga..." />
+                </Field>
+              </>
             )}
             <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
               <button type="button" onClick={() => setCreateModal(false)} style={{ flex: 1, padding: "9px 0", border: `1px solid ${colors.border}`, borderRadius: 8, background: "none", cursor: "pointer", fontSize: 13, fontFamily: "var(--font-sans)", color: colors.text }}>
@@ -312,9 +411,17 @@ export default function UserManagementPage() {
             <Field label="Email">
               <input required type="email" style={inputStyle} value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} />
             </Field>
-            <Field label="Phone (optional)">
-              <input style={inputStyle} value={editForm.phoneNumber} onChange={e => setEditForm(f => ({ ...f, phoneNumber: e.target.value }))} />
-            </Field>
+            {/* Telefoni dhe adresa vlejnë vetëm për user-at me rol Client. */}
+            {editModal.roles?.includes("Client") && (
+              <>
+                <Field label="Phone (optional)">
+                  <input style={inputStyle} value={editForm.phoneNumber} onChange={e => setEditForm(f => ({ ...f, phoneNumber: e.target.value }))} placeholder="+383..." />
+                </Field>
+                <Field label="Address (optional)">
+                  <input style={inputStyle} value={editForm.address} onChange={e => setEditForm(f => ({ ...f, address: e.target.value }))} placeholder="Rruga..." />
+                </Field>
+              </>
+            )}
             <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
               <button type="button" onClick={() => setEditModal(null)} style={{ flex: 1, padding: "9px 0", border: `1px solid ${colors.border}`, borderRadius: 8, background: "none", cursor: "pointer", fontSize: 13, fontFamily: "var(--font-sans)", color: colors.text }}>
                 Cancel

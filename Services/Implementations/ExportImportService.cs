@@ -33,7 +33,7 @@ namespace Warehouse.Services.Implementations
                 ["Name"]        = p.Name,
                 ["SKU"]         = p.SKU,
                 ["Description"] = p.Description,
-                ["Type"]        = p.Type,
+                ["Type"]        = p.Type.ToString(),
                 ["Length"]      = p.Length,
                 ["Width"]       = p.Width,
                 ["Height"]      = p.Height,
@@ -254,12 +254,20 @@ namespace Warehouse.Services.Implementations
                     continue;
                 }
 
+                var typeStr = GetStringOrNull(row, "Type");
+                if (!Enum.TryParse<ProductType>(typeStr, ignoreCase: true, out var productType) || !Enum.IsDefined(productType))
+                {
+                    result.Errors.Add(new ImportErrorDto { Row = rowNum, Field = "Type", Message = $"Invalid product type '{typeStr}'." });
+                    result.SkippedCount++;
+                    continue;
+                }
+
                 await _context.Products.AddAsync(new Product
                 {
                     Name        = name!,
                     SKU         = sku!,
                     Description = GetStringOrNull(row, "Description"),
-                    Type        = GetStringOrNull(row, "Type"),
+                    Type        = productType,
                     Length      = GetDecimal(row, "Length"),
                     Width       = GetDecimal(row, "Width"),
                     Height      = GetDecimal(row, "Height"),

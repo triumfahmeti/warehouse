@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Warehouse.Enums;
 
 namespace Warehouse.Models
 {
@@ -15,6 +16,6 @@ namespace Warehouse.Models
         public decimal Width { get; set; }
         public decimal Height { get; set; }
         public decimal Weight { get; set; }
-        public string Type { get; set; } //Its better to make product type as enum but for now we will keep it as string
+        public ProductType Type { get; set; }
     }
 }

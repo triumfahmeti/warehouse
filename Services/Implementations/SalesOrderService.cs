@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using Warehouse.DTOs.NotificationDto;
 using Warehouse.DTOs.SalesOrder;
 using Warehouse.Enums;
@@ -45,10 +46,137 @@ namespace Warehouse.Services.Implementations
             _userManager = userManager;
         }
 
+        public async Task<List<SalesOrderDto>> GetAllAsync()
+        {
+            var orders = await _context.SalesOrders
+                .Include(o => o.Client)
+                .Include(o => o.SalesOrderItems).ThenInclude(i => i.Product)
+                .OrderByDescending(o => o.OrderDate)
+                .ToListAsync();
+            return orders.Select(MapToDto).ToList();
+        }
+
+        public async Task<List<SalesOrderDto>> GetOrdersForUserAsync(string userId)
+        {
+            var client = await _clientRepository.GetClientByUserIdAsync(userId)
+                ?? throw new InvalidOperationException("Client profile not found for this user.");
+
+            var orders = await _context.SalesOrders
+                .Include(o => o.Client)
+                .Include(o => o.SalesOrderItems).ThenInclude(i => i.Product)
+                .Where(o => o.ClientId == client.Id)
+                .OrderByDescending(o => o.OrderDate)
+                .ToListAsync();
+            return orders.Select(MapToDto).ToList();
+        }
+
+        public async Task<SalesOrderDto?> GetDtoByIdAsync(int salesOrderId)
+        {
+            var order = await _context.SalesOrders
+                .Include(o => o.Client)
+                .Include(o => o.SalesOrderItems).ThenInclude(i => i.Product)
+                .FirstOrDefaultAsync(o => o.Id == salesOrderId);
+            return order == null ? null : MapToDto(order);
+        }
+
+        public async Task<int> CreateOrderForUser(string userId, List<CreateOrderItemDto> items)
+        {
+            var client = await _clientRepository.GetClientByUserIdAsync(userId)
+                ?? throw new InvalidOperationException("Client profile not found for this user.");
+            return await CreateOrder(client.Id, items);
+        }
+
+        public async Task ConfirmOrderForUser(string userId, int salesOrderId)
+        {
+            var client = await _clientRepository.GetClientByUserIdAsync(userId)
+                ?? throw new InvalidOperationException("Client profile not found for this user.");
+
+            var order = await _salesOrderRepository.GetOrderWithItems(salesOrderId)
+                ?? throw new InvalidOperationException("Order not found");
+
+            if (order.ClientId != client.Id)
+                throw new InvalidOperationException("You can only confirm your own orders.");
+
+            await ConfirmOrder(salesOrderId);
+        }
+
+        public async Task CancelOrder(int salesOrderId)
+        {
+            var order = await _salesOrderRepository.GetOrderWithItems(salesOrderId)
+                ?? throw new InvalidOperationException("Order not found");
+
+            // Vetem porosite e pakonfirmuara (New) mund te anulohen. Pas Confirm s'ka anulim.
+            if (order.Status != SalesOrderStatus.New)
+                throw new InvalidOperationException("Only new (unconfirmed) orders can be cancelled");
+
+            order.Status = SalesOrderStatus.Cancelled;
+            await _salesOrderRepository.UpdateAsync(order);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task CancelOrderForUser(string userId, int salesOrderId)
+        {
+            var client = await _clientRepository.GetClientByUserIdAsync(userId)
+                ?? throw new InvalidOperationException("Client profile not found for this user.");
+
+            var order = await _salesOrderRepository.GetOrderWithItems(salesOrderId)
+                ?? throw new InvalidOperationException("Order not found");
+
+            if (order.ClientId != client.Id)
+                throw new InvalidOperationException("You can only cancel your own orders.");
+
+            await CancelOrder(salesOrderId);
+        }
+
+        private static SalesOrderDto MapToDto(SalesOrder o) => new SalesOrderDto
+        {
+            Id = o.Id,
+            ClientId = o.ClientId,
+            ClientName = o.Client?.FullName,
+            OrderDate = o.OrderDate,
+            Status = o.Status.ToString(),
+            TotalAmount = o.SalesOrderItems.Sum(i => (i.UnitPrice ?? 0) * i.Quantity),
+            IsPriced = o.SalesOrderItems.Any() && o.SalesOrderItems.All(i => i.UnitPrice != null),
+            Items = o.SalesOrderItems.Select(i => new SalesOrderItemDto
+            {
+                Id = i.Id,
+                ProductId = i.ProductId,
+                ProductName = i.Product?.Name,
+                Quantity = i.Quantity,
+                UnitPrice = i.UnitPrice
+            }).ToList()
+        };
+
         public async Task<int> CreateOrder(int clientId, List<CreateOrderItemDto> items)
         {
             if (items == null || !items.Any())
                 throw new InvalidOperationException("Order must have items");
+
+            // Kontroll stoku qe ne krijim, qe te shmanget overselling nga porosi te shumta:
+            //   available efektiv = stoku fizik i lire − demanda e porosive te tjera ende New
+            //   (porosite New nuk kane rezervuar ende; Confirmed-at jane tashme te zbritura nga ReservedQuantity).
+            foreach (var item in items)
+            {
+                if (item.Quantity <= 0)
+                    throw new InvalidOperationException("Order items must have quantity greater than zero");
+
+                var physicalAvailable = await _inventoryRepository.GetAvailableStock(item.ProductId);
+
+                var pendingDemand = await _context.SalesOrderItems
+                    .Where(soi => soi.ProductId == item.ProductId
+                                  && soi.SalesOrder.Status == SalesOrderStatus.New)
+                    .SumAsync(soi => soi.Quantity);
+
+                var effectiveAvailable = physicalAvailable - pendingDemand;
+
+                if (effectiveAvailable < item.Quantity)
+                {
+                    var product = await _context.Products.FindAsync(item.ProductId);
+                    var name = product?.Name ?? $"#{item.ProductId}";
+                    throw new InvalidOperationException(
+                        $"Not enough stock for '{name}'. Available: {Math.Max(0, effectiveAvailable)}, requested: {item.Quantity}.");
+                }
+            }
 
             var order = new SalesOrder
             {
@@ -98,6 +226,9 @@ namespace Warehouse.Services.Implementations
 
                 orderItem.UnitPrice = itemDto.UnitPrice;
             }
+
+            // Ruajme totalin sa here qe caktohen/ndryshohen cmimet.
+            order.TotalAmount = order.SalesOrderItems.Sum(i => (i.UnitPrice ?? 0) * i.Quantity);
 
             await _salesOrderRepository.UpdateAsync(order);
             await _context.SaveChangesAsync();

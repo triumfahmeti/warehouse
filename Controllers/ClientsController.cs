@@ -16,6 +16,13 @@ namespace Warehouse.Controllers
             _clientService = clientService;
         }
 
+        [HttpGet]
+        public async Task<IActionResult> GetAll()
+        {
+            var clients = await _clientService.GetAllAsync();
+            return Ok(clients);
+        }
+
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] UpsertClientDto dto)
         {

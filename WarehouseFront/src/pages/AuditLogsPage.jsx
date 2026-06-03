@@ -193,15 +193,11 @@ export default function AuditLogsPage() {
             </div>
             <div style={{ marginBottom: 16 }}>
               <div style={{ fontSize: 11, color: colors.textMuted, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>Old Value</div>
-              <pre style={{ background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: 8, padding: 12, margin: 0, fontSize: 12, fontFamily: "var(--font-mono)", overflow: "auto", color: colors.text, whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
-                {detail.oldValue || "(empty)"}
-              </pre>
+              <PrettyValue value={detail.oldValue} />
             </div>
             <div>
               <div style={{ fontSize: 11, color: colors.textMuted, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>New Value</div>
-              <pre style={{ background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: 8, padding: 12, margin: 0, fontSize: 12, fontFamily: "var(--font-mono)", overflow: "auto", color: colors.text, whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
-                {detail.newValue || "(empty)"}
-              </pre>
+              <PrettyValue value={detail.newValue} />
             </div>
           </div>
         </div>
@@ -209,3 +205,41 @@ export default function AuditLogsPage() {
     </div>
   );
 }
+
+// Shfaq OldValue/NewValue në mënyrë të lexueshme: parsoj JSON-in dhe e tregoj key → value.
+function PrettyValue({ value }) {
+  if (!value) return <div style={emptyBox}>(empty)</div>;
+
+  let parsed;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    return <pre style={rawBox}>{value}</pre>;
+  }
+
+  if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+    const keys = Object.keys(parsed);
+    if (keys.length === 0) return <div style={emptyBox}>(no fields)</div>;
+    return (
+      <div style={{ border: `1px solid ${colors.border}`, borderRadius: 8, overflow: "hidden" }}>
+        {keys.map((k, i) => (
+          <div key={k} style={{ display: "flex", gap: 12, padding: "8px 12px", background: colors.bg, borderBottom: i < keys.length - 1 ? `1px solid ${colors.border}` : "none" }}>
+            <span style={{ width: 150, flexShrink: 0, fontSize: 11, color: colors.textMuted, fontFamily: "var(--font-mono)" }}>{k}</span>
+            <span style={{ flex: 1, fontSize: 13, color: colors.text, fontFamily: "var(--font-sans)", wordBreak: "break-word" }}>{fmtVal(parsed[k])}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return <pre style={rawBox}>{String(value)}</pre>;
+}
+
+function fmtVal(v) {
+  if (v === null || v === undefined || v === "") return "—";
+  if (typeof v === "object") return JSON.stringify(v);
+  return String(v);
+}
+
+const rawBox = { background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: 8, padding: 12, margin: 0, fontSize: 12, fontFamily: "var(--font-mono)", overflow: "auto", color: colors.text, whiteSpace: "pre-wrap", wordBreak: "break-all" };
+const emptyBox = { fontSize: 13, color: colors.textDim, fontFamily: "var(--font-sans)", padding: "4px 0" };

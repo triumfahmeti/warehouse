@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Warehouse.DTOs.Client;
 using Warehouse.Enums;
 using Warehouse.Models;
@@ -15,6 +16,23 @@ namespace Warehouse.Services.Implementations
         {
             _clientRepository = clientRepository;
             _context = context;
+        }
+
+        public async Task<List<ClientListDto>> GetAllAsync()
+        {
+            return await _context.Clients
+                .AsNoTracking()
+                .OrderBy(c => c.FullName)
+                .Select(c => new ClientListDto
+                {
+                    Id = c.Id,
+                    FullName = c.FullName,
+                    Email = c.Email,
+                    PhoneNumber = c.PhoneNumber,
+                    Address = c.Address,
+                    OrdersCount = c.SalesOrders.Count
+                })
+                .ToListAsync();
         }
 
         public async Task<int> CreateClient(string fullName, string email, string? phoneNumber, string? address)
