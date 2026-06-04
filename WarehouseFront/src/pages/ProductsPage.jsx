@@ -6,6 +6,7 @@ import { useAuth } from '../auth/AuthContext';
 import PageHeader from '../components/ui/PageHeader';
 import Table from '../components/ui/Table';
 import { PrimaryButton } from '../components/ui/Button';
+import { exportToCsv } from '../utils/exportCsv';
 
 // Duhet të përputhen me enum-in ProductType në backend.
 const PRODUCT_TYPES = ['Laptop', 'TV', 'PC', 'Monitor', 'Accessories', 'Phone', 'Tablet'];
@@ -139,6 +140,12 @@ export default function ProductsPage() {
   };
   if (comparators[sortBy]) sorted.sort(comparators[sortBy]);
 
+  const exportCsv = () => {
+    const headers = ['SKU', 'Name', 'Type', 'Description', 'Length (cm)', 'Width (cm)', 'Height (cm)', 'Weight (kg)'];
+    const rows = sorted.map(p => [p.sku, p.name, p.type, p.description || '', p.length, p.width, p.height, p.weight]);
+    exportToCsv(headers, rows, 'products');
+  };
+
   return (
     <div className="page-content">
       <PageHeader
@@ -146,6 +153,7 @@ export default function ProductsPage() {
         count={sorted.length}
         onFilter={toggleFilter}
         filterActive={showFilter}
+        onExport={exportCsv}
         action={canManage ? <PrimaryButton icon={Plus} onClick={openCreate}>New Product</PrimaryButton> : undefined}
       />
 

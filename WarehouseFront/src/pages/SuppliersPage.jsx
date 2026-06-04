@@ -5,6 +5,7 @@ import { suppliersApi } from '../api';
 import PageHeader from '../components/ui/PageHeader';
 import Table from '../components/ui/Table';
 import { PrimaryButton } from '../components/ui/Button';
+import { exportToCsv } from '../utils/exportCsv';
 
 const emptyForm = { name: '', contactPerson: '', email: '', phone: '', address: '', city: '', country: '' };
 
@@ -121,6 +122,12 @@ export default function SuppliersPage() {
   };
   if (comparators[sortBy]) sorted.sort(comparators[sortBy]);
 
+  const exportCsv = () => {
+    const headers = ['ID', 'Name', 'Contact Person', 'Email', 'Phone', 'Address', 'City', 'Country'];
+    const rows = sorted.map(s => [s.id, s.name, s.contactPerson || '', s.email || '', s.phone || '', s.address || '', s.city || '', s.country || '']);
+    exportToCsv(headers, rows, 'suppliers');
+  };
+
   return (
     <div className="page-content">
       <PageHeader
@@ -128,6 +135,7 @@ export default function SuppliersPage() {
         count={sorted.length}
         onFilter={toggleFilter}
         filterActive={showFilter}
+        onExport={exportCsv}
         action={<PrimaryButton icon={Plus} onClick={openCreate}>New Supplier</PrimaryButton>}
       />
 

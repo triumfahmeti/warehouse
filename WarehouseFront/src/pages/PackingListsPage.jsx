@@ -5,13 +5,21 @@ import PageHeader from '../components/ui/PageHeader';
 import Table from '../components/ui/Table';
 import StatusBadge from '../components/ui/StatusBadge';
 import { PrimaryButton } from '../components/ui/Button';
+import { exportToCsv } from '../utils/exportCsv';
 
 export default function PackingListsPage() {
+  const exportCsv = () => {
+    const headers = ['Number', 'Sales Order', 'Warehouse', 'Pallets', 'Date', 'Status'];
+    const rows = mockData.packingLists.map(p => [p.number, p.salesOrderNumber, p.warehouseName, p.pallets, p.date, p.status]);
+    exportToCsv(headers, rows, 'packing-lists');
+  };
+
   return (
     <div className="page-content">
       <PageHeader
         title="Packing Lists"
         count={mockData.packingLists.length}
+        onExport={exportCsv}
         action={<PrimaryButton icon={Plus}>New Packing List</PrimaryButton>}
       />
       <Table

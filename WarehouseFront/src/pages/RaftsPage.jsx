@@ -5,6 +5,7 @@ import { raftsApi, warehousesApi } from '../api';
 import PageHeader from '../components/ui/PageHeader';
 import Table from '../components/ui/Table';
 import { PrimaryButton } from '../components/ui/Button';
+import { exportToCsv } from '../utils/exportCsv';
 
 const emptyForm = { raftNumber: '', warehouseId: '', maxCapacity: '' };
 
@@ -128,6 +129,12 @@ export default function RaftsPage() {
   };
   if (comparators[sortBy]) sorted.sort(comparators[sortBy]);
 
+  const exportCsv = () => {
+    const headers = ['ID', 'Raft Number', 'Warehouse', 'Max Capacity', 'Used Capacity'];
+    const rows = sorted.map(r => [r.id, r.raftNumber, r.warehouseName || '', r.maxCapacity, r.usedCapacity ?? 0]);
+    exportToCsv(headers, rows, 'rafts');
+  };
+
   return (
     <div className="page-content">
       <PageHeader
@@ -135,6 +142,7 @@ export default function RaftsPage() {
         count={sorted.length}
         onFilter={toggleFilter}
         filterActive={showFilter}
+        onExport={exportCsv}
         action={<PrimaryButton icon={Plus} onClick={openCreate}>New Raft</PrimaryButton>}
       />
 

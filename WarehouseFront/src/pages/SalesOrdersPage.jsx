@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Plus, MoreHorizontal, X, Eye, Tag, CheckCircle, Ban, Trash2 } from 'lucide-react';
+import { exportToCsv } from '../utils/exportCsv';
 import { colors } from '../theme/colors';
 import { salesOrdersApi, productsApi } from '../api';
 import { useAuth } from '../auth/AuthContext';
@@ -166,11 +167,25 @@ export default function SalesOrdersPage() {
     ) },
   ];
 
+  const exportCsv = () => {
+    const headers = ['ID', 'Client', 'Items', 'Total (€)', 'Date', 'Status'];
+    const rows = orders.map(o => [
+      o.id,
+      o.clientName || '',
+      o.items?.length || 0,
+      o.isPriced ? Number(o.totalAmount || 0).toFixed(2) : 'not priced',
+      new Date(o.orderDate).toLocaleDateString('sq-AL'),
+      o.status,
+    ]);
+    exportToCsv(headers, rows, 'sales-orders');
+  };
+
   return (
     <div className="page-content">
       <PageHeader
         title="Sales Orders"
         count={orders.length}
+        onExport={exportCsv}
         action={isClient ? <PrimaryButton icon={Plus} onClick={openCreate}>New Order</PrimaryButton> : undefined}
       />
 

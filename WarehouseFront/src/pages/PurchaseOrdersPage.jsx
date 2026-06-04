@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Plus, MoreHorizontal, X, Search, Eye, Ban, Lock, PackageCheck, Trash2 } from 'lucide-react';
+import { exportToCsv } from '../utils/exportCsv';
 import { colors } from '../theme/colors';
 import { purchaseOrdersApi, suppliersApi, productsApi, raftsApi } from '../api';
 import { useAuth } from '../auth/AuthContext';
@@ -178,6 +179,20 @@ export default function PurchaseOrdersPage() {
 
   const productName = id => products.find(p => p.id === id)?.name || `#${id}`;
 
+  const exportCsv = () => {
+    const headers = ['ID', 'Supplier', 'Items', 'Total (€)', 'Order Date', 'Expected Date', 'Status'];
+    const rows = sorted.map(o => [
+      o.id,
+      o.supplierName || '',
+      o.items?.length || 0,
+      Number(o.totalAmount || 0).toFixed(2),
+      new Date(o.orderDate).toLocaleDateString('sq-AL'),
+      o.expectedDeliveryDate ? new Date(o.expectedDeliveryDate).toLocaleDateString('sq-AL') : '',
+      o.status,
+    ]);
+    exportToCsv(headers, rows, 'purchase-orders');
+  };
+
   return (
     <div className="page-content">
       <PageHeader
@@ -185,6 +200,7 @@ export default function PurchaseOrdersPage() {
         count={sorted.length}
         onFilter={toggleFilter}
         filterActive={showFilter}
+        onExport={exportCsv}
         action={isManager ? <PrimaryButton icon={Plus} onClick={openCreate}>New Purchase Order</PrimaryButton> : undefined}
       />
 

@@ -5,6 +5,7 @@ import { warehousesApi } from '../api';
 import PageHeader from '../components/ui/PageHeader';
 import Table from '../components/ui/Table';
 import { PrimaryButton } from '../components/ui/Button';
+import { exportToCsv } from '../utils/exportCsv';
 
 const emptyForm = { name: '', location: '', phone: '', email: '' };
 
@@ -122,6 +123,12 @@ export default function WarehousesPage() {
   };
   if (comparators[sortBy]) sorted.sort(comparators[sortBy]);
 
+  const exportCsv = () => {
+    const headers = ['ID', 'Name', 'Location', 'Phone', 'Email', 'Rafts', 'Utilization (%)'];
+    const rows = sorted.map(w => [w.id, w.name, w.location || '', w.phone || '', w.email || '', w.raftCount ?? 0, w.utilization ?? 0]);
+    exportToCsv(headers, rows, 'warehouses');
+  };
+
   return (
     <div className="page-content">
       <PageHeader
@@ -129,6 +136,7 @@ export default function WarehousesPage() {
         count={sorted.length}
         onFilter={toggleFilter}
         filterActive={showFilter}
+        onExport={exportCsv}
         action={<PrimaryButton icon={Plus} onClick={openCreate}>New Warehouse</PrimaryButton>}
       />
 

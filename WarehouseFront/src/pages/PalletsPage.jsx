@@ -4,13 +4,24 @@ import { mockData } from '../data/mockData';
 import PageHeader from '../components/ui/PageHeader';
 import Table from '../components/ui/Table';
 import { PrimaryButton } from '../components/ui/Button';
+import { exportToCsv } from '../utils/exportCsv';
 
 export default function PalletsPage() {
+  const exportCsv = () => {
+    const headers = ['Number', 'Packaging Type', 'Items', 'Weight (kg)', 'Sales Order'];
+    const rows = mockData.pallets.map(p => [
+      p.number, p.packagingType, p.items, p.weight,
+      `SO-2026-${String(p.salesOrderId).padStart(4, '0')}`,
+    ]);
+    exportToCsv(headers, rows, 'pallets');
+  };
+
   return (
     <div className="page-content">
       <PageHeader
         title="Pallets"
         count={mockData.pallets.length}
+        onExport={exportCsv}
         action={<PrimaryButton icon={Plus}>From Sales Order</PrimaryButton>}
       />
       <Table

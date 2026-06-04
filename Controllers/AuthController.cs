@@ -54,9 +54,7 @@ namespace Warehouse.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrWhiteSpace(currentUserId))
-                return Unauthorized("Unable to identify the current user.");
+            var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "system";
 
             var currentUserRoles = User.FindAll(ClaimTypes.Role)
                 .Select(c => c.Value)

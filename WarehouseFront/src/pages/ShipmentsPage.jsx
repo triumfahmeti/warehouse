@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Truck, Plus, ChevronRight } from 'lucide-react';
+import { exportToCsv } from '../utils/exportCsv';
 import { colors } from '../theme/colors';
 import { mockData } from '../data/mockData';
 import PageHeader from '../components/ui/PageHeader';
@@ -52,6 +53,11 @@ export default function ShipmentsPage() {
       <PageHeader
         title="All Shipments"
         count={mockData.shipments.length}
+        onExport={() => {
+          const headers = ['Number', 'Packing List', 'Warehouse', 'Date', 'Status'];
+          const rows = mockData.shipments.map(s => [s.number, s.packingListNumber, s.warehouseName, s.date, s.status]);
+          exportToCsv(headers, rows, 'shipments');
+        }}
         action={<PrimaryButton icon={Plus}>New Shipment</PrimaryButton>}
       />
 

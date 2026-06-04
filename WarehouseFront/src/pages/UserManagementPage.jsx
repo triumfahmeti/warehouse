@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Plus, Edit2, UserCheck, UserX, Shield, X, Check, Filter, Search } from "lucide-react";
+import { Plus, Edit2, UserCheck, UserX, Shield, X, Check, Filter, Search, Download } from "lucide-react";
+import { exportToCsv } from '../utils/exportCsv';
 import { colors } from "../theme/colors";
 import { usersApi } from "../api";
 
@@ -237,6 +238,24 @@ export default function UserManagementPage() {
             fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "var(--font-sans)",
           }}>
             <Filter size={14} /> Filter
+          </button>
+          <button onClick={() => {
+            const headers = ['ID', 'Name', 'Email', 'Roles', 'Phone', 'Status', 'Created At'];
+            const rows = displayed.map(u => [
+              u.id, u.name, u.email,
+              (u.roles || []).join(', '),
+              u.phoneNumber || '',
+              u.isActive ? 'Active' : 'Inactive',
+              fmt(u.createdAt),
+            ]);
+            exportToCsv(headers, rows, 'users');
+          }} style={{
+            display: "flex", alignItems: "center", gap: 6,
+            background: colors.surface, color: colors.text,
+            border: `1px solid ${colors.border}`, borderRadius: 8, padding: "9px 14px",
+            fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "var(--font-sans)",
+          }}>
+            <Download size={14} /> Export
           </button>
           <button onClick={() => setCreateModal(true)} style={{
             display: "flex", alignItems: "center", gap: 6,
