@@ -12,15 +12,11 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-
 using MongoDB.Driver;
-
 using Microsoft.AspNetCore.Http.Features;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
@@ -61,7 +57,8 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins("http://localhost:5173")
               .AllowAnyHeader()
-              .AllowAnyMethod();
+              .AllowAnyMethod()
+                 .AllowCredentials();
     });
 });
 
@@ -71,13 +68,10 @@ builder.Services.AddIdentity<ApplicationUser, ApplicationRole>()
     .AddEntityFrameworkStores<AppDbContext>()
     .AddDefaultTokenProviders();
 
-    // mongodb connection
-
 builder.Services.AddSingleton<IMongoClient>(sp =>
 {
     var configuration = sp.GetRequiredService<IConfiguration>();
     var connectionString = configuration["MongoDb:ConnectionString"];
-
     return new MongoClient(connectionString);
 });
 
@@ -85,20 +79,13 @@ builder.Services.AddSingleton(sp =>
 {
     var configuration = sp.GetRequiredService<IConfiguration>();
     var client = sp.GetRequiredService<IMongoClient>();
-
     return client.GetDatabase(configuration["MongoDb:DatabaseName"]);
 });
 
-
-//test
-var mongoClient = new MongoClient(
-    builder.Configuration["MongoDb:ConnectionString"]
-);
-
+var mongoClient = new MongoClient(builder.Configuration["MongoDb:ConnectionString"]);
 try
 {
     var databases = mongoClient.ListDatabaseNames().ToList();
-
     Console.WriteLine("MongoDB Connected!");
 }
 catch (Exception ex)
@@ -106,7 +93,6 @@ catch (Exception ex)
     Console.WriteLine("Mongo Error:");
     Console.WriteLine(ex.Message);
 }
-
 
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = jwtSettings["SecretKey"]
@@ -130,13 +116,13 @@ builder.Services.AddAuthentication(options =>
         ValidateAudience = true,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
-
         ValidIssuer = issuer,
         ValidAudience = audience,
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
         ClockSkew = TimeSpan.Zero
     };
 });
+
 builder.Services.AddScoped<IExportImportService, ExportImportService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IAuthService, AuthService>();
@@ -166,19 +152,19 @@ builder.Services.AddScoped<ISettingService, SettingService>();
 builder.Services.AddScoped<IPalletRepository, PalletRepository>();
 builder.Services.AddScoped<IPalletItemRepository, PalletItemRepository>();
 builder.Services.AddScoped<IPackingListRepository, PackingListRepository>();
-builder.Services.Configure<MongoDbSettings>(
-    builder.Configuration.GetSection("MongoDb"));
+builder.Services.Configure<MongoDbSettings>(builder.Configuration.GetSection("MongoDb"));
 builder.Services.AddSingleton<INotificationService, NotificationService>();
 builder.Services.AddScoped<IPalletService, PalletService>();
 builder.Services.AddScoped<IPalletItemService, PalletItemService>();
 builder.Services.AddScoped<IPackingListService, PackingListService>();
+builder.Services.AddScoped<IShipmentRepository, ShipmentRepository>();
+builder.Services.AddScoped<IShipmentService, ShipmentService>();
+builder.Services.AddScoped<IReportService, ReportService>();
 
 builder.Services.AddSignalR();
 
 var app = builder.Build();
 
-
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -196,10 +182,39 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
+
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapHub<NotificationHub>("/notificationHub");
 app.MapControllers();
+
+using (var scope = app.Services.CreateScope())
+{
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
+
+    string[] roles = { "Admin", "Manager", "Client" };
+    foreach (var role in roles)
+    {
+        if (!await roleManager.RoleExistsAsync(role))
+            await roleManager.CreateAsync(new ApplicationRole { Name = role });
+    }
+
+    var adminEmail = "admin@warehouse.com";
+    if (await userManager.FindByEmailAsync(adminEmail) == null)
+    {
+        var admin = new ApplicationUser
+        {
+            Name = "Admin",
+            Email = adminEmail,
+            UserName = adminEmail,
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow
+        };
+        await userManager.CreateAsync(admin, "Admin123!");
+        await userManager.AddToRoleAsync(admin, "Admin");
+    }
+}
 
 app.Run();

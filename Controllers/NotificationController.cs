@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Warehouse.DTOs.NotificationDto;
 using Warehouse.Services.Interfaces;
+using System.Security.Claims;
 
 namespace Warehouse.Controllers
 {
@@ -18,7 +19,11 @@ namespace Warehouse.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var list = await _service.GetAllAsync();
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            var list = await _service.GetByUserIdAsync(userId);
             return Ok(list);
         }
 

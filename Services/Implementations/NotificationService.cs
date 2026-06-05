@@ -2,7 +2,6 @@ using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using Warehouse.DTOs.NotificationDto;
 using Warehouse.Models;
-using Warehouse.Enums;
 using Warehouse.Services.Interfaces;
 
 namespace Warehouse.Services.Implementations
@@ -21,6 +20,16 @@ namespace Warehouse.Services.Implementations
         {
             var list = await _notifications
                 .Find(_ => true)
+                .SortByDescending(n => n.CreatedAt)
+                .ToListAsync();
+
+            return list.Select(n => ToDto(n)).ToList();
+        }
+
+        public async Task<List<NotificationDto>> GetByUserIdAsync(string userId)
+        {
+            var list = await _notifications
+                .Find(n => n.UserId == userId)
                 .SortByDescending(n => n.CreatedAt)
                 .ToListAsync();
 
@@ -49,7 +58,6 @@ namespace Warehouse.Services.Implementations
             };
 
             await _notifications.InsertOneAsync(notification);
-
             return ToDto(notification);
         }
 

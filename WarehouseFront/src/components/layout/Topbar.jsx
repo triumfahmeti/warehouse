@@ -1,21 +1,19 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Bell, Settings, LogOut, Menu } from 'lucide-react';
+import { Search, Settings, LogOut, Menu } from 'lucide-react';
 import { colors } from '../../theme/colors';
 import { IconButton } from '../ui/Button';
 import { useAuth } from '../../auth/AuthContext';
+import NotificationBell from './NotificationBell';
 
-// Shiriti i sipërm: subtitle + titull majtas, kërkim + ikona + menu user djathtas.
 export default function Topbar({ title, subtitle, action, onMenuToggle }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const menuRef = useRef(null);
 
-  // Inicialja për avatar (nga email-i). Fallback 'U'.
   const initial = (user?.email?.[0] || 'U').toUpperCase();
 
-  // Mbyll dropdown-in kur klikohet jashtë.
   useEffect(() => {
     const onClick = e => {
       if (menuRef.current && !menuRef.current.contains(e.target)) setOpen(false);
@@ -37,18 +35,12 @@ export default function Topbar({ title, subtitle, action, onMenuToggle }) {
       position: 'sticky', top: 0, zIndex: 10,
       gap: 12,
     }}>
-      {/* Hamburger – shfaqet vetëm në mobile */}
-      <button
-        className="menu-toggle"
-        onClick={onMenuToggle}
-        style={{
-          all: 'unset', cursor: 'pointer', flexShrink: 0,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          width: 34, height: 34, borderRadius: 8,
-          border: `1px solid ${colors.border}`, background: colors.bg,
-          color: colors.text,
-        }}
-      >
+      <button className="menu-toggle" onClick={onMenuToggle} style={{
+        all: 'unset', cursor: 'pointer', flexShrink: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        width: 34, height: 34, borderRadius: 8,
+        border: `1px solid ${colors.border}`, background: colors.bg, color: colors.text,
+      }}>
         <Menu size={16} />
       </button>
 
@@ -70,33 +62,28 @@ export default function Topbar({ title, subtitle, action, onMenuToggle }) {
           borderRadius: 8, width: 220,
         }}>
           <Search size={14} color={colors.textMuted} />
-          <input
-            placeholder="Search anything…"
-            style={{
-              all: 'unset', flex: 1, fontSize: 13, color: colors.text,
-              fontFamily: 'var(--font-sans)',
-            }}
-          />
+          <input placeholder="Search anything…" style={{
+            all: 'unset', flex: 1, fontSize: 13, color: colors.text,
+            fontFamily: 'var(--font-sans)',
+          }} />
           <span style={{
             fontSize: 10, color: colors.textDim, fontFamily: 'var(--font-mono)',
             padding: '1px 5px', border: `1px solid ${colors.border}`, borderRadius: 3,
           }}>⌘K</span>
         </div>
-        <IconButton><Bell size={15} /></IconButton>
+
+        <NotificationBell />
+
         <IconButton><Settings size={15} /></IconButton>
 
-        {/* Avatar + dropdown */}
         <div ref={menuRef} style={{ position: 'relative' }}>
-          <button
-            onClick={() => setOpen(o => !o)}
-            style={{
-              all: 'unset', cursor: 'pointer',
-              width: 30, height: 30, borderRadius: 999,
-              background: `linear-gradient(135deg, ${colors.accent}, #FFB388)`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'white', fontSize: 12, fontWeight: 600, fontFamily: 'var(--font-sans)',
-            }}
-          >{initial}</button>
+          <button onClick={() => setOpen(o => !o)} style={{
+            all: 'unset', cursor: 'pointer',
+            width: 30, height: 30, borderRadius: 999,
+            background: `linear-gradient(135deg, ${colors.accent}, #FFB388)`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: 'white', fontSize: 12, fontWeight: 600, fontFamily: 'var(--font-sans)',
+          }}>{initial}</button>
 
           {open && (
             <div style={{
@@ -109,20 +96,16 @@ export default function Topbar({ title, subtitle, action, onMenuToggle }) {
                 <div style={{ fontSize: 13, fontWeight: 500, color: colors.text }}>
                   {user?.email || 'Unknown user'}
                 </div>
-                <div style={{
-                  fontSize: 11, color: colors.textMuted, fontFamily: 'var(--font-mono)', marginTop: 2,
-                }}>
+                <div style={{ fontSize: 11, color: colors.textMuted, fontFamily: 'var(--font-mono)', marginTop: 2 }}>
                   {user?.roles?.length ? user.roles.join(', ') : 'No role'}
                 </div>
               </div>
-              <button
-                onClick={handleLogout}
-                style={{
-                  all: 'unset', display: 'flex', alignItems: 'center', gap: 8,
-                  width: '100%', boxSizing: 'border-box', padding: '8px 10px',
-                  borderRadius: 6, cursor: 'pointer',
-                  fontSize: 13, color: colors.danger, fontFamily: 'var(--font-sans)',
-                }}
+              <button onClick={handleLogout} style={{
+                all: 'unset', display: 'flex', alignItems: 'center', gap: 8,
+                width: '100%', boxSizing: 'border-box', padding: '8px 10px',
+                borderRadius: 6, cursor: 'pointer',
+                fontSize: 13, color: colors.danger, fontFamily: 'var(--font-sans)',
+              }}
                 onMouseEnter={e => (e.currentTarget.style.background = colors.dangerSoft)}
                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
               >
