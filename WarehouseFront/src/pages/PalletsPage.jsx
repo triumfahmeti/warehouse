@@ -37,7 +37,7 @@ export default function PalletsPage() {
   const [orderModal, setOrderModal] = useState(false);
   const [salesOrders, setSalesOrders] = useState([]);
   const [rafts, setRafts] = useState([]);
-  const [orderForm, setOrderForm] = useState({ salesOrderId: '', packagingType: 'EuroPallet', raftId: '' });
+  const [orderForm, setOrderForm] = useState({ salesOrderId: '', packagingType: 'EuroPallet', raftId: '', splitMode: false, itemsPerPallet: '' });
   const [orderPreview, setOrderPreview] = useState(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
 
@@ -109,7 +109,7 @@ export default function PalletsPage() {
       ]);
       setSalesOrders(ordersData.filter(o => o.status === 'Confirmed'));
       setRafts(raftsData);
-      setOrderForm({ salesOrderId: '', packagingType: 'EuroPallet', raftId: '' });
+      setOrderForm({ salesOrderId: '', packagingType: 'EuroPallet', raftId: '', splitMode: false, itemsPerPallet: '' });
       setOrderPreview(null);
       setOrderModal(true);
     } catch {
@@ -136,14 +136,27 @@ export default function PalletsPage() {
     e.preventDefault();
     setSaving(true);
     try {
-      await palletsApi.fromOrder({
-        salesOrderId: Number(orderForm.salesOrderId),
-        packagingType: orderForm.packagingType,
-        raftId: Number(orderForm.raftId),
-      });
-      setOrderModal(false);
-      await load();
-      showFeedback('Pallet created from sales order.');
+      if (orderForm.splitMode) {
+        const result = await palletsApi.fromOrderSplit({
+          salesOrderId:  Number(orderForm.salesOrderId),
+          packagingType: orderForm.packagingType,
+          raftId:        Number(orderForm.raftId),
+          itemsPerPallet: Number(orderForm.itemsPerPallet),
+        });
+        const count = result?.palletIds?.length ?? '?';
+        setOrderModal(false);
+        await load();
+        showFeedback(`${count} pallets created from sales order.`);
+      } else {
+        await palletsApi.fromOrder({
+          salesOrderId:  Number(orderForm.salesOrderId),
+          packagingType: orderForm.packagingType,
+          raftId:        Number(orderForm.raftId),
+        });
+        setOrderModal(false);
+        await load();
+        showFeedback('Pallet created from sales order.');
+      }
     } catch (err) {
       showFeedback(err.message, false);
     } finally {
@@ -223,9 +236,15 @@ export default function PalletsPage() {
           columns={[
             { key: 'id', label: 'ID', width: '60px', render: r => <span style={{ fontFamily: 'var(--font-mono)', color: colors.textMuted, fontSize: 12 }}>#{r.id}</span> },
             { key: 'palletCode', label: 'Pallet Code', render: r => <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 500 }}>{r.palletCode}</span> },
-            { key: 'packingType', label: 'Packaging', width: '160px', render: r => (
+            { key: 'salesOrderId', label: 'Sales Order', width: '130px', render: r => <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: colors.textMuted }}>#{r.salesOrderId}</span> },
+            { key: 'packingType', label: 'Packaging', width: '140px', render: r => (
               <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 999, background: colors.bg, color: colors.textMuted, fontFamily: 'var(--font-mono)' }}>
                 {r.packingType}
+              </span>
+            )},
+            { key: 'items', label: 'Items', width: '80px', render: r => (
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: colors.textMuted }}>
+                {r.items?.reduce((s, i) => s + i.quantity, 0) ?? 0}
               </span>
             )},
             { key: 'action', label: '', width: '48px', render: r => (
@@ -335,9 +354,39 @@ export default function PalletsPage() {
                 ))}
               </select>
             </Field>
-            <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
+            {/* Toggle: Single vs Split */}
+            <div style={{ marginBottom: 16, padding: '12px', background: colors.bg, borderRadius: 8, border: `1px solid ${colors.border}` }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: orderForm.splitMode ? 12 : 0 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, fontFamily: 'var(--font-sans)', color: colors.text, userSelect: 'none' }}>
+                  <input
+                    type="checkbox"
+                    checked={orderForm.splitMode}
+                    onChange={e => setOrderForm(f => ({ ...f, splitMode: e.target.checked, itemsPerPallet: '' }))}
+                    style={{ cursor: 'pointer' }}
+                  />
+                  Split into multiple pallets
+                </label>
+              </div>
+              {orderForm.splitMode && (
+                <Field label="Items per Pallet">
+                  <input
+                    required
+                    type="number"
+                    min="1"
+                    style={inputStyle}
+                    value={orderForm.itemsPerPallet}
+                    onChange={e => setOrderForm(f => ({ ...f, itemsPerPallet: e.target.value }))}
+                    placeholder="ex. 100"
+                  />
+                </Field>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
               <button type="button" onClick={() => setOrderModal(false)} style={cancelBtn}>Cancel</button>
-              <button type="submit" disabled={saving} style={submitBtn(saving)}>{saving ? 'Creating...' : 'Create Pallet'}</button>
+              <button type="submit" disabled={saving} style={submitBtn(saving)}>
+                {saving ? 'Creating...' : orderForm.splitMode ? 'Create Pallets' : 'Create Pallet'}
+              </button>
             </div>
           </form>
         </Modal>
@@ -362,6 +411,25 @@ export default function PalletsPage() {
           <DetailRow label="ID" value={`#${detail.id}`} mono />
           <DetailRow label="Pallet Code" value={detail.palletCode} mono />
           <DetailRow label="Packaging Type" value={detail.packingType} />
+          <DetailRow label="Sales Order" value={`#${detail.salesOrderId}`} mono />
+
+          {/* Items brenda palletit */}
+          {detail.items?.length > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <div style={{ fontSize: 10, color: colors.textMuted, fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                Items ({detail.totalQuantity ?? detail.items.reduce((s, i) => s + i.quantity, 0)} total)
+              </div>
+              <div style={{ border: `1px solid ${colors.border}`, borderRadius: 8, overflow: 'hidden' }}>
+                {detail.items.map((item, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', borderTop: i > 0 ? `1px solid ${colors.border}` : 'none', background: i % 2 === 0 ? colors.surface : colors.bg }}>
+                    <span style={{ fontSize: 13, fontFamily: 'var(--font-sans)', color: colors.text }}>{item.productName}</span>
+                    <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: colors.textMuted, fontWeight: 500 }}>× {item.quantity}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
             {canManage && (
               <button onClick={() => { const p = detail; setDetail(null); openEdit(p); }} style={cancelBtn}>Edit</button>

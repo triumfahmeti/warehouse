@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Warehouse.DTOs.Pallet;
+using Warehouse.DTOs.PalletItem;
 using Warehouse.Enums;
 using Warehouse.Models;
 using Warehouse.Repositories.Interfaces;
@@ -264,11 +265,19 @@ namespace Warehouse.Services.Implementations
 
         private static PalletDto MapToDto(Pallet p) => new PalletDto
         {
-            Id = p.Id,
-            PalletCode = p.PalletCode,
-            PackingType = p.PackingType.ToString(), // enum → string për DTO
-            SalesOrderId = p.SalesOrderId  // ← shto
-
+            Id           = p.Id,
+            PalletCode   = p.PalletCode,
+            PackingType  = p.PackingType.ToString(),
+            SalesOrderId = p.SalesOrderId,
+            Items = (p.Items ?? new List<PalletItem>()).Select(i => new PalletItemDto
+            {
+                Id          = i.Id,
+                PalletId    = i.PalletId,
+                PalletCode  = p.PalletCode,
+                ProductId   = i.ProductId,
+                ProductName = i.Product?.Name ?? $"Product #{i.ProductId}",
+                Quantity    = i.Quantity,
+            }).ToList(),
         };
     }
 }

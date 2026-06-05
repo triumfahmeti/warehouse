@@ -118,4 +118,19 @@ export const http = {
   put: (path, body) => api(path, { method: 'PUT', body }),
   patch: (path, body) => api(path, { method: 'PATCH', body }),
   del: path => api(path, { method: 'DELETE' }),
+  // Për file upload — nuk vendos Content-Type (browser e vendos vetë me boundary)
+  upload: async (path, formData) => {
+    let token = tokenStorage.getAccessToken();
+    const res = await fetch(`${API_BASE}${path}`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+    if (!res.ok) {
+      let message = `Request failed (${res.status})`;
+      try { const d = await res.json(); message = d.message || message; } catch {}
+      throw new Error(message);
+    }
+    return res.status === 204 ? null : res.json();
+  },
 };

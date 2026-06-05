@@ -84,6 +84,7 @@ export const palletsApi = {
   update:          (id, data) => http.put(`/pallets/${id}`, data),
   remove:          id         => http.del(`/pallets/${id}`),
   fromOrder:       data       => http.post('/pallets/from-order', data),
+  fromOrderSplit:  data       => http.post('/pallets/from-order-split', data),
   orderPreview:    id         => http.get(`/pallets/order-preview/${id}`),
 };
 
@@ -167,4 +168,13 @@ export const settingsApi = {
 // Admin Dashboard — statistikat e sistemit.
 export const adminDashboardApi = {
   getStats: () => http.get('/admindashboard/stats'),
+};
+
+// Import — vetëm Admin. Pranon CSV/XLSX/JSON.
+const makeFormData = file => { const fd = new FormData(); fd.append('file', file); return fd; };
+export const importApi = {
+  products:  file => http.upload('/exportimport/import/products',  makeFormData(file)),
+  suppliers: file => http.upload('/exportimport/import/suppliers', makeFormData(file)),
+  clients:   file => http.upload('/exportimport/import/clients',   makeFormData(file)),
+  inventory: file => http.upload('/exportimport/import/inventory', makeFormData(file)),
 };

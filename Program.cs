@@ -159,11 +159,8 @@ builder.Services.AddScoped<IPalletItemService, PalletItemService>();
 builder.Services.AddScoped<IPackingListService, PackingListService>();
 builder.Services.AddScoped<IShipmentRepository, ShipmentRepository>();
 builder.Services.AddScoped<IShipmentService, ShipmentService>();
-<<<<<<< Updated upstream
 builder.Services.AddScoped<IReportService, ReportService>();
 
-=======
->>>>>>> Stashed changes
 builder.Services.AddSignalR();
 
 var app = builder.Build();

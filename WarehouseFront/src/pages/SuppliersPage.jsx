@@ -6,10 +6,15 @@ import PageHeader from '../components/ui/PageHeader';
 import Table from '../components/ui/Table';
 import { PrimaryButton } from '../components/ui/Button';
 import { exportToCsv } from '../utils/exportCsv';
+import ImportButton from '../components/ui/ImportButton';
+import { importApi } from '../api';
+import { useAuth } from '../auth/AuthContext';
 
 const emptyForm = { name: '', contactPerson: '', email: '', phone: '', address: '', city: '', country: '' };
 
 export default function SuppliersPage() {
+  const { user } = useAuth();
+  const isAdmin = (user?.roles || []).includes('Admin');
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -136,7 +141,23 @@ export default function SuppliersPage() {
         onFilter={toggleFilter}
         filterActive={showFilter}
         onExport={exportCsv}
-        action={<PrimaryButton icon={Plus} onClick={openCreate}>New Supplier</PrimaryButton>}
+        action={
+          <div style={{ display: 'flex', gap: 8 }}>
+            {isAdmin && (
+              <ImportButton
+                onImport={async (file) => {
+                  const res = await importApi.suppliers(file);
+                  const msg = res?.errors?.length
+                    ? `Imported: ${res.successCount}, skipped: ${res.skippedCount}. Errors: ${res.errors.map(e => `Row ${e.row}: ${e.message}`).join('; ')}`
+                    : `Imported: ${res?.successCount ?? 0} suppliers, skipped: ${res?.skippedCount ?? 0}`;
+                  showFeedback(msg, !res?.errors?.length);
+                  await load();
+                }}
+              />
+            )}
+            <PrimaryButton icon={Plus} onClick={openCreate}>New Supplier</PrimaryButton>
+          </div>
+        }
       />
 
       {showFilter && (

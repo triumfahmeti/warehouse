@@ -9,12 +9,18 @@ import {
   ShoppingCart,
 } from "lucide-react";
 import { colors } from "../theme/colors";
-import { clientsApi } from "../api";
+import { clientsApi, importApi } from "../api";
+import { useAuth } from "../auth/AuthContext";
 import PageHeader from "../components/ui/PageHeader";
 import Table from "../components/ui/Table";
+import ImportButton from "../components/ui/ImportButton";
 
 export default function ClientsPage() {
+  const { user } = useAuth();
+  const isAdmin = (user?.roles || []).includes('Admin');
   const [clients, setClients] = useState([]);
+  const [feedback, setFeedback] = useState(null);
+  const showFeedback = (msg, ok = true) => { setFeedback({ msg, ok }); setTimeout(() => setFeedback(null), 3000); };
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [query, setQuery] = useState("");
@@ -104,7 +110,23 @@ export default function ClientsPage() {
         onFilter={toggleFilter}
         onExport={exportCsv}
         filterActive={showFilter}
+        action={isAdmin && (
+          <ImportButton
+            onImport={async (file) => {
+              const res = await importApi.clients(file);
+              const msg = res?.errors?.length
+                ? `Imported: ${res.successCount}, skipped: ${res.skippedCount}. Errors: ${res.errors.map(e => `Row ${e.row}: ${e.message}`).join('; ')}`
+                : `Imported: ${res?.successCount ?? 0} clients, skipped: ${res?.skippedCount ?? 0}`;
+              showFeedback(msg, !res?.errors?.length);
+            }}
+          />
+        )}
       />
+      {feedback && (
+        <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 1100, background: feedback.ok ? colors.text : colors.danger, color: colors.surface, padding: '12px 18px', borderRadius: 10, fontSize: 13, fontFamily: 'var(--font-sans)', boxShadow: '0 8px 24px rgba(0,0,0,0.15)' }}>
+          {feedback.msg}
+        </div>
+      )}
 
       {/* Shiriti i filtrit: kërkim + renditje */}
       {showFilter && (

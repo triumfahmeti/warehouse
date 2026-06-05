@@ -7,6 +7,8 @@ import PageHeader from '../components/ui/PageHeader';
 import Table from '../components/ui/Table';
 import { PrimaryButton } from '../components/ui/Button';
 import { exportToCsv } from '../utils/exportCsv';
+import ImportButton from '../components/ui/ImportButton';
+import { importApi } from '../api';
 
 // Duhet të përputhen me enum-in ProductType në backend.
 const PRODUCT_TYPES = ['Laptop', 'TV', 'PC', 'Monitor', 'Accessories', 'Phone', 'Tablet'];
@@ -154,7 +156,23 @@ export default function ProductsPage() {
         onFilter={toggleFilter}
         filterActive={showFilter}
         onExport={exportCsv}
-        action={canManage ? <PrimaryButton icon={Plus} onClick={openCreate}>New Product</PrimaryButton> : undefined}
+        action={
+          <div style={{ display: 'flex', gap: 8 }}>
+            {(user?.roles || []).includes('Admin') && (
+              <ImportButton
+                onImport={async (file) => {
+                  const res = await importApi.products(file);
+                  const msg = res?.errors?.length
+                    ? `Imported: ${res.successCount}, skipped: ${res.skippedCount}. Errors: ${res.errors.map(e => `Row ${e.row}: ${e.message}`).join('; ')}`
+                    : `Imported: ${res?.successCount ?? 0} products, skipped: ${res?.skippedCount ?? 0}`;
+                  showFeedback(msg, !res?.errors?.length);
+                  await load();
+                }}
+              />
+            )}
+            {canManage && <PrimaryButton icon={Plus} onClick={openCreate}>New Product</PrimaryButton>}
+          </div>
+        }
       />
 
       {/* Shiriti i filtrit: kërkim + renditje */}

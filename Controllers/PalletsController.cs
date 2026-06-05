@@ -54,13 +54,6 @@ namespace Warehouse.Controllers
             return Ok(preview);
         }
 
-        [HttpPost("from-order")]
-        public async Task<IActionResult> CreateFromOrder(CreatePalletDto dto)
-        {
-            var palletId = await _service.CreatePalletFromOrder(dto);
-            return CreatedAtAction(nameof(GetById), new { id = palletId }, new { id = palletId });
-        }
-
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, CreateEditPalletDto dto)
         {
@@ -75,11 +68,32 @@ namespace Warehouse.Controllers
             return NoContent();
         }
 
+        [HttpPost("from-order")]
+        public async Task<IActionResult> CreateFromOrder(CreatePalletDto dto)
+        {
+            try
+            {
+                var palletId = await _service.CreatePalletFromOrder(dto);
+                return CreatedAtAction(nameof(GetById), new { id = palletId }, new { id = palletId });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         [HttpPost("from-order-split")]
         public async Task<IActionResult> CreateFromOrderSplit([FromBody] CreatePalletSplitDto dto)
         {
-            var palletIds = await _service.CreatePalletsFromOrderSplit(dto);
-            return Ok(new { palletIds });
+            try
+            {
+                var palletIds = await _service.CreatePalletsFromOrderSplit(dto);
+                return Ok(new { palletIds });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpGet("by-order/{salesOrderId}")]
