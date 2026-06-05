@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Warehouse.DTOs.Pallet;
 using Warehouse.Enums;
 using Warehouse.Models;
@@ -79,6 +80,49 @@ namespace Warehouse.Services.Implementations
 
             await _repo.DeleteAsync(id);
             await _context.SaveChangesAsync();
+        }
+
+        public async Task<OrderPickingPreviewDto?> GetOrderPickingPreviewAsync(int salesOrderId)
+        {
+            var order = await _context.SalesOrders
+                .Include(o => o.Client)
+                .Include(o => o.SalesOrderItems)
+                    .ThenInclude(i => i.Product)
+                .FirstOrDefaultAsync(o => o.Id == salesOrderId);
+
+            if (order == null) return null;
+
+            var items = new List<PickingItemPreviewDto>();
+
+            foreach (var item in order.SalesOrderItems)
+            {
+                var inventories = await _inventoryRepository
+                    .GetInventoriesWithRaftByProduct(item.ProductId);
+
+                var locations = inventories.Select(inv => new RaftLocationDto
+                {
+                    RaftId       = inv.RaftId,
+                    RaftNumber   = inv.Raft?.RaftNumber   ?? $"Raft #{inv.RaftId}",
+                    WarehouseName = inv.Raft?.Warehouse?.Name ?? "Unknown",
+                    ReservedQuantity = inv.ReservedQuantity,
+                }).ToList();
+
+                items.Add(new PickingItemPreviewDto
+                {
+                    ProductId   = item.ProductId,
+                    ProductName = item.Product?.Name ?? $"Product #{item.ProductId}",
+                    Quantity    = item.Quantity,
+                    Locations   = locations,
+                });
+            }
+
+            return new OrderPickingPreviewDto
+            {
+                OrderId    = order.Id,
+                ClientName = order.Client?.FullName ?? $"Client #{order.ClientId}",
+                Status     = order.Status.ToString(),
+                Items      = items,
+            };
         }
 
         public async Task<int> CreatePalletFromOrder(CreatePalletDto dto)

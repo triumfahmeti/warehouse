@@ -38,6 +38,8 @@ export default function PalletsPage() {
   const [salesOrders, setSalesOrders] = useState([]);
   const [rafts, setRafts] = useState([]);
   const [orderForm, setOrderForm] = useState({ salesOrderId: '', packagingType: 'EuroPallet', raftId: '' });
+  const [orderPreview, setOrderPreview] = useState(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
 
   const showFeedback = (msg, ok = true) => {
     setFeedback({ msg, ok });
@@ -108,9 +110,25 @@ export default function PalletsPage() {
       setSalesOrders(ordersData.filter(o => o.status === 'Confirmed'));
       setRafts(raftsData);
       setOrderForm({ salesOrderId: '', packagingType: 'EuroPallet', raftId: '' });
+      setOrderPreview(null);
       setOrderModal(true);
     } catch {
       showFeedback('Could not load data.', false);
+    }
+  };
+
+  const handleOrderSelect = async (salesOrderId) => {
+    setOrderForm(f => ({ ...f, salesOrderId, raftId: '' }));
+    setOrderPreview(null);
+    if (!salesOrderId) return;
+    setLoadingPreview(true);
+    try {
+      const preview = await palletsApi.orderPreview(salesOrderId);
+      setOrderPreview(preview);
+    } catch {
+      showFeedback('Could not load order details.', false);
+    } finally {
+      setLoadingPreview(false);
     }
   };
 
@@ -265,13 +283,45 @@ export default function PalletsPage() {
         <Modal title="Create Pallet from Sales Order" onClose={() => setOrderModal(false)}>
           <form onSubmit={handleFromOrder}>
             <Field label="Sales Order (Confirmed)">
-              <select required style={inputStyle} value={orderForm.salesOrderId} onChange={e => setOrderForm(f => ({ ...f, salesOrderId: e.target.value }))}>
+              <select required style={inputStyle} value={orderForm.salesOrderId} onChange={e => handleOrderSelect(e.target.value)}>
                 <option value="" disabled>Select order...</option>
                 {salesOrders.map(o => (
-                  <option key={o.id} value={o.id}>#{o.id} — {o.clientName || 'Client'} ({o.status})</option>
+                  <option key={o.id} value={o.id}>#{o.id} — {o.clientName || 'Client'}</option>
                 ))}
               </select>
             </Field>
+
+            {/* Preview i produkteve dhe rajteve */}
+            {loadingPreview && (
+              <div style={{ fontSize: 12, color: colors.textMuted, fontFamily: 'var(--font-mono)', marginBottom: 16 }}>Loading order details...</div>
+            )}
+            {orderPreview && (
+              <div style={{ marginBottom: 16, border: `1px solid ${colors.border}`, borderRadius: 8, overflow: 'hidden' }}>
+                <div style={{ background: colors.bg, padding: '8px 12px', fontSize: 11, fontFamily: 'var(--font-mono)', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  Order Contents
+                </div>
+                {orderPreview.items.map((item, i) => (
+                  <div key={i} style={{ padding: '10px 12px', borderTop: i > 0 ? `1px solid ${colors.border}` : 'none' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <span style={{ fontWeight: 500, fontSize: 13, fontFamily: 'var(--font-sans)' }}>{item.productName}</span>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: colors.textMuted }}>Qty: {item.quantity}</span>
+                    </div>
+                    {item.locations.length > 0 ? item.locations.map((loc, j) => (
+                      <div key={j} style={{ fontSize: 12, color: colors.textMuted, fontFamily: 'var(--font-mono)', display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <span style={{ background: colors.surface, border: `1px solid ${colors.border}`, borderRadius: 4, padding: '2px 6px' }}>
+                          📦 {loc.raftNumber}
+                        </span>
+                        <span>{loc.warehouseName}</span>
+                        <span style={{ color: colors.success }}>Reserved: {loc.reservedQuantity}</span>
+                      </div>
+                    )) : (
+                      <div style={{ fontSize: 12, color: colors.danger, fontFamily: 'var(--font-mono)' }}>⚠ No reserved stock found</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
             <Field label="Packaging Type">
               <select required style={inputStyle} value={orderForm.packagingType} onChange={e => setOrderForm(f => ({ ...f, packagingType: e.target.value }))}>
                 {PACKAGING_TYPES.map(t => <option key={t} value={t}>{t}</option>)}

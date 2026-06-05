@@ -46,6 +46,14 @@ namespace Warehouse.Controllers
             return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
         }
 
+        [HttpGet("order-preview/{salesOrderId}")]
+        public async Task<IActionResult> GetOrderPickingPreview(int salesOrderId)
+        {
+            var preview = await _service.GetOrderPickingPreviewAsync(salesOrderId);
+            if (preview == null) return NotFound();
+            return Ok(preview);
+        }
+
         [HttpPost("from-order")]
         public async Task<IActionResult> CreateFromOrder(CreatePalletDto dto)
         {

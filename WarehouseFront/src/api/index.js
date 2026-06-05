@@ -78,12 +78,13 @@ export const purchaseOrdersApi = {
 };
 
 export const palletsApi = {
-  getAll:       ()         => http.get('/pallets'),
-  getById:      id         => http.get(`/pallets/${id}`),
-  create:       data       => http.post('/pallets', data),
-  update:       (id, data) => http.put(`/pallets/${id}`, data),
-  remove:       id         => http.del(`/pallets/${id}`),
-  fromOrder:    data       => http.post('/pallets/from-order', data),
+  getAll:          ()         => http.get('/pallets'),
+  getById:         id         => http.get(`/pallets/${id}`),
+  create:          data       => http.post('/pallets', data),
+  update:          (id, data) => http.put(`/pallets/${id}`, data),
+  remove:          id         => http.del(`/pallets/${id}`),
+  fromOrder:       data       => http.post('/pallets/from-order', data),
+  orderPreview:    id         => http.get(`/pallets/order-preview/${id}`),
 };
 
 export const packingListsApi = {

@@ -12,6 +12,7 @@ namespace Warehouse.Services.Interfaces
         Task<PalletDto> AddAsync(CreateEditPalletDto dto);
         Task UpdateAsync(int id, CreateEditPalletDto dto);
         Task DeleteAsync(int id);
+        Task<OrderPickingPreviewDto?> GetOrderPickingPreviewAsync(int salesOrderId);
         Task<int> CreatePalletFromOrder(CreatePalletDto dto);
         Task<List<int>> CreatePalletsFromOrderSplit(CreatePalletSplitDto dto);
     }

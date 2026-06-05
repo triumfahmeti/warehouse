@@ -37,6 +37,16 @@ namespace Warehouse.Repositories.Implementations
                 .ToListAsync();
         }
 
+        public async Task<List<Inventory>> GetInventoriesWithRaftByProduct(int productId)
+        {
+            return await _context.Inventories
+                .Include(i => i.Raft)
+                    .ThenInclude(r => r.Warehouse)
+                .Include(i => i.Product)
+                .Where(i => i.ProductId == productId && i.ReservedQuantity > 0)
+                .ToListAsync();
+        }
+
         public async Task<int> ReserveStockAtomicAsync(int inventoryId, int quantityToReserve)
         {
             return await _context.Database.ExecuteSqlRawAsync(@"
