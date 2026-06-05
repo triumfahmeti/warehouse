@@ -222,7 +222,9 @@ namespace Warehouse.Services.Implementations
         {
             Id = p.Id,
             PalletCode = p.PalletCode,
-            PackingType = p.PackingType.ToString() // enum → string për DTO
+            PackingType = p.PackingType.ToString(), // enum → string për DTO
+            SalesOrderId = p.SalesOrderId  // ← shto
+
         };
     }
 }

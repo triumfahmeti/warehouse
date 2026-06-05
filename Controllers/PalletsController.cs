@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Warehouse.DTOs.Pallet;
 using Warehouse.Services.Interfaces;
 
+
 namespace Warehouse.Controllers
 {
     [ApiController]
@@ -71,6 +72,13 @@ namespace Warehouse.Controllers
         {
             var palletIds = await _service.CreatePalletsFromOrderSplit(dto);
             return Ok(new { palletIds });
+        }
+
+        [HttpGet("by-order/{salesOrderId}")]
+        public async Task<IActionResult> GetBySalesOrder(int salesOrderId)
+        {
+            var pallets = await _service.GetAllAsync();
+            return Ok(pallets.Where(p => p.SalesOrderId == salesOrderId));
         }
     }
 }

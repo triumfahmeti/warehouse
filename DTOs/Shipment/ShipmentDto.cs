@@ -15,6 +15,8 @@ namespace Warehouse.DTOs.ShipmentDto
         public string WarehouseName { get; set; } = null!;
         public int PackingListId { get; set; }
         public string PackingListNumber { get; set; } = null!;
+                public DateTime CreatedAt { get; set; }  // ← shto këtë
+
     }
 
 }

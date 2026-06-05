@@ -34,11 +34,15 @@ namespace Warehouse.Services.Implementations
             _packingListPalletRepository = packingListPalletRepository;
             _context = context;
         }
-            public async Task<List<PackingList>> GetAllAsync()
-    {
-        return await _context.PackingLists.ToListAsync();
-    }
-
+   public async Task<List<PackingList>> GetAllAsync()
+{
+    return await _context.PackingLists
+        .Include(pl => pl.Warehouse)
+        .Include(pl => pl.SalesOrder)
+            .ThenInclude(so => so.Client)
+        .AsNoTracking()
+        .ToListAsync();
+}
     public async Task<PackingList?> GetByIdAsync(int id)
     {
         return await _context.PackingLists.FindAsync(id);
@@ -156,6 +160,20 @@ namespace Warehouse.Services.Implementations
             await _context.SaveChangesAsync();
 
             return packingList.Id;
+        }
+
+        public async Task<List<PackingList>> GetAvailableAsync()
+        {
+            var assignedIds = await _context.Shipments
+                .Select(s => s.PackingListId)
+                .ToListAsync();
+
+            return await _context.PackingLists
+                .Include(pl => pl.Warehouse)
+                .Include(pl => pl.SalesOrder)
+                    .ThenInclude(so => so.Client)
+                .Where(pl => pl.Status == PackingListStatus.Ready && !assignedIds.Contains(pl.Id))
+                .ToListAsync();
         }
     }
 }

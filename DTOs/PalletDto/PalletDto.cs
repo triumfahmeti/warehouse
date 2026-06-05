@@ -5,6 +5,8 @@ namespace Warehouse.DTOs.Pallet
         public int Id { get; set; }
         public string PalletCode { get; set; }
         public string? PackingType { get; set; }
+            public int SalesOrderId { get; set; }  // ← shto
+
     }
 }
  

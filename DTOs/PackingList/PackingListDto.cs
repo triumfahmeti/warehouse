@@ -9,6 +9,10 @@ namespace Warehouse.DTOs.PackingList
         public int SalesOrderId { get; set; }
         public int WarehouseId { get; set; }
         public string WarehouseName { get; set; } = null!;
+            public DateTime CreatedAt { get; set; }  // ← shto këtë
+public string? ClientName { get; set; }
+
+    
     }
 
    

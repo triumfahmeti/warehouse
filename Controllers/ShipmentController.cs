@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Warehouse.DTOs.ShipmentDto;
 using Warehouse.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace Warehouse.Controllers
 {
@@ -62,6 +64,15 @@ namespace Warehouse.Controllers
         {
             await _service.CancelAsync(id);
             return NoContent();
+        }
+
+        [HttpGet("mine")]
+        [Authorize]
+        public async Task<IActionResult> GetMine()
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var list = await _service.GetByUserAsync(userId);
+            return Ok(list);
         }
     }
 }

@@ -14,8 +14,10 @@ namespace Warehouse.Services.Interfaces
         Task MarkAsReadyAsync(int id);
         Task CancelAsync(int id);
         Task<int> CreatePackingList(CreatePackingListDto dto);
-
+        Task<List<PackingList>> GetAvailableAsync();
     }
 }
+
+
 
 

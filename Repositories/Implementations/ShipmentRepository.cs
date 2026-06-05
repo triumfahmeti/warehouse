@@ -30,6 +30,7 @@ namespace Warehouse.Repositories.Implementations
             return await _context.Shipments
                 .Include(s => s.PackingList)
                     .ThenInclude(pl => pl.SalesOrder)
+                        .ThenInclude(so => so.Client)  // ← shto
                 .Include(s => s.Warehouse)
                 .OrderByDescending(s => s.CreatedAt)
                 .ToListAsync();

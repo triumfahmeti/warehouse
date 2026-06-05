@@ -12,5 +12,7 @@ namespace Warehouse.Services.Interfaces
         Task Ship(int shipmentId);
         Task Deliver(int shipmentId);
         Task CancelAsync(int id);
+        Task<List<ShipmentDto>> GetByUserAsync(string userId);
+
     }
 }

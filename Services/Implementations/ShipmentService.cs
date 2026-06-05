@@ -207,6 +207,20 @@ namespace Warehouse.Services.Implementations
             WarehouseName = s.Warehouse?.Name ?? "",
             PackingListId = s.PackingListId,
             PackingListNumber = s.PackingList?.PackingListNumber ?? "",
+            CreatedAt = s.CreatedAt
         };
+
+        public async Task<List<ShipmentDto>> GetByUserAsync(string userId)
+        {
+            var list = await _shipmentRepository.GetAllWithDetails();
+            
+            return list
+                .Where(s => s.PackingList?.SalesOrder?.Client?.UserId == userId)
+                .Select(s => ToDto(s))
+                .ToList();
+        }
+
+
+        
     }
 }

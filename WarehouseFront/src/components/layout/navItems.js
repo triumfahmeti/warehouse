@@ -21,7 +21,7 @@ export const navItems = [
   { id: 'salesorders',  label: 'Sales Orders',    icon: FileText,       path: '/sales-orders',       group: 'Fulfillment',    roles: ['Admin', 'Manager', 'Client'] },
   { id: 'pallets',      label: 'Pallets',         icon: Box,            path: '/pallets',            group: 'Fulfillment',    roles: ['Admin', 'Manager', 'Worker'] },
   { id: 'packinglists', label: 'Packing Lists',   icon: ClipboardList,  path: '/packing-lists',      group: 'Fulfillment',    roles: ['Admin', 'Manager', 'Worker'] },
-  { id: 'shipments',    label: 'Shipments',       icon: Truck,          path: '/shipments',          group: 'Fulfillment',    roles: ['Admin', 'Manager', 'Worker', 'Client'], highlight: true },
+  { id: 'shipments',    label: 'Shipments',       icon: Truck,          path: '/shipments',          group: 'Fulfillment',    roles: ['Admin', 'Manager', 'Worker', 'Client']},
 
   // Administration - vetëm Admin
   { id: 'users',        label: 'User Management', icon: UserCog,        path: '/admin/users',        group: 'Administration', roles: ['Admin'] },

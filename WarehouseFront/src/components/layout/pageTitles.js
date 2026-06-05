@@ -10,7 +10,7 @@ export const pageTitles = {
   '/sales-orders':  { title: 'Sales Orders',  subtitle: 'Fulfillment' },
   '/pallets':       { title: 'Pallets',       subtitle: 'Packaging' },
   '/packing-lists': { title: 'Packing Lists', subtitle: 'Pre-shipment' },
-  '/shipments':     { title: 'Shipments',     subtitle: "Era's Module · Lab 2" },
+  '/shipments':     { title: 'Shipments',     subtitle: 'Shipment' },
 };
 
 export const defaultTitle = { title: 'Warehouse OS', subtitle: '' };

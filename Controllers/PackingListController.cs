@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Warehouse.DTOs.PackingList;
+using Warehouse.Enums;
 using Warehouse.Services.Interfaces;
 
 namespace Warehouse.Controllers
@@ -23,7 +24,10 @@ namespace Warehouse.Controllers
             Notes = pl.Notes,
             SalesOrderId = pl.SalesOrderId,
             WarehouseId = pl.WarehouseId,
-            WarehouseName = pl.Warehouse?.Name ?? ""
+            WarehouseName = pl.Warehouse?.Name ?? "",
+            CreatedAt = pl.CreatedAt ,
+            ClientName = pl.SalesOrder?.Client?.FullName ?? ""  // ← shto
+
         };
 
         [HttpGet]
@@ -66,6 +70,13 @@ namespace Warehouse.Controllers
         {
             await _service.CancelAsync(id);
             return NoContent();
+        }
+
+        [HttpGet("available")]
+        public async Task<IActionResult> GetAvailable()
+        {
+            var list = await _service.GetAvailableAsync();
+            return Ok(list.Select(pl => ToDto(pl)));
         }
     }
 }

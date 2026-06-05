@@ -88,14 +88,18 @@ export const palletsApi = {
 
 export const packingListsApi = {
   getAll: () => http.get('/packinglist'),
+  getAvailable: () => http.get('/packinglist/available'), // ← vetëm ato pa shipment
   getById: id => http.get(`/packinglist/${id}`),
   create: data => http.post('/packinglist', data),
+  markReady: id => http.patch(`/packinglist/${id}/ready`),
+  cancel: id => http.patch(`/packinglist/${id}/cancel`),
 };
 
 // Shipment — moduli kryesor. Veprimet e tranzicionit të statusit
 // (ready/ship/deliver) varen nga si i ke emërtuar endpoint-et në backend.
 export const shipmentsApi = {
   getAll: () => http.get('/shipment'),
+  getMine: () => http.get('/shipment/mine'),  // ← shto
   getById: id => http.get(`/shipment/${id}`),
   create: data => http.post('/shipment', data),
   markReady: id => http.patch(`/shipment/${id}/ready`),
