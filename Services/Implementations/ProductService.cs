@@ -11,11 +11,13 @@ namespace Warehouse.Services.Implementations
     {
         private readonly IProductRepository _repository;
         private readonly AppDbContext _context;
+        private readonly IRealtimeNotifier _realtime;
 
-        public ProductService(IProductRepository repository, AppDbContext context)
+        public ProductService(IProductRepository repository, AppDbContext context, IRealtimeNotifier realtime)
         {
             _repository = repository;
             _context = context;
+            _realtime = realtime;
         }
 
         public async Task<List<ProductDto>> GetAllAsync()
@@ -84,6 +86,7 @@ namespace Warehouse.Services.Implementations
 
             await _repository.AddAsync(product);
             await _context.SaveChangesAsync();
+            await _realtime.ResourceChangedAsync("products");
             return ToDto(product);
         }
 
@@ -107,6 +110,7 @@ namespace Warehouse.Services.Implementations
 
             await _repository.UpdateAsync(product);
             await _context.SaveChangesAsync();
+            await _realtime.ResourceChangedAsync("products");
         }
 
         public async Task DeleteAsync(int id)
@@ -116,6 +120,7 @@ namespace Warehouse.Services.Implementations
 
             await _repository.DeleteAsync(id);
             await _context.SaveChangesAsync();
+            await _realtime.ResourceChangedAsync("products");
         }
 
         private static ProductDto ToDto(Product p) => new()

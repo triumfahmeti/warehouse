@@ -6,6 +6,7 @@ import PageHeader from '../components/ui/PageHeader';
 import Table from '../components/ui/Table';
 import { PrimaryButton } from '../components/ui/Button';
 import { exportToCsv } from '../utils/exportCsv';
+import { useLiveResource } from '../realtime/useLiveResource';
 
 const emptyForm = { name: '', location: '', phone: '', email: '' };
 
@@ -33,20 +34,22 @@ export default function WarehousesPage() {
     setTimeout(() => setFeedback(null), 3000);
   };
 
-  const load = async () => {
-    setLoading(true);
+  const load = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const data = await warehousesApi.getAll();
       setWarehouses(data);
       setError(null);
     } catch (err) {
-      setError(err.message);
+      if (!silent) setError(err.message);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => { load(); }, []);
+  // Utilizimi i depove varet edhe nga stoku → dëgjojmë 'inventory' veç 'warehouses'.
+  useLiveResource(['warehouses', 'inventory'], () => load(true));
 
   const openCreate = () => { setForm(emptyForm); setEditId(null); setModalMode('create'); };
   const openEdit = (w) => {

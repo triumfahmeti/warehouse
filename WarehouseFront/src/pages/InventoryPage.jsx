@@ -4,6 +4,7 @@ import { colors } from '../theme/colors';
 import { inventoryApi } from '../api';
 import PageHeader from '../components/ui/PageHeader';
 import Table from '../components/ui/Table';
+import { useLiveResource } from '../realtime/useLiveResource';
 
 export default function InventoryPage() {
   const [inventory, setInventory] = useState([]);
@@ -14,18 +15,21 @@ export default function InventoryPage() {
   const [query, setQuery] = useState('');
   const [sortBy, setSortBy] = useState('');
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const data = await inventoryApi.getAll();
-        setInventory(data);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
+  const load = async () => {
+    try {
+      const data = await inventoryApi.getAll();
+      setInventory(data);
+      setError(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+  // Inventari ndryshon nga marrja e PO-ve, rezervimet/konfirmimet, dërgesat etj.
+  useLiveResource(['inventory', 'products'], load);
 
   const toggleFilter = () => setShowFilter(v => { if (v) { setQuery(''); setSortBy(''); } return !v; });
 

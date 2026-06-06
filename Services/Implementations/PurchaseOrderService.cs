@@ -15,15 +15,18 @@ namespace Warehouse.Services.Implementations
         private readonly IPurchaseOrderRepository _purchaseOrderRepository;
         private readonly IInventoryService _inventoryService;
         private readonly AppDbContext _context;
+        private readonly IRealtimeNotifier _realtime;
 
         public PurchaseOrderService(
             IPurchaseOrderRepository purchaseOrderRepository,
             IInventoryService inventoryService,
-            AppDbContext context)
+            AppDbContext context,
+            IRealtimeNotifier realtime)
         {
             _purchaseOrderRepository = purchaseOrderRepository;
             _inventoryService = inventoryService;
             _context = context;
+            _realtime = realtime;
         }
 
         public async Task<List<PurchaseOrderDto>> GetAllAsync()
@@ -104,6 +107,7 @@ namespace Warehouse.Services.Implementations
 
             await _purchaseOrderRepository.AddAsync(order);
             await _context.SaveChangesAsync();
+            await _realtime.ResourceChangedAsync("purchaseorders");
             return order.Id;
         }
 
@@ -131,6 +135,7 @@ namespace Warehouse.Services.Implementations
                 await _context.SaveChangesAsync();
 
                 await transaction.CommitAsync();
+                await _realtime.ResourceChangedAsync("purchaseorders", "inventory", "products");
             }
             catch
             {
@@ -156,6 +161,7 @@ namespace Warehouse.Services.Implementations
             order.Status = PurchaseOrderStatus.Cancelled;
             await _purchaseOrderRepository.UpdateAsync(order);
             await _context.SaveChangesAsync();
+            await _realtime.ResourceChangedAsync("purchaseorders");
         }
 
         public async Task ClosePurchaseOrder(int purchaseOrderId)
@@ -175,6 +181,7 @@ namespace Warehouse.Services.Implementations
             order.Status = PurchaseOrderStatus.Closed;
             await _purchaseOrderRepository.UpdateAsync(order);
             await _context.SaveChangesAsync();
+            await _realtime.ResourceChangedAsync("purchaseorders");
         }
 
         public async Task AddReceivedStock(int purchaseOrderId, List<ReceivePurchaseOrderItemDto> items)

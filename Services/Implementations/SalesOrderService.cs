@@ -25,6 +25,7 @@ namespace Warehouse.Services.Implementations
         private readonly INotificationService _notificationService;
         private readonly IHubContext<NotificationHub> _hubContext;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IRealtimeNotifier _realtime;
 
         public SalesOrderService(
             ISalesOrderRepository salesOrderRepository,
@@ -34,7 +35,8 @@ namespace Warehouse.Services.Implementations
             AppDbContext context,
             INotificationService notificationService,
             IHubContext<NotificationHub> hubContext,
-            UserManager<ApplicationUser> userManager)
+            UserManager<ApplicationUser> userManager,
+            IRealtimeNotifier realtime)
         {
             _salesOrderRepository = salesOrderRepository;
             _inventoryRepository = inventoryRepository;
@@ -44,6 +46,7 @@ namespace Warehouse.Services.Implementations
             _notificationService = notificationService;
             _hubContext = hubContext;
             _userManager = userManager;
+            _realtime = realtime;
         }
 
         public async Task<List<SalesOrderDto>> GetAllAsync()
@@ -112,6 +115,8 @@ namespace Warehouse.Services.Implementations
             order.Status = SalesOrderStatus.Cancelled;
             await _salesOrderRepository.UpdateAsync(order);
             await _context.SaveChangesAsync();
+            // Anulimi liron demandën pending → AvailableToOrder rritet sërish.
+            await _realtime.ResourceChangedAsync("salesorders", "products");
         }
 
         public async Task CancelOrderForUser(string userId, int salesOrderId)
@@ -205,6 +210,9 @@ namespace Warehouse.Services.Implementations
                 );
             }
 
+            // Porosia New "zë" stok pa rezervuar → ndryshon AvailableToOrder i produkteve.
+            await _realtime.ResourceChangedAsync("salesorders", "products");
+
             return order.Id;
         }
 
@@ -232,6 +240,7 @@ namespace Warehouse.Services.Implementations
 
             await _salesOrderRepository.UpdateAsync(order);
             await _context.SaveChangesAsync();
+            await _realtime.ResourceChangedAsync("salesorders");
 
             // Njoftim te Clienti: cmimi u caktua
             var client = await _clientRepository.GetByIdAsync(order.ClientId);
@@ -320,6 +329,9 @@ namespace Warehouse.Services.Implementations
                         message: $"Order ID {salesOrderId} has been confirmed by the client."
                     );
                 }
+
+                // Konfirmimi rezervon stok → ndryshon inventari dhe availability e produkteve.
+                await _realtime.ResourceChangedAsync("salesorders", "inventory", "products");
             }
             catch
             {

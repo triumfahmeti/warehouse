@@ -19,13 +19,15 @@ namespace Warehouse.Services.Implementations
         private readonly ISalesOrderRepository _salesOrderRepository;
         private readonly AppDbContext _context;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IRealtimeNotifier _realtime;
 
-        public InventoryService(IInventoryRepository inventoryRepository, ISalesOrderRepository salesOrderRepository, AppDbContext context, IHttpContextAccessor httpContextAccessor)
+        public InventoryService(IInventoryRepository inventoryRepository, ISalesOrderRepository salesOrderRepository, AppDbContext context, IHttpContextAccessor httpContextAccessor, IRealtimeNotifier realtime)
         {
             _inventoryRepository = inventoryRepository;
             _salesOrderRepository = salesOrderRepository;
             _context = context;
             _httpContextAccessor = httpContextAccessor;
+            _realtime = realtime;
         }
 
         private static string BuildStateString(int quantityOnHand, int reservedQuantity)
@@ -115,6 +117,8 @@ namespace Warehouse.Services.Implementations
                 await _inventoryRepository.UpdateAsync(inventory);
                 await _context.SaveChangesAsync();
             }
+
+            await _realtime.ResourceChangedAsync("inventory", "products");
         }
 
         public async Task RemoveStock(int productId, int raftId, int quantity)
@@ -127,6 +131,7 @@ namespace Warehouse.Services.Implementations
             inventory.QuantityOnHand -= quantity;
             await _inventoryRepository.UpdateAsync(inventory);
             await _context.SaveChangesAsync();
+            await _realtime.ResourceChangedAsync("inventory", "products");
         }
 
         public async Task<int> GetAvailableStock(int productId)
@@ -180,6 +185,7 @@ namespace Warehouse.Services.Implementations
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
+                await _realtime.ResourceChangedAsync("inventory", "products");
             }
             catch
             {
@@ -245,6 +251,7 @@ namespace Warehouse.Services.Implementations
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
+                await _realtime.ResourceChangedAsync("inventory", "products");
             }
             catch
             {
@@ -302,6 +309,7 @@ namespace Warehouse.Services.Implementations
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
+                await _realtime.ResourceChangedAsync("inventory", "products");
             }
             catch
             {
@@ -355,6 +363,7 @@ namespace Warehouse.Services.Implementations
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
+                await _realtime.ResourceChangedAsync("inventory", "products");
             }
             catch
             {
@@ -413,6 +422,7 @@ namespace Warehouse.Services.Implementations
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
+                await _realtime.ResourceChangedAsync("inventory", "products");
             }
             catch
             {

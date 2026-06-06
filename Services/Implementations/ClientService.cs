@@ -11,11 +11,13 @@ namespace Warehouse.Services.Implementations
     {
         private readonly IClientRepository _clientRepository;
         private readonly AppDbContext _context;
+        private readonly IRealtimeNotifier _realtime;
 
-        public ClientService(IClientRepository clientRepository, AppDbContext context)
+        public ClientService(IClientRepository clientRepository, AppDbContext context, IRealtimeNotifier realtime)
         {
             _clientRepository = clientRepository;
             _context = context;
+            _realtime = realtime;
         }
 
         public async Task<List<ClientListDto>> GetAllAsync()
@@ -47,6 +49,7 @@ namespace Warehouse.Services.Implementations
 
             await _clientRepository.AddAsync(client);
             await _context.SaveChangesAsync();
+            await _realtime.ResourceChangedAsync("clients");
 
             return client.Id;
         }
@@ -65,6 +68,7 @@ namespace Warehouse.Services.Implementations
 
             await _clientRepository.UpdateAsync(client);
             await _context.SaveChangesAsync();
+            await _realtime.ResourceChangedAsync("clients");
         }
 
         public async Task<List<SalesOrder>> GetClientOrders(int clientId)

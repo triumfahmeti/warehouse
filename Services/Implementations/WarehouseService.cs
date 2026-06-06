@@ -9,11 +9,13 @@ namespace Warehouse.Services.Implementations
     {
         private readonly IWarehouseRepository _warehouseRepository;
         private readonly AppDbContext _context;
+        private readonly IRealtimeNotifier _realtime;
 
-        public WarehouseService(IWarehouseRepository warehouseRepository, AppDbContext context)
+        public WarehouseService(IWarehouseRepository warehouseRepository, AppDbContext context, IRealtimeNotifier realtime)
         {
             _warehouseRepository = warehouseRepository;
             _context = context;
+            _realtime = realtime;
         }
 
         public async Task<IEnumerable<WarehouseDto>> GetAllAsync()
@@ -67,6 +69,7 @@ namespace Warehouse.Services.Implementations
 
             await _warehouseRepository.AddAsync(warehouse);
             await _context.SaveChangesAsync();
+            await _realtime.ResourceChangedAsync("warehouses");
             return MapToDto(warehouse);
         }
 
@@ -85,6 +88,7 @@ namespace Warehouse.Services.Implementations
 
             await _warehouseRepository.UpdateAsync(warehouse);
             await _context.SaveChangesAsync();
+            await _realtime.ResourceChangedAsync("warehouses");
         }
 
         public async Task DeleteAsync(int id)
@@ -95,6 +99,7 @@ namespace Warehouse.Services.Implementations
 
             await _warehouseRepository.DeleteAsync(id);
             await _context.SaveChangesAsync();
+            await _realtime.ResourceChangedAsync("warehouses");
         }
 
         private static void ValidateDto(CreateEditWarehouseDto dto)

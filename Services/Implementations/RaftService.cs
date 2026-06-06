@@ -12,11 +12,13 @@ namespace Warehouse.Services.Implementations
     {
         private readonly IRaftRepository _repo;
         private readonly AppDbContext _context;
+        private readonly IRealtimeNotifier _realtime;
 
-        public RaftService(IRaftRepository repo, AppDbContext context)
+        public RaftService(IRaftRepository repo, AppDbContext context, IRealtimeNotifier realtime)
         {
             _repo = repo;
             _context = context;
+            _realtime = realtime;
         }
 
         public async Task<IEnumerable<RaftDto>> GetAllAsync()
@@ -56,6 +58,7 @@ namespace Warehouse.Services.Implementations
 
             await _repo.AddAsync(raft);
             await _context.SaveChangesAsync();
+            await _realtime.ResourceChangedAsync("rafts");
             return MapToDto(raft);
         }
 
@@ -73,6 +76,7 @@ namespace Warehouse.Services.Implementations
 
             await _repo.UpdateAsync(raft);
             await _context.SaveChangesAsync();
+            await _realtime.ResourceChangedAsync("rafts");
         }
 
         public async Task DeleteAsync(int id)
@@ -83,6 +87,7 @@ namespace Warehouse.Services.Implementations
 
             await _repo.DeleteAsync(id);
             await _context.SaveChangesAsync();
+            await _realtime.ResourceChangedAsync("rafts");
         }
 
         private async Task ValidateDtoAsync(CreateEditRaftDto dto)

@@ -4,6 +4,7 @@ import { colors } from '../../theme/colors';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
 import { pageTitles, defaultTitle } from './pageTitles';
+import { RealtimeProvider } from '../../realtime/RealtimeContext';
 
 export default function AppLayout() {
   const { pathname } = useLocation();
@@ -11,6 +12,7 @@ export default function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
+    <RealtimeProvider>
     <div style={{
       '--font-sans': "'Geist', -apple-system, BlinkMacSystemFont, sans-serif",
       '--font-mono': "'JetBrains Mono', 'SF Mono', Menlo, monospace",
@@ -35,5 +37,6 @@ export default function AppLayout() {
         <Outlet />
       </main>
     </div>
+    </RealtimeProvider>
   );
 }

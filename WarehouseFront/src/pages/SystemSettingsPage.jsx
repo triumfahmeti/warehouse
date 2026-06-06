@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Plus, Edit2, Trash2, Check, X } from "lucide-react";
 import { colors } from "../theme/colors";
 import { settingsApi } from "../api";
+import { usePagination } from "../components/ui/usePagination";
+import Pagination from "../components/ui/Pagination";
 
 const inputStyle = {
   padding: "7px 10px", border: `1px solid ${colors.border}`,
@@ -39,6 +41,8 @@ export default function SystemSettingsPage() {
   };
 
   useEffect(load, []);
+
+  const pg = usePagination(settings, 10);
 
   const showFeedback = (msg, ok = true) => {
     setFeedback({ msg, ok });
@@ -170,8 +174,8 @@ export default function SystemSettingsPage() {
               </tr>
             </thead>
             <tbody>
-              {settings.map((s, i) => (
-                <tr key={s.id} style={{ borderBottom: i < settings.length - 1 ? `1px solid ${colors.border}` : "none" }}>
+              {pg.pageItems.map((s, i) => (
+                <tr key={s.id} style={{ borderBottom: i < pg.pageItems.length - 1 ? `1px solid ${colors.border}` : "none" }}>
                   {editing === s.id ? (
                     <>
                       <td style={{ padding: "10px 14px" }}>
@@ -226,6 +230,7 @@ export default function SystemSettingsPage() {
               No settings configured. Add the first one above.
             </div>
           )}
+          <Pagination pagination={pg} />
         </div>
       )}
     </div>

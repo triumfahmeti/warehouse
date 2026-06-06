@@ -154,6 +154,7 @@ builder.Services.AddScoped<IPalletItemRepository, PalletItemRepository>();
 builder.Services.AddScoped<IPackingListRepository, PackingListRepository>();
 builder.Services.Configure<MongoDbSettings>(builder.Configuration.GetSection("MongoDb"));
 builder.Services.AddSingleton<INotificationService, NotificationService>();
+builder.Services.AddSingleton<IRealtimeNotifier, RealtimeNotifier>();
 builder.Services.AddScoped<IPalletService, PalletService>();
 builder.Services.AddScoped<IPalletItemService, PalletItemService>();
 builder.Services.AddScoped<IPackingListService, PackingListService>();

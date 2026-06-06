@@ -12,6 +12,7 @@ import { colors } from "../theme/colors";
 import { clientsApi } from "../api";
 import PageHeader from "../components/ui/PageHeader";
 import Table from "../components/ui/Table";
+import { useLiveResource } from "../realtime/useLiveResource";
 
 export default function ClientsPage() {
   const [clients, setClients] = useState([]);
@@ -23,25 +24,28 @@ export default function ClientsPage() {
   const [sortBy, setSortBy] = useState(""); // '' | orders-desc | orders-asc | name-asc | name-desc
 
   // Lidhja me API-në: mapojmë fushat e DTO-së në formën që pret tabela.
-  useEffect(() => {
-    (async () => {
-      try {
-        const data = await clientsApi.getAll();
-        setClients(data.map((c) => ({
-          id: c.id,
-          name: c.fullName,
-          email: c.email,
-          phone: c.phoneNumber,
-          address: c.address,
-          orders: c.ordersCount,
-        })));
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
+  const load = async () => {
+    try {
+      const data = await clientsApi.getAll();
+      setClients(data.map((c) => ({
+        id: c.id,
+        name: c.fullName,
+        email: c.email,
+        phone: c.phoneNumber,
+        address: c.address,
+        orders: c.ordersCount,
+      })));
+      setError(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+  // 'salesorders' këtu mban të freskët numrin e porosive (ordersCount) për klient.
+  useLiveResource(["clients", "salesorders"], load);
 
   // Filtrim sipas emrit, email-it ose telefonit.
   const filtered = useMemo(() => {

@@ -20,19 +20,22 @@ namespace Warehouse.Services.Implementations
         private readonly IGenericRepository<PackingList> _packingListRepository;
         private readonly IGenericRepository<PackingListPallet> _packingListPalletRepository;
         private readonly AppDbContext _context;
+        private readonly IRealtimeNotifier _realtime;
 
         public PackingListService(
             ISalesOrderRepository orderRepository,
             IGenericRepository<Pallet> palletRepository,
             IGenericRepository<PackingList> packingListRepository,
             IGenericRepository<PackingListPallet> packingListPalletRepository,
-            AppDbContext context)
+            AppDbContext context,
+            IRealtimeNotifier realtime)
         {
             _orderRepository = orderRepository;
             _palletRepository = palletRepository;
             _packingListRepository = packingListRepository;
             _packingListPalletRepository = packingListPalletRepository;
             _context = context;
+            _realtime = realtime;
         }
    public async Task<List<PackingList>> GetAllAsync()
 {
@@ -61,6 +64,7 @@ namespace Warehouse.Services.Implementations
 
         await _packingListRepository.AddAsync(packingList);
         await _context.SaveChangesAsync();
+        await _realtime.ResourceChangedAsync("packinglists");
 
         return packingList;
     }
@@ -76,6 +80,7 @@ namespace Warehouse.Services.Implementations
         packingList.SalesOrderId = dto.SalesOrderId;
 
         await _context.SaveChangesAsync();
+        await _realtime.ResourceChangedAsync("packinglists");
     }
 
     public async Task MarkAsReadyAsync(int id)
@@ -88,6 +93,7 @@ namespace Warehouse.Services.Implementations
         packingList.Status = PackingListStatus.Ready;
 
         await _context.SaveChangesAsync();
+        await _realtime.ResourceChangedAsync("packinglists");
     }
 
     public async Task CancelAsync(int id)
@@ -99,6 +105,7 @@ namespace Warehouse.Services.Implementations
 
         packingList.Status = PackingListStatus.Closed;
         await _context.SaveChangesAsync();
+        await _realtime.ResourceChangedAsync("packinglists");
     }
 
 
@@ -158,6 +165,7 @@ namespace Warehouse.Services.Implementations
             }
 
             await _context.SaveChangesAsync();
+            await _realtime.ResourceChangedAsync("packinglists");
 
             return packingList.Id;
         }
