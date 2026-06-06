@@ -1,14 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
 import { colors } from '../theme/colors';
-import { inventoryApi, importApi } from '../api';
+import { inventoryApi, importApi, settingsApi } from '../api';
 import { useAuth } from '../auth/AuthContext';
 import PageHeader from '../components/ui/PageHeader';
 import Table from '../components/ui/Table';
 import ImportButton from '../components/ui/ImportButton';
-import { inventoryApi, settingsApi } from '../api';
-import PageHeader from '../components/ui/PageHeader';
-import Table from '../components/ui/Table';
 import { useLiveResource } from '../realtime/useLiveResource';
 
 
