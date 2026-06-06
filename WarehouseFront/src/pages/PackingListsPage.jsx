@@ -566,17 +566,15 @@ export default function PackingListsPage() {
             </div>
 
             {/* Pallets */}
-            <div
-              style={{
-                fontSize: 11,
-                color: colors.textMuted,
-                fontFamily: "var(--font-mono)",
-                textTransform: "uppercase",
-                letterSpacing: "0.1em",
-                marginBottom: 10,
-              }}
-            >
-              Pallets
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <div style={{ fontSize: 11, color: colors.textMuted, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                Pallets ({pallets.length})
+              </div>
+              {pallets.length > 0 && (
+                <div style={{ fontSize: 11, color: colors.textMuted, fontFamily: "var(--font-mono)" }}>
+                  Total: {pallets.reduce((s, p) => s + (p.items?.reduce((si, i) => si + i.quantity, 0) ?? 0), 0)} pcs
+                </div>
+              )}
             </div>
             {palletsLoading ? (
               <div
@@ -636,6 +634,18 @@ export default function PackingListsPage() {
                       >
                         {p.packingType}
                       </div>
+                    </div>
+                    <div style={{
+                      fontSize: 12,
+                      fontFamily: "var(--font-mono)",
+                      fontWeight: 600,
+                      color: colors.text,
+                      background: colors.surface,
+                      border: `1px solid ${colors.border}`,
+                      borderRadius: 6,
+                      padding: "2px 8px",
+                    }}>
+                      {p.items?.reduce((s, i) => s + i.quantity, 0) ?? 0} pcs
                     </div>
                   </div>
                 ))}
