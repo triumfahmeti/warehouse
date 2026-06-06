@@ -15,17 +15,20 @@ namespace Warehouse.Services.Implementations
         private readonly ISalesOrderRepository _orderRepository;
         private readonly IInventoryRepository _inventoryRepository;
         private readonly AppDbContext _context;
+        private readonly IRealtimeNotifier _realtime;
 
         public PalletService(
             IPalletRepository repo,
             ISalesOrderRepository orderRepository,
             IInventoryRepository inventoryRepository,
-            AppDbContext context)
+            AppDbContext context,
+            IRealtimeNotifier realtime)
         {
             _repo = repo;
             _orderRepository = orderRepository;
             _inventoryRepository = inventoryRepository;
             _context = context;
+            _realtime = realtime;
         }
 
         public async Task<IEnumerable<PalletDto>> GetAllAsync()
@@ -58,6 +61,7 @@ namespace Warehouse.Services.Implementations
 
             await _repo.AddAsync(pallet);
             await _context.SaveChangesAsync();
+            await _realtime.ResourceChangedAsync("pallets");
             return MapToDto(pallet);
         }
 
@@ -72,6 +76,7 @@ namespace Warehouse.Services.Implementations
 
             await _repo.UpdateAsync(pallet);
             await _context.SaveChangesAsync();
+            await _realtime.ResourceChangedAsync("pallets");
         }
 
         public async Task DeleteAsync(int id)
@@ -81,6 +86,7 @@ namespace Warehouse.Services.Implementations
 
             await _repo.DeleteAsync(id);
             await _context.SaveChangesAsync();
+            await _realtime.ResourceChangedAsync("pallets");
         }
 
         public async Task<OrderPickingPreviewDto?> GetOrderPickingPreviewAsync(int salesOrderId)
@@ -183,6 +189,8 @@ namespace Warehouse.Services.Implementations
             await _repo.AddAsync(pallet);
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
+            // Pick-u nga porosia zbret ReservedQuantity → ndryshon edhe inventari.
+            await _realtime.ResourceChangedAsync("pallets", "inventory");
 
             return pallet.Id;
         }
@@ -260,6 +268,7 @@ namespace Warehouse.Services.Implementations
             }
 
             await transaction.CommitAsync();
+            await _realtime.ResourceChangedAsync("pallets", "inventory");
             return palletIds;
         }
 

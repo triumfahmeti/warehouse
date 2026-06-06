@@ -6,6 +6,7 @@ import PageHeader from '../components/ui/PageHeader';
 import Table from '../components/ui/Table';
 import { PrimaryButton } from '../components/ui/Button';
 import { exportToCsv } from '../utils/exportCsv';
+import { useLiveResource } from '../realtime/useLiveResource';
 
 const emptyForm = { raftNumber: '', warehouseId: '', maxCapacity: '' };
 
@@ -34,16 +35,16 @@ export default function RaftsPage() {
     setTimeout(() => setFeedback(null), 3000);
   };
 
-  const load = async () => {
-    setLoading(true);
+  const load = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const data = await raftsApi.getAll();
       setRafts(data);
       setError(null);
     } catch (err) {
-      setError(err.message);
+      if (!silent) setError(err.message);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -52,6 +53,8 @@ export default function RaftsPage() {
     // Opsionet e depove për dropdown-in e formës.
     warehousesApi.getAll().then(setWarehouseOptions).catch(() => setWarehouseOptions([]));
   }, []);
+  // UsedCapacity i raftit varet edhe nga stoku → dëgjojmë 'inventory' veç 'rafts'.
+  useLiveResource(['rafts', 'inventory'], () => load(true));
 
   const openCreate = () => { setForm(emptyForm); setEditId(null); setModalMode('create'); };
   const openEdit = (r) => {

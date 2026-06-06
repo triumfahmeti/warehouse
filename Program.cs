@@ -154,12 +154,14 @@ builder.Services.AddScoped<IPalletItemRepository, PalletItemRepository>();
 builder.Services.AddScoped<IPackingListRepository, PackingListRepository>();
 builder.Services.Configure<MongoDbSettings>(builder.Configuration.GetSection("MongoDb"));
 builder.Services.AddSingleton<INotificationService, NotificationService>();
+builder.Services.AddSingleton<IRealtimeNotifier, RealtimeNotifier>();
 builder.Services.AddScoped<IPalletService, PalletService>();
 builder.Services.AddScoped<IPalletItemService, PalletItemService>();
 builder.Services.AddScoped<IPackingListService, PackingListService>();
 builder.Services.AddScoped<IShipmentRepository, ShipmentRepository>();
 builder.Services.AddScoped<IShipmentService, ShipmentService>();
 builder.Services.AddScoped<IReportService, ReportService>();
+
 
 builder.Services.AddSignalR();
 
@@ -215,6 +217,50 @@ using (var scope = app.Services.CreateScope())
         await userManager.CreateAsync(admin, "Admin123!");
         await userManager.AddToRoleAsync(admin, "Admin");
     }
+}
+
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+    var defaultSettings = new List<(string Key, string Value, string Description)>
+    {
+        // General
+        ("company_name", "Warehouse Co.", "Company name"),
+        ("company_address", "Prishtine, Kosovo", "Company address"),
+        ("company_email", "info@warehouse.com", "Company email"),
+        ("currency", "EUR", "Default currency"),
+
+        // Inventory
+        ("low_stock_threshold", "10", "Notify when stock falls below this value"),
+        ("critical_stock_threshold", "5", "Critical stock alert threshold"),
+        ("auto_reserve_on_confirm", "true", "Automatically reserve stock when order is confirmed"),
+
+        // Shipment
+        ("max_pallets_per_shipment", "20", "Maximum pallets allowed per shipment"),
+        ("shipment_number_prefix", "SHP", "Prefix for shipment numbers"),
+        ("packing_list_number_prefix", "PL", "Prefix for packing list numbers"),
+
+        // Notifications
+        ("low_stock_alerts", "true", "Enable low stock notifications"),
+        ("order_created_notify", "true", "Notify when order is created"),
+        ("shipment_delivered_notify", "true", "Notify when shipment is delivered"),
+    };
+
+    foreach (var (key, value, description) in defaultSettings)
+    {
+        if (!context.Settings.Any(s => s.Key == key))
+        {
+            context.Settings.Add(new Setting
+            {
+                Key = key,
+                Value = value,
+                Description = description,
+                UpdatedAt = DateTime.UtcNow
+            });
+        }
+    }
+    await context.SaveChangesAsync();
 }
 
 app.Run();

@@ -9,6 +9,7 @@ import { exportToCsv } from '../utils/exportCsv';
 import ImportButton from '../components/ui/ImportButton';
 import { importApi } from '../api';
 import { useAuth } from '../auth/AuthContext';
+import { useLiveResource } from '../realtime/useLiveResource';
 
 const emptyForm = { name: '', contactPerson: '', email: '', phone: '', address: '', city: '', country: '' };
 
@@ -37,20 +38,21 @@ export default function SuppliersPage() {
     setTimeout(() => setFeedback(null), 3000);
   };
 
-  const load = async () => {
-    setLoading(true);
+  const load = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const data = await suppliersApi.getAll();
       setSuppliers(data);
       setError(null);
     } catch (err) {
-      setError(err.message);
+      if (!silent) setError(err.message);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => { load(); }, []);
+  useLiveResource('suppliers', () => load(true));
 
   const openCreate = () => { setForm(emptyForm); setEditId(null); setModalMode('create'); };
   const openEdit = (s) => {

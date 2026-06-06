@@ -3,6 +3,7 @@ import { Plus, MoreHorizontal, X, Pencil, Trash2, Search, Eye } from 'lucide-rea
 import { colors } from '../theme/colors';
 import { productsApi } from '../api';
 import { useAuth } from '../auth/AuthContext';
+import { useLiveResource } from '../realtime/useLiveResource';
 import PageHeader from '../components/ui/PageHeader';
 import Table from '../components/ui/Table';
 import { PrimaryButton } from '../components/ui/Button';
@@ -42,20 +43,22 @@ export default function ProductsPage() {
     setTimeout(() => setFeedback(null), 3000);
   };
 
-  const load = async () => {
-    setLoading(true);
+  // silent=true: rifreskim live në sfond pa flash "Loading...".
+  const load = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const data = await productsApi.getAll();
       setProducts(data);
       setError(null);
     } catch (err) {
-      setError(err.message);
+      if (!silent) setError(err.message);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => { load(); }, []);
+  useLiveResource('products', () => load(true));
 
   const openCreate = () => { setForm(emptyForm); setEditId(null); setModalMode('create'); };
   const openEdit = (p) => {

@@ -3,6 +3,8 @@ import { Plus, Edit2, UserCheck, UserX, Shield, X, Check, Filter, Search, Downlo
 import { exportToCsv } from '../utils/exportCsv';
 import { colors } from "../theme/colors";
 import { usersApi } from "../api";
+import { usePagination } from "../components/ui/usePagination";
+import Pagination from "../components/ui/Pagination";
 
 const ALL_ROLES = ["Admin", "Manager", "Worker", "Client"];
 
@@ -205,6 +207,8 @@ export default function UserManagementPage() {
     return list;
   })();
 
+  const pg = usePagination(displayed, 10);
+
   return (
     <div style={{ padding: "0 0 40px" }}>
       {/* Feedback toast */}
@@ -325,8 +329,8 @@ export default function UserManagementPage() {
                   </td>
                 </tr>
               )}
-              {displayed.map((user, i) => (
-                <tr key={user.id} style={{ borderBottom: i < displayed.length - 1 ? `1px solid ${colors.border}` : "none" }}>
+              {pg.pageItems.map((user, i) => (
+                <tr key={user.id} style={{ borderBottom: i < pg.pageItems.length - 1 ? `1px solid ${colors.border}` : "none" }}>
                   <td style={{ padding: "12px 14px", fontSize: 13, fontWeight: 500, color: colors.text, fontFamily: "var(--font-sans)" }}>
                     {user.name}
                   </td>
@@ -373,6 +377,7 @@ export default function UserManagementPage() {
               No users found.
             </div>
           )}
+          <Pagination pagination={pg} />
         </div>
       )}
 

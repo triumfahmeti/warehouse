@@ -1,232 +1,267 @@
-import { useEffect, useState } from "react";
-import { Plus, Edit2, Trash2, Check, X } from "lucide-react";
-import { colors } from "../theme/colors";
-import { settingsApi } from "../api";
-
-const inputStyle = {
-  padding: "7px 10px", border: `1px solid ${colors.border}`,
-  borderRadius: 8, fontSize: 13, fontFamily: "var(--font-sans)",
-  background: colors.bg, color: colors.text, outline: "none", width: "100%", boxSizing: "border-box",
+import { useEffect, useState } from 'react';
+import { Save, RotateCcw } from 'lucide-react';
+import { colors } from '../theme/colors';
+import { settingsApi } from '../api';
+import { useTheme } from '../theme/ThemeContext';
+import { Sun, Moon } from 'lucide-react';
+// const GROUPS = {
+//   General: ['company_name', 'company_address', 'company_email', 'currency'],
+//   Inventory: ['low_stock_threshold', 'critical_stock_threshold', 'auto_reserve_on_confirm'],
+//   Shipment: ['max_pallets_per_shipment', 'shipment_number_prefix', 'packing_list_number_prefix'],
+//   Notifications: ['low_stock_alerts', 'order_created_notify', 'shipment_delivered_notify'],
+// };
+const GROUPS = {
+  General: ['company_name', 'company_address', 'company_email', 'currency'],
+  Inventory: ['low_stock_threshold', 'critical_stock_threshold'],
+  Shipment: ['max_pallets_per_shipment'],
+  
 };
 
-function Field({ label, children }) {
-  return (
-    <div style={{ marginBottom: 14 }}>
-      <label style={{ display: "block", fontSize: 11, color: colors.textMuted, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 5 }}>{label}</label>
-      {children}
-    </div>
-  );
-}
-
+const BOOLEAN_KEYS = ['auto_reserve_on_confirm'];
+const NUMBER_KEYS = ['low_stock_threshold', 'critical_stock_threshold', 'max_pallets_per_shipment'];
 export default function SystemSettingsPage() {
-  const [settings, setSettings] = useState([]);
+  const [settings, setSettings] = useState({});
+  const [original, setOriginal] = useState({});
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [feedback, setFeedback] = useState(null);
-
-  const [editing, setEditing] = useState(null);
-  const [editForm, setEditForm] = useState({ key: "", value: "", description: "" });
-  const [showCreate, setShowCreate] = useState(false);
-  const [createForm, setCreateForm] = useState({ key: "", value: "", description: "" });
   const [saving, setSaving] = useState(false);
-
-  const load = () => {
-    setLoading(true);
-    settingsApi.getAll()
-      .then(setSettings)
-      .catch(err => setError(err.message))
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(load, []);
-
+  const [feedback, setFeedback] = useState(null);
+  const [descriptions, setDescriptions] = useState({});
+  const [ids, setIds] = useState({});
+  const { isDark, toggle } = useTheme();
   const showFeedback = (msg, ok = true) => {
     setFeedback({ msg, ok });
     setTimeout(() => setFeedback(null), 3000);
   };
 
-  const handleCreate = async e => {
-    e.preventDefault();
-    setSaving(true);
+  useEffect(() => {
+  const load = async () => {
+    setLoading(true);
     try {
-      await settingsApi.create(createForm);
-      setShowCreate(false);
-      setCreateForm({ key: "", value: "", description: "" });
-      load();
-      showFeedback("Setting created.");
+      const data = await settingsApi.getAll();
+      const map = {};
+      const idMap = {};
+      const descMap = {};  // ← shto këtë
+      data.forEach(s => {
+        map[s.key] = s.value;
+        idMap[s.key] = s.id;
+        descMap[s.key] = s.description;
+      });
+      setSettings(map);
+      setOriginal(map);
+      setIds(idMap);
+      setDescriptions(descMap);  // ← shto këtë
     } catch (err) {
       showFeedback(err.message, false);
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
   };
+  load();
+}, []);
 
-  const handleSaveEdit = async (id) => {
-    setSaving(true);
-    try {
-      await settingsApi.update(id, editForm);
-      setEditing(null);
-      load();
-      showFeedback("Setting updated.");
-    } catch (err) {
-      showFeedback(err.message, false);
-    } finally {
-      setSaving(false);
-    }
+  const handleSave = async () => {
+  setSaving(true);
+  try {
+    const changed = Object.keys(settings).filter(k => settings[k] !== original[k]);
+    await Promise.all(
+      changed.map(key =>
+        settingsApi.update(ids[key], {
+          key,
+          value: settings[key],
+          description: descriptions[key] ?? '',  // ← shto këtë
+        })
+      )
+    );
+    setOriginal({ ...settings });
+    showFeedback('Settings saved successfully.');
+  } catch (err) {
+    showFeedback(err.message, false);
+  } finally {
+    setSaving(false);
+  }
+};
+
+  const handleReset = () => {
+    setSettings({ ...original });
   };
 
-  const handleDelete = async (id, key) => {
-    if (!confirm(`Delete setting "${key}"?`)) return;
-    try {
-      await settingsApi.remove(id);
-      load();
-      showFeedback("Setting deleted.");
-    } catch (err) {
-      showFeedback(err.message, false);
-    }
-  };
+  const hasChanges = Object.keys(settings).some(k => settings[k] !== original[k]);
 
-  const fmt = d => d ? new Date(d).toLocaleString("sq-AL", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
+  if (loading) return (
+    <div style={{ padding: 40, textAlign: 'center', color: colors.textMuted, fontFamily: 'var(--font-mono)', fontSize: 13 }}>
+      Loading...
+    </div>
+  );
 
   return (
-    <div style={{ padding: "0 0 40px" }}>
-      {/* Feedback toast */}
-      {feedback && (
-        <div style={{
-          position: "fixed", top: 20, right: 20, zIndex: 2000,
-          background: feedback.ok ? colors.success : colors.danger,
-          color: "#fff", padding: "10px 18px", borderRadius: 8,
-          fontSize: 13, fontFamily: "var(--font-sans)", boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
-        }}>
-          {feedback.msg}
-        </div>
-      )}
-
+    <div className="page-content">
       {/* Header */}
-      <div className="page-header" style={{ marginBottom: 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
         <div>
-          <div style={{ fontSize: 11, color: colors.textMuted, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>
-            Administration
-          </div>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 600, color: colors.text, fontFamily: "var(--font-sans)", letterSpacing: "-0.02em" }}>
+          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600, color: colors.text, fontFamily: 'var(--font-sans)' }}>
             System Settings
           </h1>
+          <p style={{ margin: '4px 0 0', fontSize: 13, color: colors.textMuted, fontFamily: 'var(--font-sans)' }}>
+            Configure global system parameters
+          </p>
         </div>
-        <div className="page-header-actions">
-          <button onClick={() => setShowCreate(v => !v)} style={{
-            display: "flex", alignItems: "center", gap: 6,
-            background: showCreate ? colors.border : colors.text, color: showCreate ? colors.text : colors.surface,
-            border: "none", borderRadius: 8, padding: "9px 16px",
-            fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "var(--font-sans)",
+        <div style={{ display: 'flex', gap: 8 }}>
+          {hasChanges && (
+            <button onClick={handleReset} style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '8px 14px', borderRadius: 8, border: `1px solid ${colors.border}`,
+              background: 'none', cursor: 'pointer', fontSize: 13,
+              fontFamily: 'var(--font-sans)', color: colors.textMuted,
+            }}>
+              <RotateCcw size={14} /> Reset
+            </button>
+          )}
+          <button onClick={handleSave} disabled={!hasChanges || saving} style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '8px 14px', borderRadius: 8, border: 'none',
+            background: hasChanges ? colors.text : colors.border,
+            cursor: hasChanges ? 'pointer' : 'not-allowed',
+            fontSize: 13, fontFamily: 'var(--font-sans)',
+            color: hasChanges ? colors.surface : colors.textMuted,
+            fontWeight: 500,
           }}>
-            {showCreate ? <><X size={15} /> Cancel</> : <><Plus size={15} /> Add Setting</>}
+            <Save size={14} /> {saving ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
       </div>
 
-      {/* Create form */}
-      {showCreate && (
-        <div style={{ background: colors.surface, border: `1px solid ${colors.border}`, borderRadius: 12, padding: 20, marginBottom: 20 }}>
-          <h3 style={{ margin: "0 0 16px", fontSize: 14, fontWeight: 600, color: colors.text, fontFamily: "var(--font-sans)" }}>New Setting</h3>
-          <form onSubmit={handleCreate}>
-            <div className="settings-form-grid">
-              <Field label="Key">
-                <input required style={inputStyle} value={createForm.key} onChange={e => setCreateForm(f => ({ ...f, key: e.target.value }))} placeholder="setting.key" />
-              </Field>
-              <Field label="Value">
-                <input required style={inputStyle} value={createForm.value} onChange={e => setCreateForm(f => ({ ...f, value: e.target.value }))} placeholder="value" />
-              </Field>
+      {/* Groups */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        {Object.entries(GROUPS).map(([group, keys]) => (
+          <div key={group} style={{
+            background: colors.surface, border: `1px solid ${colors.border}`,
+            borderRadius: 12, overflow: 'hidden',
+          }}>
+            <div style={{
+              padding: '14px 20px', borderBottom: `1px solid ${colors.border}`,
+              fontSize: 12, fontWeight: 500, color: colors.textMuted,
+              fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em',
+            }}>
+              {group}
             </div>
-            <Field label="Description">
-              <input style={inputStyle} value={createForm.description} onChange={e => setCreateForm(f => ({ ...f, description: e.target.value }))} placeholder="What does this setting control?" />
-            </Field>
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 8 }}>
-              <button type="button" onClick={() => setShowCreate(false)} style={{ padding: "8px 16px", border: `1px solid ${colors.border}`, borderRadius: 8, background: "none", cursor: "pointer", fontSize: 13, fontFamily: "var(--font-sans)", color: colors.text }}>
-                Cancel
-              </button>
-              <button type="submit" disabled={saving} style={{ padding: "8px 16px", border: "none", borderRadius: 8, background: colors.text, color: colors.surface, cursor: saving ? "not-allowed" : "pointer", fontSize: 13, fontFamily: "var(--font-sans)", fontWeight: 500, opacity: saving ? 0.6 : 1 }}>
-                {saving ? "Creating..." : "Create"}
-              </button>
+            <div style={{ padding: '8px 0' }}>
+              {keys.map(key => (
+                <SettingRow
+                  key={key}
+                  settingKey={key}
+                  value={settings[key] ?? ''}
+                  isBoolean={BOOLEAN_KEYS.includes(key)}
+                  isNumber={NUMBER_KEYS.includes(key)}
+                  changed={settings[key] !== original[key]}
+                  onChange={val => setSettings(s => ({ ...s, [key]: val }))}
+                />
+              ))}
             </div>
-          </form>
+          </div>
+        ))}
+      </div>
+      {/* Appearance */}
+<div style={{
+  background: colors.surface, border: `1px solid ${colors.border}`,
+  borderRadius: 12, overflow: 'hidden',
+}}>
+  <div style={{
+    padding: '14px 20px', borderBottom: `1px solid ${colors.border}`,
+    fontSize: 12, fontWeight: 500, color: colors.textMuted,
+    fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.08em',
+  }}>
+    Appearance
+  </div>
+  <div style={{
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    padding: '12px 20px',
+  }}>
+    <div>
+      <div style={{ fontSize: 13, fontWeight: 500, color: colors.text, fontFamily: 'var(--font-sans)' }}>
+        Theme
+      </div>
+      <div style={{ fontSize: 11, color: colors.textMuted, fontFamily: 'var(--font-sans)', marginTop: 2 }}>
+        {isDark ? 'Dark mode is on' : 'Light mode is on'}
+      </div>
+    </div>
+    <button onClick={toggle} style={{
+      display: 'flex', alignItems: 'center', gap: 8,
+      padding: '8px 14px', borderRadius: 8,
+      border: `1px solid ${colors.border}`,
+      background: colors.bg, color: colors.text,
+      cursor: 'pointer', fontSize: 13,
+      fontFamily: 'var(--font-sans)', fontWeight: 500,
+    }}>
+      {isDark ? <><Sun size={14} /> Light Mode</> : <><Moon size={14} /> Dark Mode</>}
+    </button>
+  </div>
+</div>
+
+      {feedback && (
+        <div style={{
+          position: 'fixed', bottom: 24, right: 24, zIndex: 1100,
+          background: feedback.ok ? colors.text : colors.danger, color: colors.surface,
+          padding: '12px 18px', borderRadius: 10, fontSize: 13,
+          fontFamily: 'var(--font-sans)', boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+        }}>
+          {feedback.msg}
         </div>
       )}
+    </div>
+  );
+}
 
-      {/* Table */}
-      {loading ? (
-        <div style={{ padding: 40, textAlign: "center", color: colors.textMuted, fontFamily: "var(--font-mono)" }}>Loading...</div>
-      ) : error ? (
-        <div style={{ padding: 40, textAlign: "center", color: colors.danger, fontFamily: "var(--font-mono)" }}>{error}</div>
-      ) : (
-        <div style={{ background: colors.surface, border: `1px solid ${colors.border}`, borderRadius: 12, overflowX: "auto" }}>
-          <table style={{ width: "100%", minWidth: 680, borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ background: colors.bg }}>
-                {["Key", "Value", "Description", "Updated At", "Actions"].map(h => (
-                  <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontSize: 11, color: colors.textMuted, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 500, borderBottom: `1px solid ${colors.border}` }}>
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {settings.map((s, i) => (
-                <tr key={s.id} style={{ borderBottom: i < settings.length - 1 ? `1px solid ${colors.border}` : "none" }}>
-                  {editing === s.id ? (
-                    <>
-                      <td style={{ padding: "10px 14px" }}>
-                        <input style={{ ...inputStyle, width: "auto" }} value={editForm.key} onChange={e => setEditForm(f => ({ ...f, key: e.target.value }))} />
-                      </td>
-                      <td style={{ padding: "10px 14px" }}>
-                        <input style={{ ...inputStyle, width: "auto" }} value={editForm.value} onChange={e => setEditForm(f => ({ ...f, value: e.target.value }))} />
-                      </td>
-                      <td style={{ padding: "10px 14px" }}>
-                        <input style={{ ...inputStyle, width: "auto" }} value={editForm.description} onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))} />
-                      </td>
-                      <td style={{ padding: "10px 14px", fontSize: 11, color: colors.textMuted, fontFamily: "var(--font-mono)" }}>—</td>
-                      <td style={{ padding: "10px 14px" }}>
-                        <div style={{ display: "flex", gap: 6 }}>
-                          <button onClick={() => handleSaveEdit(s.id)} disabled={saving} style={{ display: "flex", alignItems: "center", gap: 4, padding: "5px 10px", border: "none", borderRadius: 6, background: colors.success, color: "#fff", cursor: "pointer", fontSize: 12, fontFamily: "var(--font-sans)" }}>
-                            <Check size={12} /> Save
-                          </button>
-                          <button onClick={() => setEditing(null)} style={{ display: "flex", alignItems: "center", padding: "5px 8px", border: `1px solid ${colors.border}`, borderRadius: 6, background: "none", cursor: "pointer", color: colors.text }}>
-                            <X size={13} />
-                          </button>
-                        </div>
-                      </td>
-                    </>
-                  ) : (
-                    <>
-                      <td style={{ padding: "12px 14px", fontSize: 13, fontWeight: 500, color: colors.text, fontFamily: "var(--font-mono)" }}>{s.key}</td>
-                      <td style={{ padding: "12px 14px" }}>
-                        <code style={{ background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: 5, padding: "2px 7px", fontSize: 12, fontFamily: "var(--font-mono)", color: colors.accent }}>
-                          {s.value}
-                        </code>
-                      </td>
-                      <td style={{ padding: "12px 14px", fontSize: 13, color: colors.textMuted, fontFamily: "var(--font-sans)" }}>{s.description || "—"}</td>
-                      <td style={{ padding: "12px 14px", fontSize: 11, color: colors.textMuted, fontFamily: "var(--font-mono)", whiteSpace: "nowrap" }}>{fmt(s.updatedAt)}</td>
-                      <td style={{ padding: "12px 14px" }}>
-                        <div style={{ display: "flex", gap: 6 }}>
-                          <button onClick={() => { setEditing(s.id); setEditForm({ key: s.key, value: s.value, description: s.description || "" }); }} style={{ background: "none", border: `1px solid ${colors.border}`, borderRadius: 6, padding: "5px 7px", cursor: "pointer", color: colors.text, display: "flex", alignItems: "center" }}>
-                            <Edit2 size={13} />
-                          </button>
-                          <button onClick={() => handleDelete(s.id, s.key)} style={{ background: "none", border: `1px solid ${colors.border}`, borderRadius: 6, padding: "5px 7px", cursor: "pointer", color: colors.danger, display: "flex", alignItems: "center" }}>
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                      </td>
-                    </>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {settings.length === 0 && (
-            <div style={{ padding: 32, textAlign: "center", color: colors.textMuted, fontFamily: "var(--font-sans)", fontSize: 13 }}>
-              No settings configured. Add the first one above.
-            </div>
-          )}
+function SettingRow({ settingKey, value, isBoolean, isNumber, changed, onChange }) {
+  const label = settingKey.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '12px 20px', borderBottom: `1px solid ${colors.border}`,
+      background: changed ? colors.accentSoft : 'transparent',
+    }}>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 13, fontWeight: 500, color: colors.text, fontFamily: 'var(--font-sans)' }}>
+          {label}
+          {changed && <span style={{ marginLeft: 8, fontSize: 11, color: colors.accent, fontFamily: 'var(--font-mono)' }}>modified</span>}
         </div>
+        <div style={{ fontSize: 11, color: colors.textDim, fontFamily: 'var(--font-mono)', marginTop: 2 }}>
+          {settingKey}
+        </div>
+      </div>
+
+      {isBoolean ? (
+        <label style={{ position: 'relative', width: 36, height: 20, cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={value === 'true'}
+            onChange={e => onChange(e.target.checked ? 'true' : 'false')}
+            style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }}
+          />
+          <div style={{
+            position: 'absolute', inset: 0, borderRadius: 999,
+            background: value === 'true' ? colors.accent : colors.border,
+            transition: 'background 0.2s',
+          }} />
+          <div style={{
+            position: 'absolute', top: 2, left: value === 'true' ? 18 : 2,
+            width: 16, height: 16, borderRadius: 999,
+            background: 'white', transition: 'left 0.2s',
+          }} />
+        </label>
+      ) : (
+        <input
+          type={isNumber ? 'number' : 'text'}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          style={{
+            padding: '6px 10px', borderRadius: 7, fontSize: 13,
+            border: `1px solid ${changed ? colors.accent : colors.border}`,
+            background: colors.bg, color: colors.text,
+            fontFamily: 'var(--font-mono)', outline: 'none',
+            width: isNumber ? 80 : 200, textAlign: isNumber ? 'right' : 'left',
+          }}
+        />
       )}
     </div>
   );

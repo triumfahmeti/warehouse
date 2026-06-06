@@ -1,11 +1,10 @@
 import { X } from "lucide-react";
 import { colors } from "../../theme/colors";
-import { navItems, getVisibleNavItems, getVisibleGroups } from "./navItems";
+import { getVisibleNavItems, getVisibleGroups } from "./navItems";
 import NavLink from "./NavLink";
 import { useAuth } from "../../auth/AuthContext";
 
-export default function Sidebar({ isOpen = false, onClose }) {
-  const { user } = useAuth();
+export default function Sidebar({ isOpen = false, onClose, companyName = 'Warehouse OS' }) {  const { user } = useAuth();
   const userRoles = user?.roles || [];
 
   // Filtrim sipas roleve të user-it
@@ -101,7 +100,7 @@ export default function Sidebar({ isOpen = false, onClose }) {
               letterSpacing: "-0.01em",
             }}
           >
-            Warehouse OS
+            {companyName}
           </div>
           <div
             style={{

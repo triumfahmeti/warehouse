@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Search, X, ChevronDown } from "lucide-react";
 import { colors } from "../theme/colors";
 import { auditLogsApi, usersApi } from "../api";
+import { usePagination } from "../components/ui/usePagination";
+import Pagination from "../components/ui/Pagination";
 
 function ActionBadge({ action }) {
   const lower = (action || "").toLowerCase();
@@ -58,6 +60,9 @@ export default function AuditLogsPage() {
   };
 
   const hasFilters = Object.values(filters).some(v => v);
+
+  // Logjet rriten shumë → paginim klient-anësor (default 25 rreshta/faqe).
+  const pg = usePagination(logs, 25);
 
   const fmt = d => d ? new Date(d).toLocaleString("sq-AL", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
 
@@ -149,8 +154,8 @@ export default function AuditLogsPage() {
               </tr>
             </thead>
             <tbody>
-              {logs.map((log, i) => (
-                <tr key={log.id} style={{ borderBottom: i < logs.length - 1 ? `1px solid ${colors.border}` : "none" }}>
+              {pg.pageItems.map((log, i) => (
+                <tr key={log.id} style={{ borderBottom: i < pg.pageItems.length - 1 ? `1px solid ${colors.border}` : "none" }}>
                   <td style={{ padding: "11px 14px", fontSize: 12, color: colors.textMuted, fontFamily: "var(--font-mono)" }}>{log.id}</td>
                   <td style={{ padding: "11px 14px", fontSize: 13, color: colors.text, fontFamily: "var(--font-sans)" }}>{log.userName || "—"}</td>
                   <td style={{ padding: "11px 14px" }}><ActionBadge action={log.action} /></td>
@@ -178,6 +183,7 @@ export default function AuditLogsPage() {
               No audit log entries found.
             </div>
           )}
+          <Pagination pagination={pg} />
         </div>
       )}
 

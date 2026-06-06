@@ -12,11 +12,13 @@ namespace Warehouse.Services.Implementations
     {
         private readonly ISupplierRepository _repo;
         private readonly AppDbContext _context;
+        private readonly IRealtimeNotifier _realtime;
 
-        public SupplierService(ISupplierRepository repo, AppDbContext context)
+        public SupplierService(ISupplierRepository repo, AppDbContext context, IRealtimeNotifier realtime)
         {
             _repo = repo;
             _context = context;
+            _realtime = realtime;
         }
 
         public async Task<IEnumerable<SupplierDto>> GetAllAsync()
@@ -46,6 +48,7 @@ namespace Warehouse.Services.Implementations
 
             await _repo.AddAsync(supplier);
             await _context.SaveChangesAsync();
+            await _realtime.ResourceChangedAsync("suppliers");
             return MapToDto(supplier);
         }
 
@@ -65,6 +68,7 @@ namespace Warehouse.Services.Implementations
 
             await _repo.UpdateAsync(supplier);
             await _context.SaveChangesAsync();
+            await _realtime.ResourceChangedAsync("suppliers");
         }
 
         public async Task DeleteAsync(int id)
@@ -75,6 +79,7 @@ namespace Warehouse.Services.Implementations
 
             await _repo.DeleteAsync(id);
             await _context.SaveChangesAsync();
+            await _realtime.ResourceChangedAsync("suppliers");
         }
 
         private static SupplierDto MapToDto(Supplier s) => new SupplierDto

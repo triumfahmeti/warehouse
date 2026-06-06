@@ -4,6 +4,7 @@ import { exportToCsv } from '../utils/exportCsv';
 import { colors } from '../theme/colors';
 import { purchaseOrdersApi, suppliersApi, productsApi, raftsApi } from '../api';
 import { useAuth } from '../auth/AuthContext';
+import { useLiveResource } from '../realtime/useLiveResource';
 import PageHeader from '../components/ui/PageHeader';
 import Table from '../components/ui/Table';
 import { PrimaryButton } from '../components/ui/Button';
@@ -53,25 +54,34 @@ export default function PurchaseOrdersPage() {
     setTimeout(() => setFeedback(null), 3500);
   };
 
-  const load = async () => {
-    setLoading(true);
+  // silent=true: rifreskim live në sfond pa flash "Loading...".
+  const load = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const data = await purchaseOrdersApi.getAll();
       setOrders(data);
       setError(null);
     } catch (err) {
-      setError(err.message);
+      if (!silent) setError(err.message);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
+  };
+
+  // Listat ndihmëse për modalet (supplier/product/raft).
+  const loadAux = () => {
+    suppliersApi.getAll().then(setSuppliers).catch(() => {});
+    productsApi.getAll().then(setProducts).catch(() => {});
+    raftsApi.getAll().then(setRafts).catch(() => {});
   };
 
   useEffect(() => {
     load();
-    suppliersApi.getAll().then(setSuppliers).catch(() => {});
-    productsApi.getAll().then(setProducts).catch(() => {});
-    raftsApi.getAll().then(setRafts).catch(() => {});
+    loadAux();
   }, []);
+
+  // Rifreskim live: PO-të + listat ndihmëse që modali i krijimit/marrjes të jetë i freskët.
+  useLiveResource(['purchaseorders', 'products', 'suppliers', 'rafts'], () => { load(true); loadAux(); });
 
   // ---- Create ----
   const openCreate = () => { setSupplierId(''); setExpectedDate(''); setLines([emptyLine()]); setCreateOpen(true); };

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Settings, LogOut, Menu } from 'lucide-react';
+import { Settings, LogOut, Menu } from 'lucide-react';
 import { colors } from '../../theme/colors';
 import { IconButton } from '../ui/Button';
 import { useAuth } from '../../auth/AuthContext';
@@ -56,22 +56,6 @@ export default function Topbar({ title, subtitle, action, onMenuToggle }) {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <div className="topbar-search" style={{
-          alignItems: 'center', gap: 8,
-          padding: '7px 10px', background: colors.bg, border: `1px solid ${colors.border}`,
-          borderRadius: 8, width: 220,
-        }}>
-          <Search size={14} color={colors.textMuted} />
-          <input placeholder="Search anything…" style={{
-            all: 'unset', flex: 1, fontSize: 13, color: colors.text,
-            fontFamily: 'var(--font-sans)',
-          }} />
-          <span style={{
-            fontSize: 10, color: colors.textDim, fontFamily: 'var(--font-mono)',
-            padding: '1px 5px', border: `1px solid ${colors.border}`, borderRadius: 3,
-          }}>⌘K</span>
-        </div>
-
         <NotificationBell />
 
         <IconButton><Settings size={15} /></IconButton>

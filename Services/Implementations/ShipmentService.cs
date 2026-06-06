@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using Warehouse.DTOs.NotificationDto;
 using Warehouse.DTOs.ShipmentDto;
 using Warehouse.Enums;
@@ -19,6 +20,7 @@ namespace Warehouse.Services.Implementations
         private readonly INotificationService _notificationService;
         private readonly IHubContext<NotificationHub> _hubContext;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IRealtimeNotifier _realtime;
 
         public ShipmentService(
             IShipmentRepository shipmentRepository,
@@ -27,7 +29,8 @@ namespace Warehouse.Services.Implementations
             AppDbContext context,
             INotificationService notificationService,
             IHubContext<NotificationHub> hubContext,
-            UserManager<ApplicationUser> userManager)
+            UserManager<ApplicationUser> userManager,
+            IRealtimeNotifier realtime)
         {
             _shipmentRepository = shipmentRepository;
             _packingListRepository = packingListRepository;
@@ -36,6 +39,7 @@ namespace Warehouse.Services.Implementations
             _notificationService = notificationService;
             _hubContext = hubContext;
             _userManager = userManager;
+            _realtime = realtime;
         }
 
         public async Task<List<ShipmentDto>> GetAllAsync()
@@ -52,6 +56,18 @@ namespace Warehouse.Services.Implementations
 
         public async Task<int> CreateShipment(CreateEditShipmentDto dto)
         {
+             var maxPalletsSetting = await _context.Settings
+                .FirstOrDefaultAsync(s => s.Key == "max_pallets_per_shipment");
+            
+            var maxPallets = int.TryParse(maxPalletsSetting?.Value, out var val) ? val : 20;
+
+            // Kontrollo sa paleta ka packing list
+            var pl = await _packingListRepository.GetWithPalletsAndOrder(dto.PackingListId)
+                ?? throw new InvalidOperationException("Packing list not found");
+
+            if (pl.Pallets.Count > maxPallets)
+                throw new InvalidOperationException($"Packing list has {pl.Pallets.Count} pallets, max allowed is {maxPallets}");
+        
             var packingList = await _packingListRepository.GetByIdAsync(dto.PackingListId)
                 ?? throw new InvalidOperationException("Packing list not found");
 
@@ -69,6 +85,7 @@ namespace Warehouse.Services.Implementations
 
             await _shipmentRepository.AddAsync(shipment);
             await _context.SaveChangesAsync();
+            await _realtime.ResourceChangedAsync("shipments");
             return shipment.Id;
         }
 
@@ -83,6 +100,7 @@ namespace Warehouse.Services.Implementations
             shipment.Status = ShipmentStatus.Ready;
             await _shipmentRepository.UpdateAsync(shipment);
             await _context.SaveChangesAsync();
+            await _realtime.ResourceChangedAsync("shipments");
         }
 
         public async Task Ship(int shipmentId)
@@ -127,6 +145,9 @@ namespace Warehouse.Services.Implementations
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
+                // Nisja zbret stokun fizik → përditëso edhe inventar/produkte.
+                await _realtime.ResourceChangedAsync("shipments", "inventory", "products");
+
                 // Njoftim te te gjithe Employee-t: dergesa u nis
                 var employees = await _userManager.GetUsersInRoleAsync("Employee");
                 foreach (var employee in employees)
@@ -157,6 +178,7 @@ namespace Warehouse.Services.Implementations
             shipment.Status = ShipmentStatus.Delivered;
             await _shipmentRepository.UpdateAsync(shipment);
             await _context.SaveChangesAsync();
+            await _realtime.ResourceChangedAsync("shipments");
 
             // Njoftim te te gjithe Employee-t: dergesa u dorezua
             var employees = await _userManager.GetUsersInRoleAsync("Employee");
@@ -182,6 +204,7 @@ namespace Warehouse.Services.Implementations
             shipment.Status = ShipmentStatus.Cancelled;
             await _shipmentRepository.UpdateAsync(shipment);
             await _context.SaveChangesAsync();
+            await _realtime.ResourceChangedAsync("shipments");
         }
 
         private async Task SendNotification(string userId, string type, string title, string message)

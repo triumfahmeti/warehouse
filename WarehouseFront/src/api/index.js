@@ -160,6 +160,7 @@ export const auditLogsApi = {
 // System Settings — vetëm Admin.
 export const settingsApi = {
   getAll: () => http.get('/setting'),
+  getById: id => http.get(`/setting/${id}`),
   create: data => http.post('/setting', data),
   update: (id, data) => http.put(`/setting/${id}`, data),
   remove: id => http.del(`/setting/${id}`),

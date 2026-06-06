@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react';
-import { Plus, MoreHorizontal, X, Eye, Tag, CheckCircle, Ban, Trash2 } from 'lucide-react';
+import { Plus, MoreHorizontal, X, Eye, Tag, CheckCircle, Ban, Trash2, Search } from 'lucide-react';
 import { exportToCsv } from '../utils/exportCsv';
 import { colors } from '../theme/colors';
 import { salesOrdersApi, productsApi } from '../api';
 import { useAuth } from '../auth/AuthContext';
+import { useLiveResource } from '../realtime/useLiveResource';
 import PageHeader from '../components/ui/PageHeader';
 import Table from '../components/ui/Table';
 import StatusBadge from '../components/ui/StatusBadge';
 import { PrimaryButton } from '../components/ui/Button';
+import { settingsApi } from '../api';
 
-const money = v => `${Number(v || 0).toFixed(2)} €`;
 const emptyLine = () => ({ productId: '', quantity: '' });
 
 export default function SalesOrdersPage() {
@@ -17,13 +18,14 @@ export default function SalesOrdersPage() {
   const roles = user?.roles || [];
   const isManager = roles.includes('Admin') || roles.includes('Manager');
   const isClient = roles.includes('Client') && !isManager;
-
+  const [currency, setCurrency] = useState('€');
   const [orders, setOrders] = useState([]);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [feedback, setFeedback] = useState(null);
   const [rowMenu, setRowMenu] = useState(null);
+const money = v => `${Number(v || 0).toFixed(2)} ${currency}`;
 
   // Client create
   const [createOpen, setCreateOpen] = useState(false);
@@ -35,6 +37,12 @@ export default function SalesOrdersPage() {
   const [prices, setPrices] = useState({});
 
   const [viewOrder, setViewOrder] = useState(null);
+
+  // Filter
+  const [showFilter, setShowFilter] = useState(false);
+  const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [sortBy, setSortBy] = useState('');
 
   const showFeedback = (msg, ok = true) => { setFeedback({ msg, ok }); setTimeout(() => setFeedback(null), 3500); };
 
@@ -52,21 +60,33 @@ export default function SalesOrdersPage() {
     }
   };
 
-  useEffect(() => {
-    load();
-    if (isClient) productsApi.getAll().then(setProducts).catch(() => {});
+  // Produktet i ngarkojmë veçmas (klienti i zgjedh kur krijon porosi).
+  const loadProducts = () => { if (isClient) productsApi.getAll().then(setProducts).catch(() => {}); };
 
-    // Rifreskim automatik: kur kthehesh te tab-i + çdo 15s (që ndryshimet
-    // ndër-sesione — psh. manageri cakton çmimin — të shfaqen pa refresh manual).
-    const onFocus = () => load(true);
-    window.addEventListener('focus', onFocus);
-    const interval = setInterval(() => load(true), 15000);
-    return () => { window.removeEventListener('focus', onFocus); clearInterval(interval); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useEffect(() => {
+  load();
+  loadProducts();
+  settingsApi.getAll()
+    .then(data => {
+      const c = data.find(s => s.key === 'currency');
+      if (c?.value) setCurrency(c.value);
+    })
+    .catch(() => {});
+
+  const onFocus = () => load(true);
+  window.addEventListener('focus', onFocus);
+  const interval = setInterval(() => load(true), 15000);
+  return () => { window.removeEventListener('focus', onFocus); clearInterval(interval); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
+
+  // Rifreskim live (SignalR) + refetch në focus, pa poll periodik. 'products'
+  // këtu zgjidh rastin kryesor: stoku/availability ndryshon nga PO-të e manager-it,
+  // dhe lista te modali "New Order" përditësohet pa refresh manual.
+  useLiveResource(['salesorders', 'products'], () => { load(true); loadProducts(); });
 
   // ---- Client: create ----
-  const openCreate = () => { setLines([emptyLine()]); setCreateOpen(true); };
+  const openCreate = () => { setLines([emptyLine()]); loadProducts(); setCreateOpen(true); };
   const setLine = (i, patch) => setLines(ls => ls.map((l, idx) => idx === i ? { ...l, ...patch } : l));
   const addLine = () => setLines(ls => [...ls, emptyLine()]);
   const removeLine = i => setLines(ls => ls.length > 1 ? ls.filter((_, idx) => idx !== i) : ls);
@@ -167,9 +187,32 @@ export default function SalesOrdersPage() {
     ) },
   ];
 
+  const toggleFilter = () => setShowFilter(v => { if (v) { setQuery(''); setStatusFilter(''); setSortBy(''); } return !v; });
+
+  // Filtrim (status + kërkim sipas id/klient/produkt) dhe renditje.
+  const q = query.trim().toLowerCase();
+  const displayed = (() => {
+    let list = orders.filter(o => {
+      if (statusFilter && o.status !== statusFilter) return false;
+      if (q
+        && !String(o.id).includes(q)
+        && !(o.clientName || '').toLowerCase().includes(q)
+        && !(o.items || []).some(it => (it.productName || '').toLowerCase().includes(q))) return false;
+      return true;
+    });
+    const comparators = {
+      'date-desc': (a, b) => new Date(b.orderDate) - new Date(a.orderDate),
+      'date-asc': (a, b) => new Date(a.orderDate) - new Date(b.orderDate),
+      'total-desc': (a, b) => b.totalAmount - a.totalAmount,
+      'total-asc': (a, b) => a.totalAmount - b.totalAmount,
+    };
+    if (comparators[sortBy]) list = [...list].sort(comparators[sortBy]);
+    return list;
+  })();
+
   const exportCsv = () => {
     const headers = ['ID', 'Client', 'Items', 'Total (€)', 'Date', 'Status'];
-    const rows = orders.map(o => [
+    const rows = displayed.map(o => [
       o.id,
       o.clientName || '',
       o.items?.length || 0,
@@ -184,10 +227,40 @@ export default function SalesOrdersPage() {
     <div className="page-content">
       <PageHeader
         title="Sales Orders"
-        count={orders.length}
+        count={displayed.length}
+        onFilter={toggleFilter}
+        filterActive={showFilter}
         onExport={exportCsv}
         action={isClient ? <PrimaryButton icon={Plus} onClick={openCreate}>New Order</PrimaryButton> : undefined}
       />
+
+      {showFilter && (
+        <div style={{ marginBottom: 16, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ position: 'relative', flex: 1, minWidth: 220, maxWidth: 320 }}>
+            <Search size={14} color={colors.textMuted} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+            <input autoFocus value={query} onChange={e => setQuery(e.target.value)}
+              placeholder={isManager ? 'Search by id, client or product...' : 'Search by id or product...'}
+              style={{ width: '100%', padding: '8px 12px 8px 32px', borderRadius: 8, border: `1px solid ${colors.border}`, background: colors.surface, color: colors.text, fontSize: 13, fontFamily: 'var(--font-sans)', outline: 'none', boxSizing: 'border-box' }} />
+          </div>
+          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+            style={{ padding: '8px 12px', borderRadius: 8, border: `1px solid ${colors.border}`, background: colors.surface, color: colors.text, fontSize: 13, fontFamily: 'var(--font-sans)', outline: 'none', cursor: 'pointer' }}>
+            <option value="">All statuses</option>
+            <option value="New">New</option>
+            <option value="Confirmed">Confirmed</option>
+            <option value="Processing">Processing</option>
+            <option value="Completed">Completed</option>
+            <option value="Cancelled">Cancelled</option>
+          </select>
+          <select value={sortBy} onChange={e => setSortBy(e.target.value)}
+            style={{ padding: '8px 12px', borderRadius: 8, border: `1px solid ${colors.border}`, background: colors.surface, color: colors.text, fontSize: 13, fontFamily: 'var(--font-sans)', outline: 'none', cursor: 'pointer' }}>
+            <option value="">Sort by: Default</option>
+            <option value="date-desc">Date (newest)</option>
+            <option value="date-asc">Date (oldest)</option>
+            <option value="total-desc">Total (high → low)</option>
+            <option value="total-asc">Total (low → high)</option>
+          </select>
+        </div>
+      )}
 
       {loading ? (
         <div style={{ padding: 40, textAlign: 'center', color: colors.textMuted, fontFamily: 'var(--font-mono)', fontSize: 13 }}>Loading...</div>
@@ -195,10 +268,12 @@ export default function SalesOrdersPage() {
         <div style={{ padding: 40, textAlign: 'center', color: colors.danger, fontFamily: 'var(--font-mono)', fontSize: 13 }}>{error}</div>
       ) : (
         <>
-          <Table rows={orders} onRowClick={o => setViewOrder(o)} columns={columns} />
-          {orders.length === 0 && (
+          <Table rows={displayed} onRowClick={o => setViewOrder(o)} columns={columns} />
+          {displayed.length === 0 && (
             <div style={{ padding: 32, textAlign: 'center', color: colors.textMuted, fontFamily: 'var(--font-sans)', fontSize: 13 }}>
-              {isClient ? 'You have no orders yet.' : 'No sales orders yet.'}
+              {query || statusFilter
+                ? 'No orders match your filter.'
+                : (isClient ? 'You have no orders yet.' : 'No sales orders yet.')}
             </div>
           )}
         </>
