@@ -41,6 +41,7 @@ export default function PalletsPage() {
   const [orderForm, setOrderForm] = useState({ salesOrderId: '', packagingType: 'EuroPallet', raftId: '', splitMode: false, itemsPerPallet: '' });
   const [orderPreview, setOrderPreview] = useState(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
+  const [splitResult, setSplitResult] = useState(null); // { pallets: [...], itemsPerPallet }
 
   const showFeedback = (msg, ok = true) => {
     setFeedback({ msg, ok });
@@ -145,10 +146,12 @@ export default function PalletsPage() {
           raftId:        Number(orderForm.raftId),
           itemsPerPallet: Number(orderForm.itemsPerPallet),
         });
-        const count = result?.palletIds?.length ?? '?';
         setOrderModal(false);
         await load();
-        showFeedback(`${count} pallets created from sales order.`);
+        // Merr detajet e palletave të krijuara
+        const allPallets = await palletsApi.getAll();
+        const createdPallets = allPallets.filter(p => result?.palletIds?.includes(p.id));
+        setSplitResult({ pallets: createdPallets, itemsPerPallet: Number(orderForm.itemsPerPallet) });
       } else {
         await palletsApi.fromOrder({
           salesOrderId:  Number(orderForm.salesOrderId),
@@ -438,6 +441,31 @@ export default function PalletsPage() {
             )}
             <button onClick={() => setDetail(null)} style={submitBtn(false)}>Close</button>
           </div>
+        </Modal>
+      )}
+
+      {/* Split Result Modal */}
+      {splitResult && (
+        <Modal title={`✅ ${splitResult.pallets.length} Pallets Created`} onClose={() => setSplitResult(null)}>
+          <div style={{ fontSize: 13, color: colors.textMuted, fontFamily: 'var(--font-sans)', marginBottom: 12 }}>
+            Items per pallet: <strong>{splitResult.itemsPerPallet}</strong> — Total pallets: <strong>{splitResult.pallets.length}</strong>
+          </div>
+          <div style={{ border: `1px solid ${colors.border}`, borderRadius: 8, overflow: 'hidden' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 100px 80px', padding: '8px 12px', background: colors.bg, fontSize: 11, fontFamily: 'var(--font-mono)', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              <span>#</span><span>Pallet Code</span><span>Packaging</span><span style={{ textAlign: 'right' }}>Items</span>
+            </div>
+            {splitResult.pallets.map((p, i) => (
+              <div key={p.id} style={{ display: 'grid', gridTemplateColumns: '40px 1fr 100px 80px', padding: '10px 12px', borderTop: `1px solid ${colors.border}`, alignItems: 'center' }}>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: colors.textMuted }}>#{i + 1}</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 500 }}>{p.palletCode}</span>
+                <span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 999, background: colors.bg, color: colors.textMuted, fontFamily: 'var(--font-mono)', width: 'fit-content' }}>{p.packingType}</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 600, textAlign: 'right', color: colors.text }}>
+                  {p.items?.reduce((s, it) => s + it.quantity, 0) ?? 0}
+                </span>
+              </div>
+            ))}
+          </div>
+          <button onClick={() => setSplitResult(null)} style={{ ...submitBtn(false), marginTop: 20, width: '100%' }}>Close</button>
         </Modal>
       )}
 
