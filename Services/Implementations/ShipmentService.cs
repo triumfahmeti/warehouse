@@ -56,18 +56,16 @@ namespace Warehouse.Services.Implementations
 
         public async Task<int> CreateShipment(CreateEditShipmentDto dto)
         {
-             var maxPalletsSetting = await _context.Settings
-                .FirstOrDefaultAsync(s => s.Key == "max_pallets_per_shipment");
-            
+            var maxPalletsSetting = await _context.Settings
+               .FirstOrDefaultAsync(s => s.Key == "max_pallets_per_shipment");
             var maxPallets = int.TryParse(maxPalletsSetting?.Value, out var val) ? val : 20;
 
-            // Kontrollo sa paleta ka packing list
             var pl = await _packingListRepository.GetWithPalletsAndOrder(dto.PackingListId)
                 ?? throw new InvalidOperationException("Packing list not found");
 
             if (pl.Pallets.Count > maxPallets)
                 throw new InvalidOperationException($"Packing list has {pl.Pallets.Count} pallets, max allowed is {maxPallets}");
-        
+
             var packingList = await _packingListRepository.GetByIdAsync(dto.PackingListId)
                 ?? throw new InvalidOperationException("Packing list not found");
 
@@ -145,15 +143,17 @@ namespace Warehouse.Services.Implementations
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
-                // Nisja zbret stokun fizik → përditëso edhe inventar/produkte.
                 await _realtime.ResourceChangedAsync("shipments", "inventory", "products");
 
-                // Njoftim te te gjithe Employee-t: dergesa u nis
-                var employees = await _userManager.GetUsersInRoleAsync("Employee");
-                foreach (var employee in employees)
+                // Njoftim te Manager-et dhe Admin-et: dergesa u nis
+                var managers = await _userManager.GetUsersInRoleAsync("Manager");
+                var admins = await _userManager.GetUsersInRoleAsync("Admin");
+                var recipients = managers.Concat(admins).DistinctBy(u => u.Id);
+
+                foreach (var user in recipients)
                 {
                     await SendNotification(
-                        userId: employee.Id,
+                        userId: user.Id,
                         type: "Shipment",
                         title: "Shipment Shipped",
                         message: $"Shipment {shipment.ShipmentNumber} has been shipped successfully."
@@ -180,15 +180,18 @@ namespace Warehouse.Services.Implementations
             await _context.SaveChangesAsync();
             await _realtime.ResourceChangedAsync("shipments");
 
-            // Njoftim te te gjithe Employee-t: dergesa u dorezua
-            var employees = await _userManager.GetUsersInRoleAsync("Employee");
-            foreach (var employee in employees)
+            // Njoftim te Manager-et dhe Admin-et: dergesa u dorezua
+            var managers = await _userManager.GetUsersInRoleAsync("Manager");
+            var admins = await _userManager.GetUsersInRoleAsync("Admin");
+            var recipients = managers.Concat(admins).DistinctBy(u => u.Id);
+
+            foreach (var user in recipients)
             {
                 await SendNotification(
-                    userId: employee.Id,
+                    userId: user.Id,
                     type: "Shipment",
                     title: "Shipment Delivered",
-                    message: $"Shipment {shipment.ShipmentNumber} has been delivered."
+                    message: $"Shipment {shipment.ShipmentNumber} has been delivered successfully."
                 );
             }
         }
@@ -236,14 +239,10 @@ namespace Warehouse.Services.Implementations
         public async Task<List<ShipmentDto>> GetByUserAsync(string userId)
         {
             var list = await _shipmentRepository.GetAllWithDetails();
-            
             return list
                 .Where(s => s.PackingList?.SalesOrder?.Client?.UserId == userId)
                 .Select(s => ToDto(s))
                 .ToList();
         }
-
-
-        
     }
 }

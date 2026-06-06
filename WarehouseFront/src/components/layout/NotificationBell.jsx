@@ -1,12 +1,12 @@
 import { useRef, useState, useEffect } from 'react';
 import { Bell } from 'lucide-react';
 import { colors } from '../../theme/colors';
-import { useNotifications } from '../../hooks/useNotifications';
+import { useRealtime } from '../../realtime/RealtimeContext';
 
 export default function NotificationBell() {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
-  const { notifications, unreadCount, markAsRead } = useNotifications();
+  const { notifications, unreadCount, markAsRead } = useRealtime();
 
   useEffect(() => {
     const handler = e => {
