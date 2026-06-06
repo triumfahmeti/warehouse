@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
 import { colors } from '../theme/colors';
-import { inventoryApi } from '../api';
+import { inventoryApi, settingsApi } from '../api';
 import PageHeader from '../components/ui/PageHeader';
 import Table from '../components/ui/Table';
 import { useLiveResource } from '../realtime/useLiveResource';
@@ -10,16 +10,24 @@ export default function InventoryPage() {
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
+  const [lowStockThreshold, setLowStockThreshold] = useState(10);
+  const [criticalThreshold, setCriticalThreshold] = useState(5);
   const [showFilter, setShowFilter] = useState(false);
   const [query, setQuery] = useState('');
   const [sortBy, setSortBy] = useState('');
 
   const load = async () => {
     try {
-      const data = await inventoryApi.getAll();
-      setInventory(data);
+      const [inventoryData, settingsData] = await Promise.all([
+        inventoryApi.getAll(),
+        settingsApi.getAll().catch(() => []),
+      ]);
+      setInventory(inventoryData);
       setError(null);
+      const low = settingsData.find(s => s.key === 'low_stock_threshold');
+      const critical = settingsData.find(s => s.key === 'critical_stock_threshold');
+      if (low?.value) setLowStockThreshold(Number(low.value));
+      if (critical?.value) setCriticalThreshold(Number(critical.value));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -28,7 +36,6 @@ export default function InventoryPage() {
   };
 
   useEffect(() => { load(); }, []);
-  // Inventari ndryshon nga marrja e PO-ve, rezervimet/konfirmimet, dërgesat etj.
   useLiveResource(['inventory', 'products'], load);
 
   const toggleFilter = () => setShowFilter(v => { if (v) { setQuery(''); setSortBy(''); } return !v; });
@@ -110,12 +117,28 @@ export default function InventoryPage() {
                   <span style={{ fontWeight: 500 }}>{r.productName}</span>
                   <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: colors.textMuted }}>{r.sku}</span>
                 </div>
-              ) },
+              )},
               { key: 'raftNumber', label: 'Raft', width: '110px', render: r => <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{r.raftNumber}</span> },
               { key: 'warehouseName', label: 'Warehouse', render: r => <span style={{ fontSize: 12, color: colors.textMuted }}>{r.warehouseName || '—'}</span> },
               { key: 'onhand', label: 'On Hand', width: '100px', render: r => <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 500 }}>{r.quantityOnHand}</span> },
               { key: 'reserved', label: 'Reserved', width: '100px', render: r => <span style={{ fontFamily: 'var(--font-mono)', color: r.reservedQuantity > 0 ? colors.warning : colors.textMuted }}>{r.reservedQuantity}</span> },
-              { key: 'available', label: 'Available', width: '100px', render: r => <span style={{ fontFamily: 'var(--font-mono)', color: colors.success, fontWeight: 500 }}>{r.availableQuantity}</span> },
+              { key: 'available', label: 'Available', width: '100px', render: r => {
+                const color = r.availableQuantity <= criticalThreshold
+                  ? colors.danger
+                  : r.availableQuantity <= lowStockThreshold
+                  ? colors.warning
+                  : colors.success;
+                return (
+                  <span style={{ fontFamily: 'var(--font-mono)', color, fontWeight: 500 }}>
+                    {r.availableQuantity}
+                    {r.availableQuantity <= lowStockThreshold && (
+                      <span style={{ marginLeft: 6, fontSize: 10, opacity: 0.8 }}>
+                        {r.availableQuantity <= criticalThreshold ? '⚠ critical' : '⚠ low'}
+                      </span>
+                    )}
+                  </span>
+                );
+              }},
             ]}
           />
           {sorted.length === 0 && (

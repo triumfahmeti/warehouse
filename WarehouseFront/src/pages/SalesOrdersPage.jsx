@@ -9,8 +9,8 @@ import PageHeader from '../components/ui/PageHeader';
 import Table from '../components/ui/Table';
 import StatusBadge from '../components/ui/StatusBadge';
 import { PrimaryButton } from '../components/ui/Button';
+import { settingsApi } from '../api';
 
-const money = v => `${Number(v || 0).toFixed(2)} €`;
 const emptyLine = () => ({ productId: '', quantity: '' });
 
 export default function SalesOrdersPage() {
@@ -18,13 +18,14 @@ export default function SalesOrdersPage() {
   const roles = user?.roles || [];
   const isManager = roles.includes('Admin') || roles.includes('Manager');
   const isClient = roles.includes('Client') && !isManager;
-
+  const [currency, setCurrency] = useState('€');
   const [orders, setOrders] = useState([]);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [feedback, setFeedback] = useState(null);
   const [rowMenu, setRowMenu] = useState(null);
+const money = v => `${Number(v || 0).toFixed(2)} ${currency}`;
 
   // Client create
   const [createOpen, setCreateOpen] = useState(false);
@@ -63,10 +64,21 @@ export default function SalesOrdersPage() {
   const loadProducts = () => { if (isClient) productsApi.getAll().then(setProducts).catch(() => {}); };
 
   useEffect(() => {
-    load();
-    loadProducts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  load();
+  loadProducts();
+  settingsApi.getAll()
+    .then(data => {
+      const c = data.find(s => s.key === 'currency');
+      if (c?.value) setCurrency(c.value);
+    })
+    .catch(() => {});
+
+  const onFocus = () => load(true);
+  window.addEventListener('focus', onFocus);
+  const interval = setInterval(() => load(true), 15000);
+  return () => { window.removeEventListener('focus', onFocus); clearInterval(interval); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
 
   // Rifreskim live (SignalR) + refetch në focus, pa poll periodik. 'products'
   // këtu zgjidh rastin kryesor: stoku/availability ndryshon nga PO-të e manager-it,

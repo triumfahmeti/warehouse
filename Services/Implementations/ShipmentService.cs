@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using Warehouse.DTOs.NotificationDto;
 using Warehouse.DTOs.ShipmentDto;
 using Warehouse.Enums;
@@ -55,6 +56,18 @@ namespace Warehouse.Services.Implementations
 
         public async Task<int> CreateShipment(CreateEditShipmentDto dto)
         {
+             var maxPalletsSetting = await _context.Settings
+                .FirstOrDefaultAsync(s => s.Key == "max_pallets_per_shipment");
+            
+            var maxPallets = int.TryParse(maxPalletsSetting?.Value, out var val) ? val : 20;
+
+            // Kontrollo sa paleta ka packing list
+            var pl = await _packingListRepository.GetWithPalletsAndOrder(dto.PackingListId)
+                ?? throw new InvalidOperationException("Packing list not found");
+
+            if (pl.Pallets.Count > maxPallets)
+                throw new InvalidOperationException($"Packing list has {pl.Pallets.Count} pallets, max allowed is {maxPallets}");
+        
             var packingList = await _packingListRepository.GetByIdAsync(dto.PackingListId)
                 ?? throw new InvalidOperationException("Packing list not found");
 

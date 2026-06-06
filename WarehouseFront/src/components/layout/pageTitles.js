@@ -11,6 +11,11 @@ export const pageTitles = {
   '/pallets':       { title: 'Pallets',       subtitle: 'Packaging' },
   '/packing-lists': { title: 'Packing Lists', subtitle: 'Pre-shipment' },
   '/shipments':     { title: 'Shipments',     subtitle: 'Shipment' },
+   // Administration
+  '/admin/users':    { title: 'User Management', subtitle: 'Administration' },
+  '/admin/roles':    { title: 'Roles',           subtitle: 'Administration' },
+  '/admin/audit':    { title: 'Audit Logs',      subtitle: 'Administration' },
+  '/admin/settings': { title: 'System Settings', subtitle: 'Administration' },
 };
 
 export const defaultTitle = { title: 'Warehouse OS', subtitle: '' };
