@@ -36,19 +36,47 @@ namespace Warehouse.Data
 
             // Assign permissions to roles
             await AssignPermissions(db, "Admin", allPerms); // Admin merr të gjitha
+
+            // Manager — menaxhim operacional (pa user/role/settings admin).
             await AssignPermissions(db, "Manager", new[] {
-            Permissions.Orders.View, Permissions.Orders.Approve, Permissions.Orders.Create,
-            Permissions.Inventory.View, Permissions.Inventory.Update, Permissions.Inventory.Transfer,
-            Permissions.Products.View, Permissions.Products.Edit,
-            Permissions.Reports.View, Permissions.Users.View
-        });
+                Permissions.SalesOrders.View, Permissions.SalesOrders.SetPrices, Permissions.SalesOrders.Cancel,
+                Permissions.PurchaseOrders.View, Permissions.PurchaseOrders.Create, Permissions.PurchaseOrders.Receive, Permissions.PurchaseOrders.Cancel, Permissions.PurchaseOrders.Close,
+                Permissions.Products.View, Permissions.Products.Create, Permissions.Products.Edit, Permissions.Products.Delete,
+                Permissions.Inventory.View, Permissions.Inventory.AddStock, Permissions.Inventory.RemoveStock, Permissions.Inventory.Reserve, Permissions.Inventory.ReleaseReserved, Permissions.Inventory.Transfer, Permissions.Inventory.Adjust, Permissions.Inventory.CycleCount, Permissions.Inventory.ViewMovements,
+                Permissions.Warehouses.View, Permissions.Warehouses.Create, Permissions.Warehouses.Edit, Permissions.Warehouses.Delete,
+                Permissions.Rafts.View, Permissions.Rafts.Create, Permissions.Rafts.Edit, Permissions.Rafts.Delete,
+                Permissions.Suppliers.View, Permissions.Suppliers.Create, Permissions.Suppliers.Edit, Permissions.Suppliers.Delete,
+                Permissions.Clients.View, Permissions.Clients.Create, Permissions.Clients.Edit, Permissions.Clients.ViewOrders,
+                Permissions.Pallets.View, Permissions.Pallets.Create, Permissions.Pallets.Edit, Permissions.Pallets.Delete, Permissions.Pallets.CreateFromOrder,
+                Permissions.PalletItems.View, Permissions.PalletItems.Create, Permissions.PalletItems.Edit, Permissions.PalletItems.Delete,
+                Permissions.PackingLists.View, Permissions.PackingLists.Create, Permissions.PackingLists.Edit, Permissions.PackingLists.MarkReady, Permissions.PackingLists.Cancel,
+                Permissions.Shipments.View, Permissions.Shipments.Create, Permissions.Shipments.MarkReady, Permissions.Shipments.Ship, Permissions.Shipments.Deliver, Permissions.Shipments.Cancel,
+                Permissions.Reports.View, Permissions.Reports.ViewInventory, Permissions.Reports.ViewSales, Permissions.Reports.ViewShipment,
+                Permissions.AuditLogs.View, Permissions.Users.View,
+                Permissions.ExportImport.Export, Permissions.ExportImport.Import,
+                Permissions.Dashboard.View, Permissions.Notifications.View,
+            });
+
+            // Worker — operacionet e fulfillment-it.
             await AssignPermissions(db, "Worker", new[] {
-            Permissions.Orders.View, Permissions.Inventory.View, Permissions.Inventory.Update,
-            Permissions.Products.View
-        });
+                Permissions.Products.View,
+                Permissions.Inventory.View, Permissions.Inventory.AddStock, Permissions.Inventory.RemoveStock, Permissions.Inventory.Transfer, Permissions.Inventory.Adjust, Permissions.Inventory.CycleCount, Permissions.Inventory.ViewMovements,
+                Permissions.Warehouses.View, Permissions.Rafts.View, Permissions.Suppliers.View,
+                Permissions.PurchaseOrders.View, Permissions.PurchaseOrders.Receive,
+                Permissions.Pallets.View, Permissions.Pallets.Create, Permissions.Pallets.Edit, Permissions.Pallets.Delete, Permissions.Pallets.CreateFromOrder,
+                Permissions.PalletItems.View, Permissions.PalletItems.Create, Permissions.PalletItems.Edit, Permissions.PalletItems.Delete,
+                Permissions.PackingLists.View, Permissions.PackingLists.Create, Permissions.PackingLists.Edit, Permissions.PackingLists.MarkReady, Permissions.PackingLists.Cancel,
+                Permissions.Shipments.View, Permissions.Shipments.Create, Permissions.Shipments.MarkReady, Permissions.Shipments.Ship, Permissions.Shipments.Deliver, Permissions.Shipments.Cancel,
+                Permissions.Notifications.View, Permissions.Dashboard.View,
+            });
+
+            // Client — vetëshërbim.
             await AssignPermissions(db, "Client", new[] {
-            Permissions.Orders.View, Permissions.Orders.Create, Permissions.Products.View
-        });
+                Permissions.SalesOrders.ViewOwn, Permissions.SalesOrders.Create, Permissions.SalesOrders.Confirm, Permissions.SalesOrders.Cancel,
+                Permissions.Products.View,
+                Permissions.Shipments.ViewOwn,
+                Permissions.Notifications.View,
+            });
 
             // Default admin user
             var adminUser = await userMgr.FindByEmailAsync("admin@warehouse.com");

@@ -15,6 +15,13 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using MongoDB.Driver;
 using Microsoft.AspNetCore.Http.Features;
 
+// Ngarko .env (nga rrënja e projektit) në environment variables PARA se të ndërtohet
+// konfigurimi. .NET-i (AddEnvironmentVariables, default) i lexon dhe override-on
+// appsettings. Variablat përdorin konventën hierarkike me '__' (p.sh.
+// JwtSettings__SecretKey → JwtSettings:SecretKey). Sekretet/connection strings rrinë
+// vetëm te .env (i gitignore-uar), jo te appsettings.
+DotNetEnv.Env.TraversePath().Load();
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers()
@@ -123,6 +130,12 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+// Autorizimi i bazuar në leje: policy provider që zgjidh policy-t "PERMISSION_*" dhe
+// handler-i që kontrollon claim-in "permission" te JWT-ja (shih [HasPermission]).
+builder.Services.AddAuthorization();
+builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationPolicyProvider, Warehouse.Authorization.PermissionPolicyProvider>();
+builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, Warehouse.Authorization.PermissionAuthorizationHandler>();
+
 builder.Services.AddScoped<IExportImportService, ExportImportService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IAuthService, AuthService>();
@@ -173,6 +186,10 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowFrontend");
+
+// Trajtuesi global i gabimeve — herët në pipeline që të kapë gabimet e endpoint-eve
+// dhe t'i kthejë si { message } miqësore (p.sh. guard-et e pallet/packing list/shipment).
+app.UseMiddleware<Warehouse.Middleware.ExceptionHandlingMiddleware>();
 
 app.UseSwagger();
 app.UseSwaggerUI(options =>

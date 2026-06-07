@@ -1,18 +1,21 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Settings, LogOut, Menu } from 'lucide-react';
+import { Settings, LogOut, Menu, Sun, Moon } from 'lucide-react';
 import { colors } from '../../theme/colors';
 import { IconButton } from '../ui/Button';
 import { useAuth } from '../../auth/AuthContext';
+import { useTheme } from '../../theme/ThemeContext';
 import NotificationBell from './NotificationBell';
 
 export default function Topbar({ title, subtitle, action, onMenuToggle }) {
   const { user, logout } = useAuth();
+  const { isDark, toggle } = useTheme();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const menuRef = useRef(null);
 
   const initial = (user?.email?.[0] || 'U').toUpperCase();
+  const isAdmin = (user?.roles || []).includes('Admin');
 
   useEffect(() => {
     const onClick = e => {
@@ -58,7 +61,11 @@ export default function Topbar({ title, subtitle, action, onMenuToggle }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <NotificationBell />
 
-        <IconButton><Settings size={15} /></IconButton>
+        {isAdmin && (
+          <IconButton onClick={() => navigate('/admin/settings')}>
+            <Settings size={15} />
+          </IconButton>
+        )}
 
         <div ref={menuRef} style={{ position: 'relative' }}>
           <button onClick={() => setOpen(o => !o)} style={{
@@ -84,6 +91,17 @@ export default function Topbar({ title, subtitle, action, onMenuToggle }) {
                   {user?.roles?.length ? user.roles.join(', ') : 'No role'}
                 </div>
               </div>
+              <button onClick={toggle} style={{
+                all: 'unset', display: 'flex', alignItems: 'center', gap: 8,
+                width: '100%', boxSizing: 'border-box', padding: '8px 10px',
+                borderRadius: 6, cursor: 'pointer',
+                fontSize: 13, color: colors.text, fontFamily: 'var(--font-sans)',
+              }}
+                onMouseEnter={e => (e.currentTarget.style.background = colors.bg)}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+              >
+                {isDark ? <Sun size={14} /> : <Moon size={14} />} {isDark ? 'Light mode' : 'Dark mode'}
+              </button>
               <button onClick={handleLogout} style={{
                 all: 'unset', display: 'flex', alignItems: 'center', gap: 8,
                 width: '100%', boxSizing: 'border-box', padding: '8px 10px',

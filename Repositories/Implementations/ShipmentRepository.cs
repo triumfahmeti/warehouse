@@ -21,6 +21,7 @@ namespace Warehouse.Repositories.Implementations
                 .Include(s => s.PackingList)
                     .ThenInclude(pl => pl.Pallets)
                         .ThenInclude(p => p.Pallet)
+                            .ThenInclude(p => p.Items)
                 .Include(s => s.Warehouse)
                 .FirstOrDefaultAsync(s => s.Id == id);
         }

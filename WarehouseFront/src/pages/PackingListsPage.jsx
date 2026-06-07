@@ -10,7 +10,6 @@ import {
 import { colors } from "../theme/colors";
 import {
   packingListsApi,
-  warehousesApi,
   salesOrdersApi,
   palletsApi,
 } from "../api";
@@ -21,11 +20,10 @@ import { PrimaryButton } from "../components/ui/Button";
 import { exportToCsv } from "../utils/exportCsv";
 import { useLiveResource } from "../realtime/useLiveResource";
 
-const emptyForm = { salesOrderId: "", warehouseId: "", notes: "" };
+const emptyForm = { salesOrderId: "", notes: "" };
 
 export default function PackingListsPage() {
   const [packingLists, setPackingLists] = useState([]);
-  const [warehouseOptions, setWarehouseOptions] = useState([]);
   const [salesOrderOptions, setSalesOrderOptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -72,14 +70,12 @@ export default function PackingListsPage() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [plData, whData, soData] = await Promise.all([
+        const [plData, soData] = await Promise.all([
           packingListsApi.getAll(),
-          warehousesApi.getAll().catch(() => []),
           salesOrdersApi.getAll().catch(() => []),
         ]);
         if (!cancelled) {
           setPackingLists(plData);
-          setWarehouseOptions(whData);
           setSalesOrderOptions(soData);
           setError(null);
         }
@@ -125,7 +121,6 @@ export default function PackingListsPage() {
     try {
       await packingListsApi.create({
         salesOrderId: Number(form.salesOrderId),
-        warehouseId: Number(form.warehouseId),
         notes: form.notes || null,
       });
       showFeedback("Packing list created successfully.");
@@ -295,7 +290,7 @@ export default function PackingListsPage() {
             <option value="">All Statuses</option>
             <option value="Draft">Draft</option>
             <option value="Ready">Ready</option>
-            <option value="Shipped">Shipped</option>
+            <option value="Closed">Closed</option>
             <option value="Cancelled">Cancelled</option>
           </select>
           <select
@@ -754,32 +749,19 @@ export default function PackingListsPage() {
                 <option value="" disabled>
                   Select sales order...
                 </option>
-                {salesOrderOptions.map((so) => (
-                  <option key={so.id} value={so.id}>
-                    #{so.id} — {so.status}
-                  </option>
-                ))}
+                {salesOrderOptions
+                  .filter((so) => so.status === "Processing")
+                  .map((so) => (
+                    <option key={so.id} value={so.id}>
+                      #{so.id} — {so.status}
+                    </option>
+                  ))}
               </select>
             </Field>
-            <Field label="Warehouse">
-              <select
-                required
-                style={inputStyle}
-                value={form.warehouseId}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, warehouseId: e.target.value }))
-                }
-              >
-                <option value="" disabled>
-                  Select warehouse...
-                </option>
-                {warehouseOptions.map((w) => (
-                  <option key={w.id} value={w.id}>
-                    {w.name}
-                  </option>
-                ))}
-              </select>
-            </Field>
+            <p style={{ margin: "0 0 14px", fontSize: 12, color: colors.textMuted, fontFamily: "var(--font-sans)", lineHeight: 1.5 }}>
+              The packing list groups all of this order's pallets. The warehouse is
+              determined automatically from where the pallets are stored.
+            </p>
             <Field label="Notes (optional)">
               <input
                 style={inputStyle}

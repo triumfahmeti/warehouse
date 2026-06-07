@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Warehouse.Services.Interfaces;
+using Warehouse.Authorization;
+using Warehouse.Authorization.Constants;
 
 namespace Warehouse.Controllers
 {
@@ -15,6 +17,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet]
+        [HasPermission(Permissions.Inventory.View)]
         public async Task<IActionResult> GetAll()
         {
             var inventory = await _service.GetAllAsync();
@@ -22,6 +25,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPost("add-stock")]
+        [HasPermission(Permissions.Inventory.AddStock)]
         public async Task<IActionResult> AddStock([FromBody] AddStockRequest request)
         {
             await _service.AddStock(request.ProductId, request.RaftId, request.Quantity);
@@ -29,6 +33,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPost("remove-stock")]
+        [HasPermission(Permissions.Inventory.RemoveStock)]
         public async Task<IActionResult> RemoveStock([FromBody] RemoveStockRequest request)
         {
             await _service.RemoveStock(request.ProductId, request.RaftId, request.Quantity);
@@ -36,6 +41,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet("available/{productId}")]
+        [HasPermission(Permissions.Inventory.View)]
         public async Task<IActionResult> GetAvailableStock(int productId)
         {
             var stock = await _service.GetAvailableStock(productId);
@@ -43,6 +49,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPatch("reserve/{salesOrderId}")]
+        [HasPermission(Permissions.Inventory.Reserve)]
         public async Task<IActionResult> ReserveStock(int salesOrderId)
         {
             await _service.ReserveStock(salesOrderId);
@@ -50,6 +57,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPost("transfer")]
+        [HasPermission(Permissions.Inventory.Transfer)]
         public async Task<IActionResult> TransferStock([FromBody] TransferStockRequest request)
         {
             await _service.TransferStock(request.ProductId, request.FromRaftId, request.ToRaftId, request.Quantity);
@@ -57,6 +65,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPost("adjust")]
+        [HasPermission(Permissions.Inventory.Adjust)]
         public async Task<IActionResult> AdjustStock([FromBody] AdjustStockRequest request)
         {
             await _service.AdjustStock(request.ProductId, request.RaftId, request.QuantityDelta, request.Reason);
@@ -64,6 +73,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPost("cycle-count")]
+        [HasPermission(Permissions.Inventory.CycleCount)]
         public async Task<IActionResult> CycleCount([FromBody] CycleCountRequest request)
         {
             await _service.CycleCount(request.ProductId, request.RaftId, request.CountedQuantity);
@@ -71,6 +81,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPatch("release/{salesOrderId}")]
+        [HasPermission(Permissions.Inventory.ReleaseReserved)]
         public async Task<IActionResult> ReleaseReservedStock(int salesOrderId)
         {
             await _service.ReleaseReservedStock(salesOrderId);
@@ -78,6 +89,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet("movements/{productId}")]
+        [HasPermission(Permissions.Inventory.ViewMovements)]
         public async Task<IActionResult> GetMovements(int productId, [FromQuery] DateTime? from, [FromQuery] DateTime? to)
         {
             var movements = await _service.GetInventoryMovements(productId, from, to);

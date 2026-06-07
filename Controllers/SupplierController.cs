@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using Warehouse.DTOs.SupplierDto;
 using Warehouse.DTOs;
 using Warehouse.Services.Interfaces;
+using Warehouse.Authorization;
+using Warehouse.Authorization.Constants;
 
 namespace Warehouse.Controllers
 {
@@ -17,6 +19,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet]
+        [HasPermission(Permissions.Suppliers.View)]
         public async Task<IActionResult> GetAll()
         {
             var suppliers = await _service.GetAllAsync();
@@ -24,6 +27,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet("{id}")]
+        [HasPermission(Permissions.Suppliers.View)]
         public async Task<IActionResult> GetById(int id)
         {
             var supplier = await _service.GetByIdAsync(id);
@@ -32,6 +36,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPost]
+        [HasPermission(Permissions.Suppliers.Create)]
         public async Task<IActionResult> Create(CreateEditSupplierDto dto)
         {
             try
@@ -46,6 +51,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPut("{id}")]
+        [HasPermission(Permissions.Suppliers.Edit)]
         public async Task<IActionResult> Update(int id, CreateEditSupplierDto dto)
         {
             try
@@ -60,6 +66,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpDelete("{id}")]
+        [HasPermission(Permissions.Suppliers.Delete)]
         public async Task<IActionResult> Delete(int id)
         {
             try

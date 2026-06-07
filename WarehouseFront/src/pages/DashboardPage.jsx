@@ -1,4 +1,5 @@
-import { Fragment } from "react";
+import { useEffect, useState, Fragment } from "react";
+import { Link } from "react-router-dom";
 import {
   FileText,
   Box,
@@ -9,56 +10,88 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import { colors } from "../theme/colors";
-import { mockData } from "../data/mockData";
 import { useAuth } from "../auth/AuthContext";
+import { shipmentsApi, warehousesApi, palletsApi, packingListsApi } from "../api";
+import { useLiveResource } from "../realtime/useLiveResource";
 import ClientDashboard from "./ClientDashboard";
 import AdminDashboard from "./AdminDashboard";
 import KpiCard from "../components/ui/KpiCard";
 import StatusBadge from "../components/ui/StatusBadge";
 
-// Hapat e flow-it të porosisë (përdoret te seksioni "Order Lifecycle").
-const flowSteps = [
-  { icon: FileText, label: "Sales Order", sub: "4 active", color: colors.info },
-  { icon: Box, label: "Pallet", sub: "3 prepared", color: colors.warning },
-  {
-    icon: ClipboardList,
-    label: "Packing List",
-    sub: "3 ready",
-    color: colors.warning,
-  },
-  {
-    icon: Truck,
-    label: "Shipment",
-    sub: "4 total",
-    color: colors.accent,
-    highlight: true,
-  },
-  {
-    icon: CheckCircle2,
-    label: "Delivered",
-    sub: "1 done",
-    color: colors.success,
-  },
-];
-
 export default function DashboardPage() {
   const { user } = useAuth();
-  const isClient = user?.roles?.includes("Client");
-  const isAdmin = user?.roles?.includes("Admin");
+  const roles = user?.roles || [];
 
-  if (isClient) return <ClientDashboard />;
-  if (isAdmin) return <AdminDashboard />;
-  const totalShipments = mockData.shipments.length;
-  const delivered = mockData.shipments.filter(
-    (s) => s.status === "Delivered",
-  ).length;
-  const inTransit = mockData.shipments.filter(
-    (s) => s.status === "Shipped",
-  ).length;
-  const totalRevenue = mockData.salesOrders.reduce(
-    (sum, o) => sum + o.total,
-    0,
+  if (roles.includes("Client")) return <ClientDashboard />;
+  if (roles.includes("Admin")) return <AdminDashboard />;
+  return <StaffDashboard />;
+}
+
+// Dashboard për Worker/Manager — i ndërtuar nga të dhëna reale të rrjedhës së
+// fulfillment-it (shipments, pallets, packing lists, warehouses). Nuk përdor sales
+// orders sepse ai endpoint është vetëm Admin/Manager (Worker do merrte 403).
+function StaffDashboard() {
+  const [shipments, setShipments] = useState([]);
+  const [warehouses, setWarehouses] = useState([]);
+  const [pallets, setPallets] = useState([]);
+  const [packingLists, setPackingLists] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = async (silent = false) => {
+    if (!silent) setLoading(true);
+    try {
+      const [sh, wh, pl, pk] = await Promise.all([
+        shipmentsApi.getAll().catch(() => []),
+        warehousesApi.getAll().catch(() => []),
+        palletsApi.getAll().catch(() => []),
+        packingListsApi.getAll().catch(() => []),
+      ]);
+      setShipments(sh);
+      setWarehouses(wh);
+      setPallets(pl);
+      setPackingLists(pk);
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Rifreskim live kur ndryshojnë burimet përkatëse.
+  useLiveResource(
+    ["shipments", "pallets", "packinglists", "inventory", "warehouses"],
+    () => load(true),
   );
+
+  // ---- Metrika reale ----
+  const totalShipments = shipments.length;
+  const delivered = shipments.filter((s) => s.status === "Delivered").length;
+  const inTransit = shipments.filter((s) => s.status === "Shipped").length;
+  const readyToShip = packingLists.filter((pl) => pl.status === "Ready").length;
+  const ordersInFulfillment = new Set(pallets.map((p) => p.salesOrderId)).size;
+
+  const flowSteps = [
+    { icon: FileText, label: "Sales Order", sub: `${ordersInFulfillment} in fulfillment`, color: colors.info },
+    { icon: Box, label: "Pallet", sub: `${pallets.length} prepared`, color: colors.warning },
+    { icon: ClipboardList, label: "Packing List", sub: `${readyToShip} ready`, color: colors.warning },
+    { icon: Truck, label: "Shipment", sub: `${totalShipments} total`, color: colors.accent, highlight: true },
+    { icon: CheckCircle2, label: "Delivered", sub: `${delivered} done`, color: colors.success },
+  ];
+
+  const recentShipments = [...shipments]
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0, 4);
+
+  if (loading) {
+    return (
+      <div style={{ padding: 40, textAlign: "center", color: colors.textMuted, fontFamily: "var(--font-mono)", fontSize: 13 }}>
+        Loading...
+      </div>
+    );
+  }
 
   return (
     <div className="dashboard-page">
@@ -86,19 +119,6 @@ export default function DashboardPage() {
             opacity: 0.4,
           }}
         />
-        <div
-          style={{
-            position: "absolute",
-            right: 20,
-            bottom: 20,
-            fontSize: 11,
-            fontFamily: "var(--font-mono)",
-            opacity: 0.4,
-            letterSpacing: "0.1em",
-          }}
-        >
-          SHIPMENT MODULE · ERA
-        </div>
         <div style={{ position: "relative", maxWidth: 600 }}>
           <div
             style={{
@@ -110,14 +130,9 @@ export default function DashboardPage() {
               marginBottom: 8,
             }}
           >
-            Lab 2 · Warehouse Management System
+            Warehouse Management System
           </div>
-          <h1
-            className="hero-heading"
-            style={{
-              fontFamily: "var(--font-sans)",
-            }}
-          >
+          <h1 className="hero-heading" style={{ fontFamily: "var(--font-sans)" }}>
             SalesOrder → Pallet → PackingList →{" "}
             <span style={{ color: colors.accent }}>Shipment</span>
           </h1>
@@ -131,39 +146,17 @@ export default function DashboardPage() {
               lineHeight: 1.5,
             }}
           >
-            Menaxho krejt flow-in nga porosia deri tek dorëzimi. Sistemi është i
-            lidhur me API në localhost:7103.
+            Manage the entire flow from order to delivery.
           </p>
         </div>
       </div>
 
       {/* KPIs */}
       <div className="kpi-grid">
-        <KpiCard
-          label="Total Shipments"
-          value={totalShipments}
-          change="+12.5%"
-          trend="up"
-          accent
-        />
-        <KpiCard
-          label="Delivered"
-          value={delivered}
-          change="+8.2%"
-          trend="up"
-        />
-        <KpiCard
-          label="In Transit"
-          value={inTransit}
-          change="-2.1%"
-          trend="down"
-        />
-        <KpiCard
-          label="Revenue (KSO)"
-          value={`€${(totalRevenue / 1000).toFixed(1)}k`}
-          change="+18.4%"
-          trend="up"
-        />
+        <KpiCard label="Total Shipments" value={totalShipments} accent />
+        <KpiCard label="Delivered" value={delivered} />
+        <KpiCard label="In Transit" value={inTransit} />
+        <KpiCard label="Ready to Ship" value={readyToShip} />
       </div>
 
       {/* Flow visualization */}
@@ -217,9 +210,7 @@ export default function DashboardPage() {
                     alignItems: "center",
                     justifyContent: "center",
                     margin: "0 auto 10px",
-                    boxShadow: step.highlight
-                      ? `0 4px 14px ${step.color}40`
-                      : "none",
+                    boxShadow: step.highlight ? `0 4px 14px ${step.color}40` : "none",
                   }}
                 >
                   <step.icon size={20} strokeWidth={2} />
@@ -269,13 +260,7 @@ export default function DashboardPage() {
             padding: 20,
           }}
         >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              marginBottom: 16,
-            }}
-          >
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
             <h3
               style={{
                 margin: 0,
@@ -287,7 +272,8 @@ export default function DashboardPage() {
             >
               Recent Shipments
             </h3>
-            <a
+            <Link
+              to="/shipments"
               style={{
                 fontSize: 12,
                 color: colors.accent,
@@ -296,13 +282,17 @@ export default function DashboardPage() {
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 2,
-                cursor: "pointer",
               }}
             >
               View all <ArrowUpRight size={12} />
-            </a>
+            </Link>
           </div>
-          {mockData.shipments.slice(0, 4).map((s, i) => (
+          {recentShipments.length === 0 && (
+            <div style={{ padding: "20px 0", textAlign: "center", color: colors.textMuted, fontSize: 13 }}>
+              No shipments yet
+            </div>
+          )}
+          {recentShipments.map((s, i) => (
             <div
               key={s.id}
               style={{
@@ -310,7 +300,7 @@ export default function DashboardPage() {
                 alignItems: "center",
                 justifyContent: "space-between",
                 padding: "10px 0",
-                borderBottom: i < 3 ? `1px solid ${colors.border}` : "none",
+                borderBottom: i < recentShipments.length - 1 ? `1px solid ${colors.border}` : "none",
               }}
             >
               <div>
@@ -322,7 +312,7 @@ export default function DashboardPage() {
                     fontFamily: "var(--font-mono)",
                   }}
                 >
-                  {s.number}
+                  {s.shipmentNumber}
                 </div>
                 <div
                   style={{
@@ -332,7 +322,7 @@ export default function DashboardPage() {
                     marginTop: 2,
                   }}
                 >
-                  {s.warehouseName}
+                  {s.warehouseName || "—"}
                 </div>
               </div>
               <StatusBadge status={s.status} />
@@ -361,55 +351,37 @@ export default function DashboardPage() {
           >
             Warehouse Utilization
           </h3>
-          {mockData.warehouses.map((w) => (
-            <div key={w.id} style={{ marginBottom: 14 }}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  marginBottom: 6,
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: 13,
-                    color: colors.text,
-                    fontFamily: "var(--font-sans)",
-                  }}
-                >
-                  {w.name}
-                </span>
-                <span
-                  style={{
-                    fontSize: 12,
-                    color: colors.textMuted,
-                    fontFamily: "var(--font-mono)",
-                  }}
-                >
-                  {w.utilization}%
-                </span>
-              </div>
-              <div
-                style={{
-                  height: 4,
-                  background: colors.bg,
-                  borderRadius: 999,
-                  overflow: "hidden",
-                }}
-              >
-                <div
-                  style={{
-                    width: `${w.utilization}%`,
-                    height: "100%",
-                    background:
-                      w.utilization > 70 ? colors.accent : colors.text,
-                    borderRadius: 999,
-                    transition: "width 0.6s",
-                  }}
-                />
-              </div>
+          {warehouses.length === 0 && (
+            <div style={{ padding: "20px 0", textAlign: "center", color: colors.textMuted, fontSize: 13 }}>
+              No warehouses
             </div>
-          ))}
+          )}
+          {warehouses.map((w) => {
+            const util = w.utilization ?? 0;
+            return (
+              <div key={w.id} style={{ marginBottom: 14 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                  <span style={{ fontSize: 13, color: colors.text, fontFamily: "var(--font-sans)" }}>
+                    {w.name}
+                  </span>
+                  <span style={{ fontSize: 12, color: colors.textMuted, fontFamily: "var(--font-mono)" }}>
+                    {util}%
+                  </span>
+                </div>
+                <div style={{ height: 4, background: colors.bg, borderRadius: 999, overflow: "hidden" }}>
+                  <div
+                    style={{
+                      width: `${Math.min(100, util)}%`,
+                      height: "100%",
+                      background: util > 70 ? colors.accent : colors.text,
+                      borderRadius: 999,
+                      transition: "width 0.6s",
+                    }}
+                  />
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

@@ -2,12 +2,13 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Warehouse.DTOs.PurchaseOrder;
 using Warehouse.Services.Interfaces;
+using Warehouse.Authorization;
+using Warehouse.Authorization.Constants;
 
 namespace Warehouse.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Admin,Manager,Worker")]
     public class PurchaseOrdersController : ControllerBase
     {
         private readonly IPurchaseOrderService _service;
@@ -18,6 +19,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet]
+        [HasPermission(Permissions.PurchaseOrders.View)]
         public async Task<IActionResult> GetAll()
         {
             var orders = await _service.GetAllAsync();
@@ -25,6 +27,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet("{id}")]
+        [HasPermission(Permissions.PurchaseOrders.View)]
         public async Task<IActionResult> GetById(int id)
         {
             var order = await _service.GetByIdAsync(id);
@@ -32,7 +35,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin,Manager")]
+        [HasPermission(Permissions.PurchaseOrders.Create)]
         public async Task<IActionResult> Create([FromBody] CreatePurchaseOrderDto dto)
         {
             if (dto == null)
@@ -50,7 +53,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPost("{id}/receive")]
-        [Authorize(Roles = "Admin,Manager,Worker")]
+        [HasPermission(Permissions.PurchaseOrders.Receive)]
         public async Task<IActionResult> Receive(int id, [FromBody] ReceivePurchaseOrderDto dto)
         {
             if (dto == null)
@@ -68,7 +71,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPost("{id}/cancel")]
-        [Authorize(Roles = "Admin,Manager")]
+        [HasPermission(Permissions.PurchaseOrders.Cancel)]
         public async Task<IActionResult> Cancel(int id)
         {
             try
@@ -83,7 +86,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPost("{id}/close")]
-        [Authorize(Roles = "Admin,Manager")]
+        [HasPermission(Permissions.PurchaseOrders.Close)]
         public async Task<IActionResult> Close(int id)
         {
             try

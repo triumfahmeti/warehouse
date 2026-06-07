@@ -53,9 +53,49 @@ namespace Warehouse.Services.Implementations
 
     public async Task<PackingList> CreateAsync(CreateEditPackingListDto dto)
     {
+        // Packing list krijohet vetëm për porosi në Processing (pallet-at janë krijuar,
+        // ende e padorëzuar). Kjo bllokon Cancelled, Completed, New dhe Confirmed.
+        var order = await _context.SalesOrders.FindAsync(dto.SalesOrderId)
+            ?? throw new InvalidOperationException("Order not found");
+
+        if (order.Status != SalesOrderStatus.Processing)
+            throw new InvalidOperationException(
+                "Packing lists can be created only for orders in Processing status (pallets created, not yet delivered).");
+
+        // Një packing list ka kuptim vetëm me pallet. Marrim pallet-at e kësaj porosie
+        // që s'janë caktuar ende në ndonjë packing list dhe i bashkojmë automatikisht.
+        var assignedPalletIds = await _context.PackingListPallets
+            .Select(plp => plp.PalletId)
+            .ToListAsync();
+
+        var orderPallets = await _context.Pallets
+            .Where(p => p.SalesOrderId == dto.SalesOrderId && !assignedPalletIds.Contains(p.Id))
+            .ToListAsync();
+
+        if (orderPallets.Count == 0)
+            throw new InvalidOperationException(
+                "This order has no unassigned pallets. Create pallets for the order first.");
+
+        // Warehouse-i derivohet nga raftet ku ndodhen fizikisht pallet-at (raft → warehouse).
+        // Nuk zgjidhet manualisht. Nëse pallet-at janë në depo të ndryshme, s'mund të
+        // grupohen në një packing list / një shipment të vetëm.
+        var palletIds = orderPallets.Select(p => p.Id).ToList();
+        var warehouseIds = await _context.PalletItems
+            .Where(pi => palletIds.Contains(pi.PalletId) && pi.RaftId != null)
+            .Select(pi => pi.Raft!.WarehouseId)
+            .Distinct()
+            .ToListAsync();
+
+        if (warehouseIds.Count == 0)
+            throw new InvalidOperationException(
+                "Cannot determine the warehouse: these pallets have no raft information.");
+        if (warehouseIds.Count > 1)
+            throw new InvalidOperationException(
+                "These pallets are stored in multiple warehouses and cannot be grouped into one packing list.");
+
         var packingList = new PackingList
         {
-            WarehouseId = dto.WarehouseId,
+            WarehouseId = warehouseIds[0],
             SalesOrderId = dto.SalesOrderId,
             Notes = dto.Notes,
             PackingListNumber = $"PL-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString()[..6].ToUpper()}",
@@ -63,6 +103,17 @@ namespace Warehouse.Services.Implementations
         };
 
         await _packingListRepository.AddAsync(packingList);
+        await _context.SaveChangesAsync();
+
+        foreach (var pallet in orderPallets)
+        {
+            await _packingListPalletRepository.AddAsync(new PackingListPallet
+            {
+                PackingListId = packingList.Id,
+                PalletId = pallet.Id
+            });
+        }
+
         await _context.SaveChangesAsync();
         await _realtime.ResourceChangedAsync("packinglists");
 
@@ -103,7 +154,11 @@ namespace Warehouse.Services.Implementations
         if (packingList == null)
             throw new Exception("Packing list not found");
 
-        packingList.Status = PackingListStatus.Closed;
+        // Closed = nisur tashmë (auto nga shipment); s'mund të anulohet.
+        if (packingList.Status == PackingListStatus.Closed)
+            throw new InvalidOperationException("Cannot cancel a packing list whose shipment has already been sent.");
+
+        packingList.Status = PackingListStatus.Cancelled;
         await _context.SaveChangesAsync();
         await _realtime.ResourceChangedAsync("packinglists");
     }

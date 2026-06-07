@@ -2,6 +2,8 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Warehouse.DTOs.Client;
 using Warehouse.Services.Interfaces;
+using Warehouse.Authorization;
+using Warehouse.Authorization.Constants;
 
 namespace Warehouse.Controllers
 {
@@ -17,6 +19,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet]
+        [HasPermission(Permissions.Clients.View)]
         public async Task<IActionResult> GetAll()
         {
             var clients = await _clientService.GetAllAsync();
@@ -24,6 +27,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPost]
+        [HasPermission(Permissions.Clients.Create)]
         public async Task<IActionResult> Create([FromBody] UpsertClientDto dto)
         {
             if (!ModelState.IsValid)
@@ -34,6 +38,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPut("{id:int}")]
+        [HasPermission(Permissions.Clients.Edit)]
         public async Task<IActionResult> Update(int id, [FromBody] UpsertClientDto dto)
         {
             if (!ModelState.IsValid)
@@ -44,6 +49,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet("{id:int}/orders")]
+        [HasPermission(Permissions.Clients.ViewOrders)]
         public async Task<IActionResult> GetOrders(int id)
         {
             var orders = await _clientService.GetClientOrders(id);
@@ -51,6 +57,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet("my-orders")]
+        [HasPermission(Permissions.SalesOrders.ViewOwn)]
         public async Task<IActionResult> GetMyOrders()
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -70,6 +77,7 @@ namespace Warehouse.Controllers
 
         // GET /api/client-portal/my-stats
         [HttpGet("my-stats")]
+        [HasPermission(Permissions.SalesOrders.ViewOwn)]
         public async Task<IActionResult> GetMyStats()
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;

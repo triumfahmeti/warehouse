@@ -75,8 +75,9 @@ namespace Warehouse.Services.Implementations
             var shipment = new Shipment
             {
                 PackingListId = dto.PackingListId,
-                WarehouseId = dto.WarehouseId,
-                ShipmentNumber = $"SHP-{dto.WarehouseId}-{DateTime.UtcNow.Ticks}",
+                // Warehouse trashëgohet nga packing list-i (i njëjti depo) — nuk rizgjidhet.
+                WarehouseId = packingList.WarehouseId,
+                ShipmentNumber = $"SHP-{packingList.WarehouseId}-{DateTime.UtcNow.Ticks}",
                 Status = ShipmentStatus.Draft,
                 Notes = dto.Notes
             };
@@ -116,34 +117,56 @@ namespace Warehouse.Services.Implementations
                 {
                     foreach (var item in pallet.Pallet.Items)
                     {
-                        var inventories = await _inventoryRepository.GetInventoriesByProduct(item.ProductId);
-                        var remaining = item.Quantity;
-
-                        foreach (var inv in inventories.OrderBy(i => i.Id))
+                        if (item.RaftId.HasValue)
                         {
-                            if (inv.QuantityOnHand <= 0)
-                                continue;
+                            // Zbrit pikërisht nga rafti nga u mor gjatë pick-ut (gjurmë e saktë).
+                            var inv = await _inventoryRepository
+                                .GetInventoryByProductAndRaft(item.ProductId, item.RaftId.Value);
 
-                            var toDeduct = Math.Min(inv.QuantityOnHand, remaining);
-                            inv.QuantityOnHand -= toDeduct;
+                            if (inv == null || inv.QuantityOnHand < item.Quantity)
+                                throw new InvalidOperationException(
+                                    $"Stock inconsistency: raft {item.RaftId} does not have enough stock for product {item.ProductId}.");
+
+                            inv.QuantityOnHand -= item.Quantity;
                             await _inventoryRepository.UpdateAsync(inv);
-                            remaining -= toDeduct;
-
-                            if (remaining == 0)
-                                break;
                         }
+                        else
+                        {
+                            // Fallback për paletat e vjetra pa raft: zbrit sipas produktit nëpër rafte.
+                            var inventories = await _inventoryRepository.GetInventoriesByProduct(item.ProductId);
+                            var remaining = item.Quantity;
 
-                        if (remaining > 0)
-                            throw new InvalidOperationException("Stock inconsistency detected");
+                            foreach (var inv in inventories.OrderBy(i => i.Id))
+                            {
+                                if (inv.QuantityOnHand <= 0)
+                                    continue;
+
+                                var toDeduct = Math.Min(inv.QuantityOnHand, remaining);
+                                inv.QuantityOnHand -= toDeduct;
+                                await _inventoryRepository.UpdateAsync(inv);
+                                remaining -= toDeduct;
+
+                                if (remaining == 0)
+                                    break;
+                            }
+
+                            if (remaining > 0)
+                                throw new InvalidOperationException("Stock inconsistency detected");
+                        }
                     }
                 }
 
                 shipment.Status = ShipmentStatus.Shipped;
                 await _shipmentRepository.UpdateAsync(shipment);
+
+                // Packing list-i mbyllet automatikisht sapo niset shipment-i.
+                if (shipment.PackingList != null)
+                    shipment.PackingList.Status = PackingListStatus.Closed;
+
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
-                await _realtime.ResourceChangedAsync("shipments", "inventory", "products");
+                await _realtime.ResourceChangedAsync("shipments", "inventory", "products", "packinglists");
 
                 // Njoftim te Manager-et dhe Admin-et: dergesa u nis
                 var managers = await _userManager.GetUsersInRoleAsync("Manager");
@@ -169,7 +192,7 @@ namespace Warehouse.Services.Implementations
 
         public async Task Deliver(int shipmentId)
         {
-            var shipment = await _shipmentRepository.GetByIdAsync(shipmentId)
+            var shipment = await _shipmentRepository.GetWithDetails(shipmentId)
                 ?? throw new InvalidOperationException("Shipment not found");
 
             if (shipment.Status != ShipmentStatus.Shipped)
@@ -177,8 +200,13 @@ namespace Warehouse.Services.Implementations
 
             shipment.Status = ShipmentStatus.Delivered;
             await _shipmentRepository.UpdateAsync(shipment);
+
+            // Dorëzimi mbyll porosinë: kalon në Completed.
+            if (shipment.PackingList?.SalesOrder != null)
+                shipment.PackingList.SalesOrder.Status = SalesOrderStatus.Completed;
+
             await _context.SaveChangesAsync();
-            await _realtime.ResourceChangedAsync("shipments");
+            await _realtime.ResourceChangedAsync("shipments", "salesorders");
 
             // Njoftim te Manager-et dhe Admin-et: dergesa u dorezua
             var managers = await _userManager.GetUsersInRoleAsync("Manager");

@@ -3,6 +3,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Warehouse.Enums;
 using Warehouse.Services.Interfaces;
+using Warehouse.Authorization;
+using Warehouse.Authorization.Constants;
 
 namespace Warehouse.Controllers
 {
@@ -23,6 +25,7 @@ namespace Warehouse.Controllers
         // ════════════════════════════════════════════════════════════════════
 
         [HttpGet("export/products")]
+        [HasPermission(Permissions.ExportImport.Export)]
         public async Task<IActionResult> ExportProducts([FromQuery] string format = "csv")
         {
             var (content, fileName, contentType) = await _service.ExportProductsAsync(format);
@@ -30,6 +33,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet("export/suppliers")]
+        [HasPermission(Permissions.ExportImport.Export)]
         public async Task<IActionResult> ExportSuppliers([FromQuery] string format = "csv")
         {
             var (content, fileName, contentType) = await _service.ExportSuppliersAsync(format);
@@ -37,6 +41,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet("export/clients")]
+        [HasPermission(Permissions.ExportImport.Export)]
         public async Task<IActionResult> ExportClients([FromQuery] string format = "csv")
         {
             var (content, fileName, contentType) = await _service.ExportClientsAsync(format);
@@ -44,6 +49,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet("export/purchaseorders")]
+        [HasPermission(Permissions.ExportImport.Export)]
         public async Task<IActionResult> ExportPurchaseOrders(
             [FromQuery] string format = "csv",
             [FromQuery] DateTime? from = null,
@@ -54,6 +60,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet("export/inventory")]
+        [HasPermission(Permissions.ExportImport.Export)]
         public async Task<IActionResult> ExportInventory(
             [FromQuery] string format = "csv",
             [FromQuery] int? warehouseId = null)
@@ -63,6 +70,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet("export/shipments")]
+        [HasPermission(Permissions.ExportImport.Export)]
         public async Task<IActionResult> ExportShipments(
             [FromQuery] string format = "csv",
             [FromQuery] ShipmentStatus? status = null)
@@ -72,6 +80,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet("export/packinglists")]
+        [HasPermission(Permissions.ExportImport.Export)]
         public async Task<IActionResult> ExportPackingLists([FromQuery] string format = "csv")
         {
             var (content, fileName, contentType) = await _service.ExportPackingListsAsync(format);
@@ -85,6 +94,7 @@ namespace Warehouse.Controllers
         // ════════════════════════════════════════════════════════════════════
 
         [HttpPost("import/products")]
+        [HasPermission(Permissions.ExportImport.Import)]
         public async Task<IActionResult> ImportProducts(IFormFile file)
         {
             if (file == null || file.Length == 0)
@@ -98,6 +108,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPost("import/suppliers")]
+        [HasPermission(Permissions.ExportImport.Import)]
         public async Task<IActionResult> ImportSuppliers(IFormFile file)
         {
             if (file == null || file.Length == 0)
@@ -111,6 +122,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPost("import/clients")]
+        [HasPermission(Permissions.ExportImport.Import)]
         public async Task<IActionResult> ImportClients(IFormFile file)
         {
             if (file == null || file.Length == 0)
@@ -124,6 +136,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPost("import/inventory")]
+        [HasPermission(Permissions.ExportImport.Import)]
         public async Task<IActionResult> ImportInventory(IFormFile file)
         {
             if (file == null || file.Length == 0)

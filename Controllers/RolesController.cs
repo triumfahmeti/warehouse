@@ -4,12 +4,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Warehouse.DTOs.Admin;
 using Warehouse.Models;
+using Warehouse.Authorization;
+using Warehouse.Authorization.Constants;
 
 namespace Warehouse.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Admin")]
     public class RolesController : ControllerBase
     {
         private readonly RoleManager<ApplicationRole> _roleManager;
@@ -22,6 +23,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet]
+        [HasPermission(Permissions.Roles.View)]
         public async Task<IActionResult> GetAll()
         {
             var allPermissions = await _context.Permissions.ToListAsync();
@@ -44,6 +46,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPut("{roleId}/permissions")]
+        [HasPermission(Permissions.Roles.ManagePermissions)]
         public async Task<IActionResult> UpdatePermissions(string roleId, [FromBody] UpdateRolePermissionsDto dto)
         {
             var role = await _roleManager.Roles

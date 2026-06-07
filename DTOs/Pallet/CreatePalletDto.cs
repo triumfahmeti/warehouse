@@ -6,7 +6,5 @@ namespace Warehouse.DTOs.Pallet
     {
         public int SalesOrderId { get; set; }
         public PackagingType PackagingType { get; set; }
-        public int RaftId { get; set; } // ← shto këtë
-    
     }
 }

@@ -13,7 +13,8 @@ import {
 import { colors, statusConfig } from "../theme/colors";
 import { mockData } from "../data/mockData";
 import { useAuth } from "../auth/AuthContext";
-import { clientsApi } from "../api";
+import { clientsApi, shipmentsApi } from "../api";
+import { useLiveResource } from "../realtime/useLiveResource";
 import KpiCard from "../components/ui/KpiCard";
 import StatusBadge from "../components/ui/StatusBadge";
 import { PrimaryButton } from "../components/ui/Button";
@@ -29,21 +30,35 @@ const statusName = (s) => (typeof s === "number" ? (SO_STATUS[s] ?? String(s)) :
 export default function ClientDashboard() {
   const { user } = useAuth();
   const [orders, setOrders] = useState([]);
+  const [shipments, setShipments] = useState([]);
   const [stats, setStats] = useState(null);
   const [statsError, setStatsError] = useState(null);
   const [statsLoading, setStatsLoading] = useState(true);
 
-  // Marrim KPIs nga API. Nëse dështon, kalkulojmë nga mock data si fallback.
-  useEffect(() => {
-    // Promise.all i bën të dy thirrjet paralel - më shpejt se në varg.
-    Promise.all([clientsApi.getMyStats(), clientsApi.getMyOrders()])
-      .then(([statsData, ordersData]) => {
+  // KPIs + porositë + dërgesat e klientit, paralelisht. Dërgesat me catch që një
+  // dështim i tyre të mos prishë statistikat/porositë.
+  const load = () => {
+    Promise.all([
+      clientsApi.getMyStats(),
+      clientsApi.getMyOrders(),
+      shipmentsApi.getMine().catch(() => []),
+    ])
+      .then(([statsData, ordersData, shipData]) => {
         setStats(statsData);
         setOrders(ordersData);
+        setShipments(shipData);
       })
       .catch((e) => setStatsError(e.message))
       .finally(() => setStatsLoading(false));
+  };
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Rifreskim live kur ndryshojnë porositë ose dërgesat e klientit.
+  useLiveResource(["shipments", "salesorders"], load);
 
   // Fallback: kalkulim lokal nëse API dështoi
   const fallbackStats = computeFallbackStats(mockData);
@@ -52,8 +67,10 @@ export default function ClientDashboard() {
   // Mock data filtruar për "klientin aktual" - për momentin marrim porositë e parit.
   // Kur lidhemi me API real, kjo do vijë e filtruar nga backend automatikisht.
   const myOrders = orders.slice(0, 4);
-  const myShipments = mockData.shipments
-    .filter((s) => ["Ready", "Shipped", "Delivered"].includes(s.status))
+  // Dërgesat aktive të klientit (jo të anuluara), më të rejat të parat.
+  const myShipments = [...shipments]
+    .filter((s) => s.status !== "Cancelled")
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     .slice(0, 4);
 
   return (
@@ -117,7 +134,7 @@ export default function ClientDashboard() {
               lineHeight: 1.5,
             }}
           >
-            Përmbledhje e porosive dhe dërgesave tuaja.
+            Overview of your orders and shipments.
           </p>
           <Link
             to="/sales-orders"
@@ -419,7 +436,7 @@ export default function ClientDashboard() {
                       fontFamily: "var(--font-mono)",
                     }}
                   >
-                    {s.number}
+                    {s.shipmentNumber}
                   </div>
                   <div
                     style={{
@@ -428,7 +445,8 @@ export default function ClientDashboard() {
                       marginTop: 2,
                     }}
                   >
-                    {s.date}
+                    {s.warehouseName || ""}
+                    {s.createdAt ? ` · ${new Date(s.createdAt).toLocaleDateString("sq-AL")}` : ""}
                   </div>
                 </div>
                 <StatusBadge status={s.status} />

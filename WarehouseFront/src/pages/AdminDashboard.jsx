@@ -88,7 +88,7 @@ export default function AdminDashboard() {
             marginTop: 12, marginBottom: 0, fontSize: 14, opacity: 0.7,
             fontFamily: "var(--font-sans)", lineHeight: 1.5,
           }}>
-            Monitor users, activity dhe gjendjen e përgjithshme të sistemit.
+            Monitor users, activity, and overall system health.
           </p>
         </div>
       </div>

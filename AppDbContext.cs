@@ -129,6 +129,14 @@ namespace Warehouse
                 .HasForeignKey(plp => plp.PalletId)
                 .OnDelete(DeleteBehavior.NoAction);
 
+            // Rafti burim i rreshtit të paletës (opsional). NoAction për të shmangur
+            // konflikt me shtigjet e tjera të kaskadës mbi Raft (Inventory etj.).
+            modelBuilder.Entity<PalletItem>()
+                .HasOne(pi => pi.Raft)
+                .WithMany()
+                .HasForeignKey(pi => pi.RaftId)
+                .OnDelete(DeleteBehavior.NoAction);
+
             modelBuilder.Entity<UserRoles>(b =>
         {
             b.HasOne(ur => ur.User)
