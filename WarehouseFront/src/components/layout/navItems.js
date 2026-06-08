@@ -1,10 +1,8 @@
 import {
   Package, Warehouse as WarehouseIcon, Layers, Box, Users, FileText,
-  Truck, ClipboardList, BarChart3, Shield, Activity, Settings, UserCog, ShoppingCart, Building2,
+  Truck, ClipboardList, BarChart3, Shield, Activity, Settings, UserCog, ShoppingCart, Building2, PieChart,
 } from 'lucide-react';
 
-// Konfigurimi i navigimit. 'perms' = lejet (any-of) që e shfaqin item-in.
-// Nëse 'perms' mungon, item shihet nga çdo përdorues i autentikuar.
 export const navItems = [
   { id: 'dashboard',    label: 'Dashboard',       icon: BarChart3,      path: '/',                 group: 'Operations' },
 
@@ -23,6 +21,9 @@ export const navItems = [
   { id: 'packinglists', label: 'Packing Lists',   icon: ClipboardList,  path: '/packing-lists',    group: 'Fulfillment',    perms: ['PackingLists.View'] },
   { id: 'shipments',    label: 'Shipments',       icon: Truck,          path: '/shipments',        group: 'Fulfillment',    perms: ['Shipments.View', 'Shipments.ViewOwn'] },
 
+  // Reports
+  { id: 'reports',      label: 'Reports',         icon: PieChart,       path: '/reports',          group: 'Reports',        perms: ['Reports.ViewInventory', 'Reports.ViewSales', 'Reports.ViewShipment'] },
+
   // Administration
   { id: 'users',        label: 'User Management', icon: UserCog,        path: '/admin/users',      group: 'Administration', perms: ['Users.View'] },
   { id: 'roles',        label: 'Roles',           icon: Shield,         path: '/admin/roles',      group: 'Administration', perms: ['Roles.View'] },
@@ -30,10 +31,8 @@ export const navItems = [
   { id: 'syssettings',  label: 'System Settings', icon: Settings,       path: '/admin/settings',   group: 'Administration', perms: ['Settings.View'] },
 ];
 
-export const navGroups = ['Operations', 'Inventory', 'Fulfillment', 'Administration'];
+export const navGroups = ['Operations', 'Inventory', 'Fulfillment', 'Reports', 'Administration'];
 
-// Helper: kthen items që user-i mund të shohë sipas lejeve të tij.
-// hasAny: funksion (perms[]) => bool (nga useAuth().hasAnyPermission).
 export function getVisibleNavItems(hasAny) {
   return navItems.filter(item => {
     if (!item.perms || item.perms.length === 0) return true;
@@ -41,7 +40,6 @@ export function getVisibleNavItems(hasAny) {
   });
 }
 
-// Helper: kthen grupet që kanë të paktën një item të dukshëm.
 export function getVisibleGroups(visibleItems) {
   const groupsWithItems = new Set(visibleItems.map(i => i.group));
   return navGroups.filter(g => groupsWithItems.has(g));

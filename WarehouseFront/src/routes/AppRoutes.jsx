@@ -20,6 +20,7 @@ import UserManagementPage from "../pages/UserManagementPage";
 import RolesPage from "../pages/RolesPage";
 import AuditLogsPage from "../pages/AuditLogsPage";
 import SystemSettingsPage from "../pages/SystemSettingsPage";
+import ReportsPage from "../pages/ReportsPage";
 
 // Qasja te faqet gat-ohet nga LEJET (jo emrat e roleve) — i njëjti burim me backend-in.
 // Çdo route kërkon lejen përkatëse 'View'; ndryshe ridrejtohet te '/'.
@@ -79,6 +80,9 @@ export default function AppRoutes() {
           </Route>
           <Route element={<PermissionRoute anyOf={["Settings.View"]} />}>
             <Route path="/admin/settings" element={<SystemSettingsPage />} />
+          </Route>
+          <Route element={<PermissionRoute anyOf={["Reports.ViewInventory", "Reports.ViewSales", "Reports.ViewShipment"]} />}>
+            <Route path="/reports" element={<ReportsPage />} />
           </Route>
 
           <Route path="*" element={<NotFoundPage />} />
