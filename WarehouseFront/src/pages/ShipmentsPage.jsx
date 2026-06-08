@@ -30,8 +30,14 @@ export default function ShipmentsPage() {
   const [showFilter, setShowFilter] = useState(false);
   const [query, setQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
-  const { user } = useAuth();
-  const isClient = user?.roles?.includes('Client');
+  const { user, hasPermission } = useAuth();
+  const isClient = user?.roles?.includes('Client'); // vetëm për etiketa kozmetike te paneli
+  // Gat-im sipas lejeve reale.
+  const canViewAll = hasPermission('Shipments.View'); // sheh të gjitha vs. vetëm të vetat
+  const canCreate = hasPermission('Shipments.Create');
+  const canMarkReady = hasPermission('Shipments.MarkReady');
+  const canShip = hasPermission('Shipments.Ship');
+  const canDeliver = hasPermission('Shipments.Deliver');
 
   const showFeedback = (msg, ok = true) => {
     setFeedback({ msg, ok });
@@ -43,7 +49,7 @@ export default function ShipmentsPage() {
     if (!silent) setLoading(true);
     try {
       const [shData, plData] = await Promise.all([
-        isClient ? shipmentsApi.getMine() : shipmentsApi.getAll(),
+        canViewAll ? shipmentsApi.getAll() : shipmentsApi.getMine(),
         packingListsApi.getAvailable().catch(() => []),
       ]);
       setShipments(shData);
@@ -59,7 +65,7 @@ export default function ShipmentsPage() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClient]);
+  }, [canViewAll]);
 
   // Rifreskim live për të gjitha rolet: kur ndryshon ndonjë shipment (ready/ship/
   // deliver/cancel) ose packing list, tabela përditësohet pa refresh manual.
@@ -162,7 +168,7 @@ export default function ShipmentsPage() {
           ]);
           exportToCsv(headers, rows, 'shipments');
         }}
-        action={!isClient && (
+        action={canCreate && (
           <PrimaryButton icon={Plus} onClick={() => { setForm(emptyForm); setModalMode('create'); }}>
             New Shipment
           </PrimaryButton>
@@ -222,11 +228,11 @@ export default function ShipmentsPage() {
           <ShipmentDetailPanel
             shipment={selected}
             onClose={() => setSelected(null)}
-            onMarkReady={!isClient ? () => handleMarkReady(selected.id) : undefined}
-            onShip={!isClient ? () => handleShip(selected.id) : undefined}
-            onDeliver={() => handleDeliver(selected.id)}  // ← të gjithë mund ta bëjnë
-            readOnly={false}  // ← mos e bëj readOnly
-            isClient={isClient}  // ← kalos rolin
+            onMarkReady={canMarkReady ? () => handleMarkReady(selected.id) : undefined}
+            onShip={canShip ? () => handleShip(selected.id) : undefined}
+            onDeliver={canDeliver ? () => handleDeliver(selected.id) : undefined}
+            readOnly={false}
+            isClient={isClient}  // etiketë kozmetike ("Confirm Receipt" vs "Mark Delivered")
           />
         )}
       </div>

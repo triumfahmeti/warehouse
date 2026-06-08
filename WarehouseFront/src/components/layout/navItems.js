@@ -3,40 +3,41 @@ import {
   Truck, ClipboardList, BarChart3, Shield, Activity, Settings, UserCog, ShoppingCart, Building2,
 } from 'lucide-react';
 
-// Konfigurimi i navigimit. 'roles' tregon cilët role mund ta shohin item-in.
-// Nëse 'roles' mungon, item shihet nga të gjithë.
+// Konfigurimi i navigimit. 'perms' = lejet (any-of) që e shfaqin item-in.
+// Nëse 'perms' mungon, item shihet nga çdo përdorues i autentikuar.
 export const navItems = [
-  { id: 'dashboard',    label: 'Dashboard',       icon: BarChart3,      path: '/',                   group: 'Operations',     roles: ['Admin', 'Manager', 'Worker', 'Client'] },
+  { id: 'dashboard',    label: 'Dashboard',       icon: BarChart3,      path: '/',                 group: 'Operations' },
 
-  // Inventory - vetëm staff i brendshëm
-  { id: 'warehouses',   label: 'Warehouses',      icon: WarehouseIcon,  path: '/warehouses',         group: 'Inventory',      roles: ['Admin', 'Manager'] },
-  { id: 'rafts',        label: 'Rafts',           icon: Layers,         path: '/rafts',              group: 'Inventory',      roles: ['Admin', 'Manager'] },
-  { id: 'products',     label: 'Products',        icon: Package,        path: '/products',           group: 'Inventory',      roles: ['Admin', 'Manager', 'Worker', 'Client'] },
-  { id: 'inventory',    label: 'Inventory',       icon: Box,            path: '/inventory',          group: 'Inventory',      roles: ['Admin', 'Manager', 'Worker'] },
-  { id: 'purchaseorders', label: 'Purchase Orders', icon: ShoppingCart, path: '/purchase-orders',   group: 'Inventory',      roles: ['Admin', 'Manager', 'Worker'] },
-  { id: 'suppliers',    label: 'Suppliers',       icon: Building2,      path: '/suppliers',          group: 'Inventory',      roles: ['Admin', 'Manager'] },
-  { id: 'clients',      label: 'Clients',         icon: Users,          path: '/clients',            group: 'Inventory',      roles: ['Admin', 'Manager'] },
+  // Inventory
+  { id: 'warehouses',   label: 'Warehouses',      icon: WarehouseIcon,  path: '/warehouses',       group: 'Inventory',      perms: ['Warehouses.View'] },
+  { id: 'rafts',        label: 'Rafts',           icon: Layers,         path: '/rafts',            group: 'Inventory',      perms: ['Rafts.View'] },
+  { id: 'products',     label: 'Products',        icon: Package,        path: '/products',         group: 'Inventory',      perms: ['Products.View'] },
+  { id: 'inventory',    label: 'Inventory',       icon: Box,            path: '/inventory',        group: 'Inventory',      perms: ['Inventory.View'] },
+  { id: 'purchaseorders', label: 'Purchase Orders', icon: ShoppingCart, path: '/purchase-orders', group: 'Inventory',      perms: ['PurchaseOrders.View'] },
+  { id: 'suppliers',    label: 'Suppliers',       icon: Building2,      path: '/suppliers',        group: 'Inventory',      perms: ['Suppliers.View'] },
+  { id: 'clients',      label: 'Clients',         icon: Users,          path: '/clients',          group: 'Inventory',      perms: ['Clients.View'] },
 
   // Fulfillment
-  { id: 'salesorders',  label: 'Sales Orders',    icon: FileText,       path: '/sales-orders',       group: 'Fulfillment',    roles: ['Admin', 'Manager', 'Client'] },
-  { id: 'pallets',      label: 'Pallets',         icon: Box,            path: '/pallets',            group: 'Fulfillment',    roles: ['Admin', 'Manager', 'Worker'] },
-  { id: 'packinglists', label: 'Packing Lists',   icon: ClipboardList,  path: '/packing-lists',      group: 'Fulfillment',    roles: ['Admin', 'Manager', 'Worker'] },
-  { id: 'shipments',    label: 'Shipments',       icon: Truck,          path: '/shipments',          group: 'Fulfillment',    roles: ['Admin', 'Manager', 'Worker', 'Client']},
+  { id: 'salesorders',  label: 'Sales Orders',    icon: FileText,       path: '/sales-orders',     group: 'Fulfillment',    perms: ['SalesOrders.View', 'SalesOrders.ViewOwn'] },
+  { id: 'pallets',      label: 'Pallets',         icon: Box,            path: '/pallets',          group: 'Fulfillment',    perms: ['Pallets.View'] },
+  { id: 'packinglists', label: 'Packing Lists',   icon: ClipboardList,  path: '/packing-lists',    group: 'Fulfillment',    perms: ['PackingLists.View'] },
+  { id: 'shipments',    label: 'Shipments',       icon: Truck,          path: '/shipments',        group: 'Fulfillment',    perms: ['Shipments.View', 'Shipments.ViewOwn'] },
 
-  // Administration - vetëm Admin
-  { id: 'users',        label: 'User Management', icon: UserCog,        path: '/admin/users',        group: 'Administration', roles: ['Admin'] },
-  { id: 'roles',        label: 'Roles',           icon: Shield,         path: '/admin/roles',        group: 'Administration', roles: ['Admin'] },
-  { id: 'auditlogs',    label: 'Audit Logs',      icon: Activity,       path: '/admin/audit-logs',   group: 'Administration', roles: ['Admin'] },
-  { id: 'syssettings',  label: 'System Settings', icon: Settings,       path: '/admin/settings',     group: 'Administration', roles: ['Admin'] },
+  // Administration
+  { id: 'users',        label: 'User Management', icon: UserCog,        path: '/admin/users',      group: 'Administration', perms: ['Users.View'] },
+  { id: 'roles',        label: 'Roles',           icon: Shield,         path: '/admin/roles',      group: 'Administration', perms: ['Roles.View'] },
+  { id: 'auditlogs',    label: 'Audit Logs',      icon: Activity,       path: '/admin/audit-logs', group: 'Administration', perms: ['AuditLogs.View'] },
+  { id: 'syssettings',  label: 'System Settings', icon: Settings,       path: '/admin/settings',   group: 'Administration', perms: ['Settings.View'] },
 ];
 
 export const navGroups = ['Operations', 'Inventory', 'Fulfillment', 'Administration'];
 
-// Helper: kthen items që user-i mund të shohë bazuar te rolet e tij.
-export function getVisibleNavItems(userRoles = []) {
+// Helper: kthen items që user-i mund të shohë sipas lejeve të tij.
+// hasAny: funksion (perms[]) => bool (nga useAuth().hasAnyPermission).
+export function getVisibleNavItems(hasAny) {
   return navItems.filter(item => {
-    if (!item.roles || item.roles.length === 0) return true;
-    return item.roles.some(role => userRoles.includes(role));
+    if (!item.perms || item.perms.length === 0) return true;
+    return hasAny(item.perms);
   });
 }
 

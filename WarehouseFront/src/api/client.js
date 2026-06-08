@@ -40,11 +40,11 @@ async function doRefresh() {
   }
 
   const data = await res.json();
-  // AuthResponseDto: accessToken, refreshToken, email, userId, roles
+  // AuthResponseDto: accessToken, refreshToken, email, userId, roles, permissions
   tokenStorage.setSession({
     accessToken: data.accessToken,
     refreshToken: data.refreshToken,
-    user: { email: data.email, userId: data.userId, roles: data.roles },
+    user: { email: data.email, userId: data.userId, roles: data.roles, permissions: data.permissions || [] },
   });
   return data.accessToken;
 }

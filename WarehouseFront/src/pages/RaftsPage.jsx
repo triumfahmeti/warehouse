@@ -7,10 +7,15 @@ import Table from '../components/ui/Table';
 import { PrimaryButton } from '../components/ui/Button';
 import { exportToCsv } from '../utils/exportCsv';
 import { useLiveResource } from '../realtime/useLiveResource';
+import { useAuth } from '../auth/AuthContext';
 
 const emptyForm = { raftNumber: '', warehouseId: '', maxCapacity: '' };
 
 export default function RaftsPage() {
+  const { hasPermission } = useAuth();
+  const canCreate = hasPermission('Rafts.Create');
+  const canEdit = hasPermission('Rafts.Edit');
+  const canDelete = hasPermission('Rafts.Delete');
   const [rafts, setRafts] = useState([]);
   const [warehouseOptions, setWarehouseOptions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -146,7 +151,7 @@ export default function RaftsPage() {
         onFilter={toggleFilter}
         filterActive={showFilter}
         onExport={exportCsv}
-        action={<PrimaryButton icon={Plus} onClick={openCreate}>New Raft</PrimaryButton>}
+        action={canCreate ? <PrimaryButton icon={Plus} onClick={openCreate}>New Raft</PrimaryButton> : undefined}
       />
 
       {/* Shiriti i filtrit: kërkim + renditje */}
@@ -205,7 +210,7 @@ export default function RaftsPage() {
               );
             } },
             { key: 'maxCapacity', label: 'Max Capacity', width: '120px', render: r => <span style={{ fontFamily: 'var(--font-mono)' }}>{r.maxCapacity}</span> },
-            { key: 'action', label: '', width: '48px', render: r => (
+            { key: 'action', label: '', width: '48px', render: r => (canEdit || canDelete) && (
               <button
                 onClick={e => toggleRowMenu(e, r)}
                 title="Veprime"
@@ -229,8 +234,8 @@ export default function RaftsPage() {
             background: colors.surface, border: `1px solid ${colors.border}`, borderRadius: 10,
             padding: 6, boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
           }}>
-            <MenuItem icon={<Pencil size={14} />} label="Edit" onClick={() => openEdit(rafts.find(r => r.id === rowMenu.id))} />
-            <MenuItem icon={<Trash2 size={14} />} label="Delete" danger onClick={() => { setDeleteTarget(rafts.find(r => r.id === rowMenu.id)); setRowMenu(null); }} />
+            {canEdit && <MenuItem icon={<Pencil size={14} />} label="Edit" onClick={() => openEdit(rafts.find(r => r.id === rowMenu.id))} />}
+            {canDelete && <MenuItem icon={<Trash2 size={14} />} label="Delete" danger onClick={() => { setDeleteTarget(rafts.find(r => r.id === rowMenu.id)); setRowMenu(null); }} />}
           </div>
         </>
       )}

@@ -4,11 +4,10 @@ import { getVisibleNavItems, getVisibleGroups } from "./navItems";
 import NavLink from "./NavLink";
 import { useAuth } from "../../auth/AuthContext";
 
-export default function Sidebar({ isOpen = false, onClose, companyName = 'Warehouse OS' }) {  const { user } = useAuth();
-  const userRoles = user?.roles || [];
+export default function Sidebar({ isOpen = false, onClose, companyName = 'Warehouse OS' }) {  const { user, hasAnyPermission } = useAuth();
 
-  // Filtrim sipas roleve të user-it
-  const visibleItems = getVisibleNavItems(userRoles);
+  // Filtrim sipas lejeve të user-it
+  const visibleItems = getVisibleNavItems(hasAnyPermission);
   const visibleGroups = getVisibleGroups(visibleItems);
 
   return (
@@ -111,7 +110,7 @@ export default function Sidebar({ isOpen = false, onClose, companyName = 'Wareho
               letterSpacing: "0.08em",
             }}
           >
-            {userRoles[0] || "No role"}
+            {user?.roles?.[0] || "No role"}
           </div>
         </div>
       </div>

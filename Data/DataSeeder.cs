@@ -59,6 +59,8 @@ namespace Warehouse.Data
 
             // Worker — operacionet e fulfillment-it.
             await AssignPermissions(db, "Worker", new[] {
+                // Sheh porositë e konfirmuara për t'i palletizuar (modali "From Sales Order").
+                Permissions.SalesOrders.View,
                 Permissions.Products.View,
                 Permissions.Inventory.View, Permissions.Inventory.AddStock, Permissions.Inventory.RemoveStock, Permissions.Inventory.Transfer, Permissions.Inventory.Adjust, Permissions.Inventory.CycleCount, Permissions.Inventory.ViewMovements,
                 Permissions.Warehouses.View, Permissions.Rafts.View, Permissions.Suppliers.View,
@@ -74,7 +76,7 @@ namespace Warehouse.Data
             await AssignPermissions(db, "Client", new[] {
                 Permissions.SalesOrders.ViewOwn, Permissions.SalesOrders.Create, Permissions.SalesOrders.Confirm, Permissions.SalesOrders.Cancel,
                 Permissions.Products.View,
-                Permissions.Shipments.ViewOwn,
+                Permissions.Shipments.ViewOwn, Permissions.Shipments.Deliver, // konfirmon marrjen e dërgesës
                 Permissions.Notifications.View,
             });
 
@@ -90,7 +92,7 @@ namespace Warehouse.Data
                     EmailConfirmed = true,
                     IsActive = true
                 };
-                var createAdminResult = await userMgr.CreateAsync(adminUser, "Admin@123456");
+                var createAdminResult = await userMgr.CreateAsync(adminUser, "Admin123!");
                 if (!createAdminResult.Succeeded)
                     throw new InvalidOperationException(string.Join("; ", createAdminResult.Errors.Select(e => e.Description)));
             }
@@ -104,10 +106,10 @@ namespace Warehouse.Data
             if (!updateAdminResult.Succeeded)
                 throw new InvalidOperationException(string.Join("; ", updateAdminResult.Errors.Select(e => e.Description)));
 
-            if (!await userMgr.CheckPasswordAsync(adminUser, "Admin@123456"))
+            if (!await userMgr.CheckPasswordAsync(adminUser, "Admin123!"))
             {
                 var resetToken = await userMgr.GeneratePasswordResetTokenAsync(adminUser);
-                var resetResult = await userMgr.ResetPasswordAsync(adminUser, resetToken, "Admin@123456");
+                var resetResult = await userMgr.ResetPasswordAsync(adminUser, resetToken, "Admin123!");
                 if (!resetResult.Succeeded)
                     throw new InvalidOperationException(string.Join("; ", resetResult.Errors.Select(e => e.Description)));
             }

@@ -10,8 +10,8 @@ import { useLiveResource } from '../realtime/useLiveResource';
 
 
 export default function InventoryPage() {
-  const { user } = useAuth();
-  const isAdmin = (user?.roles || []).includes('Admin');
+  const { hasPermission } = useAuth();
+  const canImport = hasPermission('ExportImport.Import');
   const [inventory, setInventory] = useState([]);
   const [feedback, setFeedback] = useState(null);
   const showFeedback = (msg, ok = true) => { setFeedback({ msg, ok }); setTimeout(() => setFeedback(null), 3000); };
@@ -89,7 +89,7 @@ export default function InventoryPage() {
         onFilter={toggleFilter}
         filterActive={showFilter}
         onExport={exportCsv}
-        action={isAdmin && (
+        action={canImport && (
           <ImportButton
             onImport={async (file) => {
               const res = await importApi.inventory(file);

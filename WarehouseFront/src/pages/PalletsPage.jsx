@@ -13,8 +13,9 @@ const PACKAGING_TYPES = ['EuroPallet', 'Box', 'Crate'];
 const emptyForm = { palletCode: '', packingType: 'Standard' };
 
 export default function PalletsPage() {
-  const { user } = useAuth();
-  const canManage = (user?.roles || []).some(r => r === 'Admin' || r === 'Manager');
+  const { hasPermission } = useAuth();
+  // Gat-im sipas lejes reale (jo rolit): kush mund të krijojë/menaxhojë pallet.
+  const canManage = hasPermission('Pallets.CreateFromOrder');
 
   const [pallets, setPallets] = useState([]);
   const [loading, setLoading] = useState(true);

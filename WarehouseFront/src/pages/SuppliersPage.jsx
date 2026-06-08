@@ -14,8 +14,11 @@ import { useLiveResource } from '../realtime/useLiveResource';
 const emptyForm = { name: '', contactPerson: '', email: '', phone: '', address: '', city: '', country: '' };
 
 export default function SuppliersPage() {
-  const { user } = useAuth();
-  const isAdmin = (user?.roles || []).includes('Admin');
+  const { hasPermission } = useAuth();
+  const canImport = hasPermission('ExportImport.Import');
+  const canCreate = hasPermission('Suppliers.Create');
+  const canEdit = hasPermission('Suppliers.Edit');
+  const canDelete = hasPermission('Suppliers.Delete');
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -145,7 +148,7 @@ export default function SuppliersPage() {
         onExport={exportCsv}
         action={
           <div style={{ display: 'flex', gap: 8 }}>
-            {isAdmin && (
+            {canImport && (
               <ImportButton
                 onImport={async (file) => {
                   const res = await importApi.suppliers(file);
@@ -157,7 +160,7 @@ export default function SuppliersPage() {
                 }}
               />
             )}
-            <PrimaryButton icon={Plus} onClick={openCreate}>New Supplier</PrimaryButton>
+            {canCreate && <PrimaryButton icon={Plus} onClick={openCreate}>New Supplier</PrimaryButton>}
           </div>
         }
       />
@@ -192,7 +195,7 @@ export default function SuppliersPage() {
             { key: 'phone', label: 'Phone', width: '140px', render: r => <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: r.phone ? colors.text : colors.textDim }}>{r.phone || '—'}</span> },
             { key: 'address', label: 'Address', render: r => <span style={{ fontSize: 12, color: r.address ? colors.textMuted : colors.textDim }}>{r.address || '—'}</span> },
             { key: 'location', label: 'Location', width: '160px', render: r => <span style={{ fontSize: 12, color: colors.textMuted }}>{[r.city, r.country].filter(Boolean).join(', ') || '—'}</span> },
-            { key: 'action', label: '', width: '48px', render: r => (
+            { key: 'action', label: '', width: '48px', render: r => (canEdit || canDelete) && (
               <button onClick={e => toggleRowMenu(e, r)} title="Actions"
                 style={{ all: 'unset', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 7, cursor: 'pointer', color: colors.textMuted }}
                 onMouseEnter={e => { e.currentTarget.style.background = colors.bg; e.currentTarget.style.color = colors.text; }}
@@ -209,8 +212,8 @@ export default function SuppliersPage() {
         <>
           <div onClick={() => setRowMenu(null)} style={{ position: 'fixed', inset: 0, zIndex: 1000 }} />
           <div style={{ position: 'fixed', top: rowMenu.y + 4, left: rowMenu.x - 150, width: 150, zIndex: 1001, background: colors.surface, border: `1px solid ${colors.border}`, borderRadius: 10, padding: 6, boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}>
-            <MenuItem icon={<Pencil size={14} />} label="Edit" onClick={() => openEdit(suppliers.find(s => s.id === rowMenu.id))} />
-            <MenuItem icon={<Trash2 size={14} />} label="Delete" danger onClick={() => { setDeleteTarget(suppliers.find(s => s.id === rowMenu.id)); setRowMenu(null); }} />
+            {canEdit && <MenuItem icon={<Pencil size={14} />} label="Edit" onClick={() => openEdit(suppliers.find(s => s.id === rowMenu.id))} />}
+            {canDelete && <MenuItem icon={<Trash2 size={14} />} label="Delete" danger onClick={() => { setDeleteTarget(suppliers.find(s => s.id === rowMenu.id)); setRowMenu(null); }} />}
           </div>
         </>
       )}

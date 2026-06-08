@@ -15,6 +15,7 @@ namespace Warehouse.DTOs.Auth
         public string UserId { get; set; }
 
         public List<string> Roles { get; set; } = new List<string>();
+        public List<string> Permissions { get; set; } = new List<string>();
 
     }
 }

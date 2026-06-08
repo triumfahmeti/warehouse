@@ -3,6 +3,7 @@ import { Plus, Edit2, UserCheck, UserX, Shield, X, Check, Filter, Search, Downlo
 import { exportToCsv } from '../utils/exportCsv';
 import { colors } from "../theme/colors";
 import { usersApi } from "../api";
+import { useAuth } from "../auth/AuthContext";
 import { usePagination } from "../components/ui/usePagination";
 import Pagination from "../components/ui/Pagination";
 
@@ -72,6 +73,7 @@ function RoleBadge({ role }) {
 }
 
 export default function UserManagementPage() {
+  const { hasPermission } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -261,14 +263,16 @@ export default function UserManagementPage() {
           }}>
             <Download size={14} /> Export
           </button>
-          <button onClick={() => setCreateModal(true)} style={{
-            display: "flex", alignItems: "center", gap: 6,
-            background: colors.text, color: colors.surface,
-            border: "none", borderRadius: 8, padding: "9px 16px",
-            fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "var(--font-sans)",
-          }}>
-            <Plus size={15} /> Create User
-          </button>
+          {hasPermission('Users.Create') && (
+            <button onClick={() => setCreateModal(true)} style={{
+              display: "flex", alignItems: "center", gap: 6,
+              background: colors.text, color: colors.surface,
+              border: "none", borderRadius: 8, padding: "9px 16px",
+              fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "var(--font-sans)",
+            }}>
+              <Plus size={15} /> Create User
+            </button>
+          )}
         </div>
       </div>
 
@@ -357,15 +361,21 @@ export default function UserManagementPage() {
                   </td>
                   <td style={{ padding: "12px 14px" }}>
                     <div style={{ display: "flex", gap: 6 }}>
-                      <IconBtn title="Edit" onClick={() => { setEditModal(user); setEditForm({ name: user.name, email: user.email, phoneNumber: user.phoneNumber || "", address: user.address || "" }); }}>
-                        <Edit2 size={13} />
-                      </IconBtn>
-                      <IconBtn title="Manage Roles" onClick={() => setRolesModal(user)} color={colors.info}>
-                        <Shield size={13} />
-                      </IconBtn>
-                      <IconBtn title={user.isActive ? "Deactivate" : "Activate"} onClick={() => toggleActive(user)} color={user.isActive ? colors.danger : colors.success}>
-                        {user.isActive ? <UserX size={13} /> : <UserCheck size={13} />}
-                      </IconBtn>
+                      {hasPermission('Users.Edit') && (
+                        <IconBtn title="Edit" onClick={() => { setEditModal(user); setEditForm({ name: user.name, email: user.email, phoneNumber: user.phoneNumber || "", address: user.address || "" }); }}>
+                          <Edit2 size={13} />
+                        </IconBtn>
+                      )}
+                      {hasPermission('Users.ManageRoles') && (
+                        <IconBtn title="Manage Roles" onClick={() => setRolesModal(user)} color={colors.info}>
+                          <Shield size={13} />
+                        </IconBtn>
+                      )}
+                      {(user.isActive ? hasPermission('Users.Deactivate') : hasPermission('Users.Activate')) && (
+                        <IconBtn title={user.isActive ? "Deactivate" : "Activate"} onClick={() => toggleActive(user)} color={user.isActive ? colors.danger : colors.success}>
+                          {user.isActive ? <UserX size={13} /> : <UserCheck size={13} />}
+                        </IconBtn>
+                      )}
                     </div>
                   </td>
                 </tr>

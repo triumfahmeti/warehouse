@@ -21,10 +21,12 @@ const money = v => `${Number(v || 0).toFixed(2)} €`;
 const emptyLine = () => ({ productId: '', quantity: '', unitPrice: '' });
 
 export default function PurchaseOrdersPage() {
-  const { user } = useAuth();
-  const roles = user?.roles || [];
-  const isManager = roles.includes('Admin') || roles.includes('Manager');
-  const canReceive = isManager || roles.includes('Worker');
+  const { hasPermission } = useAuth();
+  // Gat-im sipas lejeve reale.
+  const canCreate = hasPermission('PurchaseOrders.Create');
+  const canReceive = hasPermission('PurchaseOrders.Receive');
+  const canCancel = hasPermission('PurchaseOrders.Cancel');
+  const canClose = hasPermission('PurchaseOrders.Close');
 
   const [orders, setOrders] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -180,9 +182,9 @@ export default function PurchaseOrdersPage() {
     const acts = [{ label: 'View details', icon: <Eye size={14} />, onClick: () => { setViewPo(po); setRowMenu(null); } }];
     if (po.status === 'Pending') {
       if (canReceive) acts.push({ label: 'Receive', icon: <PackageCheck size={14} />, onClick: () => openReceive(po) });
-      if (isManager) acts.push({ label: 'Cancel', icon: <Ban size={14} />, danger: true, onClick: () => doAction(() => purchaseOrdersApi.cancel(po.id), 'cancelled') });
+      if (canCancel) acts.push({ label: 'Cancel', icon: <Ban size={14} />, danger: true, onClick: () => doAction(() => purchaseOrdersApi.cancel(po.id), 'cancelled') });
     } else if (po.status === 'Received') {
-      if (isManager) acts.push({ label: 'Close', icon: <Lock size={14} />, onClick: () => doAction(() => purchaseOrdersApi.close(po.id), 'closed') });
+      if (canClose) acts.push({ label: 'Close', icon: <Lock size={14} />, onClick: () => doAction(() => purchaseOrdersApi.close(po.id), 'closed') });
     }
     return acts;
   };
@@ -211,7 +213,7 @@ export default function PurchaseOrdersPage() {
         onFilter={toggleFilter}
         filterActive={showFilter}
         onExport={exportCsv}
-        action={isManager ? <PrimaryButton icon={Plus} onClick={openCreate}>New Purchase Order</PrimaryButton> : undefined}
+        action={canCreate ? <PrimaryButton icon={Plus} onClick={openCreate}>New Purchase Order</PrimaryButton> : undefined}
       />
 
       {showFilter && (

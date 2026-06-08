@@ -208,32 +208,11 @@ app.UseAuthorization();
 app.MapHub<NotificationHub>("/notificationHub");
 app.MapControllers();
 
+// Seed i plotë: migrime + leje + role (përfshirë Worker) + caktime leje/rol + admin.
+// Pa këtë, lejet e reja s'do mbilleshin dhe çdo endpoint i mbrojtur do jepte 403.
 using (var scope = app.Services.CreateScope())
 {
-    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
-
-    string[] roles = { "Admin", "Manager", "Client" };
-    foreach (var role in roles)
-    {
-        if (!await roleManager.RoleExistsAsync(role))
-            await roleManager.CreateAsync(new ApplicationRole { Name = role });
-    }
-
-    var adminEmail = "admin@warehouse.com";
-    if (await userManager.FindByEmailAsync(adminEmail) == null)
-    {
-        var admin = new ApplicationUser
-        {
-            Name = "Admin",
-            Email = adminEmail,
-            UserName = adminEmail,
-            IsActive = true,
-            CreatedAt = DateTime.UtcNow
-        };
-        await userManager.CreateAsync(admin, "Admin123!");
-        await userManager.AddToRoleAsync(admin, "Admin");
-    }
+    await Warehouse.Data.DataSeeder.SeedAsync(scope.ServiceProvider);
 }
 
 using (var scope = app.Services.CreateScope())
