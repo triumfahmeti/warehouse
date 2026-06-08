@@ -61,6 +61,7 @@ erDiagram
     Products ||--o{ SalesOrderItems : ordered_as
     Products ||--o{ PurchaseOrderItems : purchased_as
     Products ||--o{ PalletItems : packed_in
+    Rafts ||--o{ PalletItems : picked_from
 
     Suppliers ||--o{ PurchaseOrders : supplies
     PurchaseOrders ||--o{ PurchaseOrderItems : contains
@@ -82,11 +83,12 @@ erDiagram
 
 ```
 Warehouse (1) ──→ (N) Raft (1) ──→ (N) Inventory
-                              └──→ (N) Pallet (1) ──→ (N) PalletItem → Product
+                              └──→ (N) PalletItem (rafti i pick-ut, nullable)
+
+SalesOrder (1) ──→ (N) Pallet (1) ──→ (N) PalletItem → Product
 
 Supplier (1) ──→ (N) PurchaseOrder (1) ──→ (N) PurchaseOrderItem → Product
 Client (1) ──→ (N) SalesOrder (1) ──→ (N) SalesOrderItem → Product
-SalesOrder (1) ──→ (N) Pallet
 PackingList (1) ──→ (1) Shipment → Warehouse
 ```
 
@@ -109,4 +111,5 @@ dotnet ef database update
 
 Migrimet ndodhen në `Migrations/`:
 - `20260604232508_InitialCreate` — skema e plotë
-- `20260607135400_SyncPendingChanges` — përditësim i vogël
+- `20260607135400_SyncPendingChanges` — `Settings.Description` bëhet nullable
+- `20260607154142_RemovePalletRaft_AddPalletItemRaft` — `RaftId` zhvendoset nga `Pallets` te `PalletItems` (nullable, vendoset gjatë pick-ut)
