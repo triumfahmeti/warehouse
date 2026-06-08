@@ -28,6 +28,19 @@ namespace Warehouse.Data
             }
             await db.SaveChangesAsync();
 
+            // Pastro lejet që s'janë më në katalog (p.sh. të hequrat legacy) — që të
+            // mos mbeten "fantazma" në DB dhe te ekrani Roles. Heq edhe caktimet e tyre.
+            var validNames = allPerms.ToHashSet();
+            var stalePerms = await db.Permissions.Where(p => !validNames.Contains(p.Name)).ToListAsync();
+            if (stalePerms.Count > 0)
+            {
+                var staleIds = stalePerms.Select(p => p.Id).ToList();
+                var staleRolePerms = await db.RolePermissions.Where(rp => staleIds.Contains(rp.PermissionId)).ToListAsync();
+                db.RolePermissions.RemoveRange(staleRolePerms);
+                db.Permissions.RemoveRange(stalePerms);
+                await db.SaveChangesAsync();
+            }
+
             // Seed roles
             string[] roles = { "Admin", "Manager", "Worker", "Client" };
             foreach (var r in roles)
@@ -51,7 +64,7 @@ namespace Warehouse.Data
                 Permissions.PalletItems.View, Permissions.PalletItems.Create, Permissions.PalletItems.Edit, Permissions.PalletItems.Delete,
                 Permissions.PackingLists.View, Permissions.PackingLists.Create, Permissions.PackingLists.Edit, Permissions.PackingLists.MarkReady, Permissions.PackingLists.Cancel,
                 Permissions.Shipments.View, Permissions.Shipments.Create, Permissions.Shipments.MarkReady, Permissions.Shipments.Ship, Permissions.Shipments.Deliver, Permissions.Shipments.Cancel,
-                Permissions.Reports.View, Permissions.Reports.ViewInventory, Permissions.Reports.ViewSales, Permissions.Reports.ViewShipment,
+                Permissions.Reports.ViewInventory, Permissions.Reports.ViewSales, Permissions.Reports.ViewShipment,
                 Permissions.AuditLogs.View, Permissions.Users.View,
                 Permissions.ExportImport.Export, Permissions.ExportImport.Import,
                 Permissions.Dashboard.View, Permissions.Notifications.View,
@@ -76,7 +89,7 @@ namespace Warehouse.Data
             await AssignPermissions(db, "Client", new[] {
                 Permissions.SalesOrders.ViewOwn, Permissions.SalesOrders.Create, Permissions.SalesOrders.Confirm, Permissions.SalesOrders.Cancel,
                 Permissions.Products.View,
-                Permissions.Shipments.ViewOwn, Permissions.Shipments.Deliver, // konfirmon marrjen e dërgesës
+                Permissions.Shipments.ViewOwn, // klienti vetëm e ndjek dërgesën (Delivered e cakton stafi)
                 Permissions.Notifications.View,
             });
 

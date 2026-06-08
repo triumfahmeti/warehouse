@@ -20,6 +20,7 @@ export default function SalesOrdersPage() {
   const canCreate = hasPermission('SalesOrders.Create');
   const canSetPrices = hasPermission('SalesOrders.SetPrices');
   const canConfirm = hasPermission('SalesOrders.Confirm');
+  const canCancel = hasPermission('SalesOrders.Cancel');
   const [currency, setCurrency] = useState('€');
   const [orders, setOrders] = useState([]);
   const [products, setProducts] = useState([]);
@@ -160,7 +161,7 @@ const money = v => `${Number(v || 0).toFixed(2)} ${currency}`;
       acts.push({ label: 'Confirm', icon: <CheckCircle size={14} />, onClick: () => doConfirm(o) });
     }
     // Anulim vetëm përpara konfirmimit (status New). Pas Confirm s'ka anulim.
-    if (o.status === 'New') {
+    if (canCancel && o.status === 'New') {
       acts.push({ label: 'Cancel order', icon: <Ban size={14} />, danger: true, onClick: () => doCancel(o) });
     }
     return acts;

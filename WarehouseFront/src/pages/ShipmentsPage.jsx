@@ -53,6 +53,9 @@ export default function ShipmentsPage() {
         packingListsApi.getAvailable().catch(() => []),
       ]);
       setShipments(shData);
+      // Ri-sinkronizo panelin e hapur me të dhënat e freskëta → status flow live
+      // edhe kur ndryshimin e bën dikush tjetër (p.sh. klienti konfirmon marrjen).
+      setSelected(prev => prev ? (shData.find(s => s.id === prev.id) ?? prev) : prev);
       setPackingListOptions(plData);
       setError(null);
     } catch (err) {

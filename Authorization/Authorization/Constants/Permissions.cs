@@ -8,15 +8,6 @@ namespace Warehouse.Authorization.Constants
     // GetAll() i mbledh të gjitha përmes reflektimit (përdoret nga DataSeeder).
     public class Permissions
     {
-        // ---- Legacy / i përgjithshëm (përdoret nga DataSeeder; mos e hiq pa rregulluar seeder-in) ----
-        public static class Orders
-        {
-            public const string View = "Orders.View";
-            public const string Create = "Orders.Create";
-            public const string Approve = "Orders.Approve";
-            public const string Delete = "Orders.Delete";
-        }
-
         // ---- Sales orders ----
         public static class SalesOrders
         {
@@ -51,7 +42,6 @@ namespace Warehouse.Authorization.Constants
         public static class Inventory
         {
             public const string View = "Inventory.View";
-            public const string Update = "Inventory.Update"; // legacy (DataSeeder)
             public const string AddStock = "Inventory.AddStock";
             public const string RemoveStock = "Inventory.RemoveStock";
             public const string Reserve = "Inventory.Reserve";
@@ -144,7 +134,6 @@ namespace Warehouse.Authorization.Constants
         {
             public const string View = "Users.View";
             public const string Create = "Users.Create";
-            public const string Manage = "Users.Manage"; // legacy (i përgjithshëm)
             public const string Edit = "Users.Edit";
             public const string Activate = "Users.Activate";
             public const string Deactivate = "Users.Deactivate";
@@ -198,7 +187,6 @@ namespace Warehouse.Authorization.Constants
         // ---- Reports ----
         public static class Reports
         {
-            public const string View = "Reports.View";
             public const string ViewInventory = "Reports.ViewInventory";
             public const string ViewSales = "Reports.ViewSales";
             public const string ViewShipment = "Reports.ViewShipment";

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Save, Check } from "lucide-react";
 import { colors } from "../theme/colors";
 import { rolesApi } from "../api";
+import { useAuth } from "../auth/AuthContext";
 
 function RoleBadge({ name }) {
   const map = {
@@ -19,6 +20,8 @@ function RoleBadge({ name }) {
 }
 
 export default function RolesPage() {
+  const { hasPermission } = useAuth();
+  const canManage = hasPermission('Roles.ManagePermissions');
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -107,21 +110,23 @@ export default function RolesPage() {
                     </div>
                   )}
                 </div>
-                <button
-                  disabled={!isDirty || isSaving}
-                  onClick={() => save(role.id)}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 6,
-                    padding: "7px 14px", border: "none", borderRadius: 8,
-                    background: isSaved ? colors.success : isDirty ? colors.text : colors.border,
-                    color: isSaved || isDirty ? colors.surface : colors.textMuted,
-                    cursor: isDirty && !isSaving ? "pointer" : "not-allowed",
-                    fontSize: 12, fontFamily: "var(--font-sans)", fontWeight: 500,
-                    transition: "background 0.2s",
-                  }}
-                >
-                  {isSaved ? <><Check size={13} /> Saved</> : <><Save size={13} /> {isSaving ? "Saving..." : "Save"}</>}
-                </button>
+                {canManage && (
+                  <button
+                    disabled={!isDirty || isSaving}
+                    onClick={() => save(role.id)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 6,
+                      padding: "7px 14px", border: "none", borderRadius: 8,
+                      background: isSaved ? colors.success : isDirty ? colors.text : colors.border,
+                      color: isSaved || isDirty ? colors.surface : colors.textMuted,
+                      cursor: isDirty && !isSaving ? "pointer" : "not-allowed",
+                      fontSize: 12, fontFamily: "var(--font-sans)", fontWeight: 500,
+                      transition: "background 0.2s",
+                    }}
+                  >
+                    {isSaved ? <><Check size={13} /> Saved</> : <><Save size={13} /> {isSaving ? "Saving..." : "Save"}</>}
+                  </button>
+                )}
               </div>
 
               {/* Permissions grid */}
@@ -140,8 +145,9 @@ export default function RolesPage() {
                       <input
                         type="checkbox"
                         checked={active}
+                        disabled={!canManage}
                         onChange={() => toggle(role.id, perm)}
-                        style={{ accentColor: groupColor, width: 14, height: 14, flexShrink: 0, cursor: "pointer" }}
+                        style={{ accentColor: groupColor, width: 14, height: 14, flexShrink: 0, cursor: canManage ? "pointer" : "not-allowed" }}
                       />
                       <span style={{ fontSize: 12, color: active ? colors.text : colors.textMuted, fontFamily: "var(--font-mono)", lineHeight: 1.3 }}>
                         {perm}

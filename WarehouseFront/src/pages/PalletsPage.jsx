@@ -14,8 +14,10 @@ const emptyForm = { palletCode: '', packingType: 'Standard' };
 
 export default function PalletsPage() {
   const { hasPermission } = useAuth();
-  // Gat-im sipas lejes reale (jo rolit): kush mund të krijojë/menaxhojë pallet.
-  const canManage = hasPermission('Pallets.CreateFromOrder');
+  // Gat-im sipas lejeve reale (jo rolit).
+  const canManage = hasPermission('Pallets.CreateFromOrder'); // butoni "From Sales Order"
+  const canEdit = hasPermission('Pallets.Edit');
+  const canDelete = hasPermission('Pallets.Delete');
 
   const [pallets, setPallets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -271,12 +273,8 @@ export default function PalletsPage() {
           <div onClick={() => setRowMenu(null)} style={{ position: 'fixed', inset: 0, zIndex: 1000 }} />
           <div style={{ position: 'fixed', top: rowMenu.y + 4, left: rowMenu.x - 150, width: 150, zIndex: 1001, background: colors.surface, border: `1px solid ${colors.border}`, borderRadius: 10, padding: 6, boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}>
             <MenuItem icon={<Eye size={14} />} label="View details" onClick={() => { setDetail(pallets.find(p => p.id === rowMenu.id)); setRowMenu(null); }} />
-            {canManage && (
-              <>
-                <MenuItem icon={<Pencil size={14} />} label="Edit" onClick={() => openEdit(pallets.find(p => p.id === rowMenu.id))} />
-                <MenuItem icon={<Trash2 size={14} />} label="Delete" danger onClick={() => { setDeleteTarget(pallets.find(p => p.id === rowMenu.id)); setRowMenu(null); }} />
-              </>
-            )}
+            {canEdit && <MenuItem icon={<Pencil size={14} />} label="Edit" onClick={() => openEdit(pallets.find(p => p.id === rowMenu.id))} />}
+            {canDelete && <MenuItem icon={<Trash2 size={14} />} label="Delete" danger onClick={() => { setDeleteTarget(pallets.find(p => p.id === rowMenu.id)); setRowMenu(null); }} />}
           </div>
         </>
       )}
@@ -433,7 +431,7 @@ export default function PalletsPage() {
           )}
 
           <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
-            {canManage && (
+            {canEdit && (
               <button onClick={() => { const p = detail; setDetail(null); openEdit(p); }} style={cancelBtn}>Edit</button>
             )}
             <button onClick={() => setDetail(null)} style={submitBtn(false)}>Close</button>

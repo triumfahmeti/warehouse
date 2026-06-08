@@ -19,10 +19,15 @@ import StatusBadge from "../components/ui/StatusBadge";
 import { PrimaryButton } from "../components/ui/Button";
 import { exportToCsv } from "../utils/exportCsv";
 import { useLiveResource } from "../realtime/useLiveResource";
+import { useAuth } from "../auth/AuthContext";
 
 const emptyForm = { salesOrderId: "", notes: "" };
 
 export default function PackingListsPage() {
+  const { hasPermission } = useAuth();
+  const canCreate = hasPermission('PackingLists.Create');
+  const canMarkReady = hasPermission('PackingLists.MarkReady');
+  const canCancel = hasPermission('PackingLists.Cancel');
   const [packingLists, setPackingLists] = useState([]);
   const [salesOrderOptions, setSalesOrderOptions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -217,11 +222,11 @@ export default function PackingListsPage() {
           ]);
           exportToCsv(headers, rows, "packing-lists");
         }}
-        action={
+        action={canCreate ? (
           <PrimaryButton icon={Plus} onClick={openCreate}>
             New Packing List
           </PrimaryButton>
-        }
+        ) : undefined}
       />
 
       {showFilter && (
@@ -656,7 +661,7 @@ export default function PackingListsPage() {
                 gap: 6,
               }}
             >
-              {selected.status === "Draft" && (
+              {selected.status === "Draft" && canMarkReady && (
                 <button
                   onClick={() => handleMarkReady(selected.id)}
                   style={{
@@ -673,7 +678,7 @@ export default function PackingListsPage() {
                   Mark as Ready →
                 </button>
               )}
-              {(selected.status === "Draft" || selected.status === "Ready") && (
+              {(selected.status === "Draft" || selected.status === "Ready") && canCancel && (
                 <button
                   onClick={() => handleCancel(selected.id)}
                   style={{
@@ -716,13 +721,13 @@ export default function PackingListsPage() {
               boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
             }}
           >
-            {rowMenu.status === "Draft" && (
+            {rowMenu.status === "Draft" && canMarkReady && (
               <MenuItem
                 label="Mark as Ready"
                 onClick={() => handleMarkReady(rowMenu.id)}
               />
             )}
-            {(rowMenu.status === "Draft" || rowMenu.status === "Ready") && (
+            {(rowMenu.status === "Draft" || rowMenu.status === "Ready") && canCancel && (
               <MenuItem
                 label="Cancel"
                 danger
