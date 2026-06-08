@@ -6,6 +6,7 @@
 //                             ku faqet rifreskojnë vetë listat e tyre.
 //
 // Përfitimi: një socket i vetëm në vend që çdo hook/faqe të hapë lidhjen e vet.
+/* eslint-disable react-refresh/only-export-components */
 
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import * as signalR from '@microsoft/signalr';
@@ -51,6 +52,7 @@ export function RealtimeProvider({ children }) {
       if (set.size === 0) map.delete(resource);
     };
   }, []);
+  
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -64,18 +66,29 @@ export function RealtimeProvider({ children }) {
       setUnreadCount(data.filter(n => !n.isRead).length);
     }).catch(() => {});
 
-    const connection = new signalR.HubConnectionBuilder()
-      .withUrl(HUB_URL, { accessTokenFactory: () => tokenStorage.getAccessToken() })
-      .withAutomaticReconnect()
-      .build();
+const connection = new signalR.HubConnectionBuilder()
+  .withUrl(HUB_URL, { 
+    accessTokenFactory: () => {
+      const token = tokenStorage.getAccessToken();
+      console.log('SignalR token:', token ? token.substring(0, 20) + '...' : 'NULL');
+      return token;
+    }
+  })
+  .withAutomaticReconnect()
+  .build();
 
-    connection.on('ReceiveNotification', (notification) => {
-      const currentUserId = tokenStorage.getUser()?.userId;
-      if (notification.userId === currentUserId) {
-        setNotifications(prev => [notification, ...prev]);
-        setUnreadCount(prev => prev + 1);
-      }
-    });
+connection.start()
+  .then(() => console.log('SignalR connected!'))
+  .catch(err => console.error('SignalR error:', err));
+
+
+    // connection.on('ReceiveNotification', (notification) => {
+    //   const currentUserId = tokenStorage.getUser()?.userId;
+    //   if (notification.userId === currentUserId) {
+    //     setNotifications(prev => [notification, ...prev]);
+    //     setUnreadCount(prev => prev + 1);
+    //   }
+    // });
 
     connection.on('ResourceChanged', (resource) => {
       const set = subscribersRef.current.get(resource);
@@ -84,8 +97,18 @@ export function RealtimeProvider({ children }) {
         try { cb(resource); } catch { /* mos lejo një abonent të prishë të tjerët */ }
       });
     });
+    connection.on('ReceiveNotification', (notification) => {
+  const currentUserId = tokenStorage.getUser()?.userId;
+  console.log('Received notification:', notification);
+  console.log('Current userId:', currentUserId);
+  console.log('Match:', notification.userId === currentUserId);
+  
+  if (notification.userId === currentUserId) {
+    setNotifications(prev => [notification, ...prev]);
+    setUnreadCount(prev => prev + 1);
+  }
+});
 
-    connection.start().catch(err => console.error('SignalR error:', err));
 
     return () => {
       cancelled = true;
