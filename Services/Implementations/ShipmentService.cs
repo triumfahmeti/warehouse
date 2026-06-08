@@ -159,6 +159,39 @@ namespace Warehouse.Services.Implementations
                         message: $"Shipment {shipment.ShipmentNumber} has been shipped successfully."
                     );
                 }
+
+                // Njoftim te Worker-et: dergesa u nis
+                var workers = await _userManager.GetUsersInRoleAsync("Worker");
+                foreach (var worker in workers)
+                {
+                    await SendNotification(
+                        userId: worker.Id,
+                        type: "Shipment",
+                        title: "Shipment Shipped",
+                        message: $"Shipment {shipment.ShipmentNumber} has been shipped and is on its way. Please prepare for delivery."
+                    );
+                }
+
+                // Njoftim te Clienti: porosia u nis
+                var salesOrder = shipment.PackingList?.SalesOrder;
+                if (salesOrder != null)
+                {
+                    var clientUser = salesOrder.Client?.UserId != null
+                        ? await _userManager.FindByIdAsync(salesOrder.Client.UserId)
+                        : salesOrder.Client?.Email != null
+                            ? await _userManager.FindByEmailAsync(salesOrder.Client.Email)
+                            : null;
+
+                    if (clientUser != null)
+                    {
+                        await SendNotification(
+                            userId: clientUser.Id,
+                            type: "Shipment",
+                            title: "Your Order Has Been Shipped",
+                            message: $"Dear {salesOrder.Client?.FullName}, your order (ID: {salesOrder.Id}) has been shipped. Shipment: {shipment.ShipmentNumber}."
+                        );
+                    }
+                }
             }
             catch
             {

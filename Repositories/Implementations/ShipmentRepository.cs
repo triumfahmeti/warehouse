@@ -18,9 +18,11 @@ namespace Warehouse.Repositories.Implementations
             return await _context.Shipments
                 .Include(s => s.PackingList)
                     .ThenInclude(pl => pl.SalesOrder)
+                        .ThenInclude(so => so.Client)
                 .Include(s => s.PackingList)
                     .ThenInclude(pl => pl.Pallets)
                         .ThenInclude(p => p.Pallet)
+                            .ThenInclude(p => p.Items)
                 .Include(s => s.Warehouse)
                 .FirstOrDefaultAsync(s => s.Id == id);
         }
@@ -30,7 +32,7 @@ namespace Warehouse.Repositories.Implementations
             return await _context.Shipments
                 .Include(s => s.PackingList)
                     .ThenInclude(pl => pl.SalesOrder)
-                        .ThenInclude(so => so.Client)  // ← shto
+                        .ThenInclude(so => so.Client)
                 .Include(s => s.Warehouse)
                 .OrderByDescending(s => s.CreatedAt)
                 .ToListAsync();

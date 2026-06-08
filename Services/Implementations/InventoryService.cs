@@ -10,6 +10,10 @@ using Warehouse.Enums;
 using Warehouse.Models;
 using Warehouse.Repositories.Interfaces;
 using Warehouse.Services.Interfaces;
+using Warehouse.DTOs.NotificationDto;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.SignalR;
+using Warehouse.Hubs;
 
 namespace Warehouse.Services.Implementations
 {
@@ -20,14 +24,20 @@ namespace Warehouse.Services.Implementations
         private readonly AppDbContext _context;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IRealtimeNotifier _realtime;
+        private readonly INotificationService _notificationService;
+        private readonly IHubContext<NotificationHub> _hubContext;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public InventoryService(IInventoryRepository inventoryRepository, ISalesOrderRepository salesOrderRepository, AppDbContext context, IHttpContextAccessor httpContextAccessor, IRealtimeNotifier realtime)
+        public InventoryService(IInventoryRepository inventoryRepository, ISalesOrderRepository salesOrderRepository, AppDbContext context, IHttpContextAccessor httpContextAccessor, IRealtimeNotifier realtime, INotificationService notificationService, IHubContext<NotificationHub> hubContext, UserManager<ApplicationUser> userManager)
         {
             _inventoryRepository = inventoryRepository;
             _salesOrderRepository = salesOrderRepository;
             _context = context;
             _httpContextAccessor = httpContextAccessor;
             _realtime = realtime;
+            _notificationService = notificationService;
+            _hubContext = hubContext;
+            _userManager = userManager;
         }
 
         private static string BuildStateString(int quantityOnHand, int reservedQuantity)
@@ -119,6 +129,9 @@ namespace Warehouse.Services.Implementations
             }
 
             await _realtime.ResourceChangedAsync("inventory", "products");
+
+            // Kontroll low stock pas shtimit (ne rast qe stoku eshte ende i ulet)
+            await CheckAndNotifyLowStock(productId);
         }
 
         public async Task RemoveStock(int productId, int raftId, int quantity)
@@ -132,6 +145,9 @@ namespace Warehouse.Services.Implementations
             await _inventoryRepository.UpdateAsync(inventory);
             await _context.SaveChangesAsync();
             await _realtime.ResourceChangedAsync("inventory", "products");
+
+            // Kontroll low stock pas heqjes
+            await CheckAndNotifyLowStock(productId);
         }
 
         public async Task<int> GetAvailableStock(int productId)
@@ -479,6 +495,55 @@ namespace Warehouse.Services.Implementations
             }
 
             return result;
+        }
+        private async Task CheckAndNotifyLowStock(int productId)
+        {
+            var lowThresholdSetting = await _context.Settings.FirstOrDefaultAsync(s => s.Key == "low_stock_threshold");
+            var criticalThresholdSetting = await _context.Settings.FirstOrDefaultAsync(s => s.Key == "critical_stock_threshold");
+            var lowThreshold = int.TryParse(lowThresholdSetting?.Value, out var lt) ? lt : 10;
+            var criticalThreshold = int.TryParse(criticalThresholdSetting?.Value, out var ct) ? ct : 5;
+
+            var totalStock = await _inventoryRepository.GetAvailableStock(productId);
+            var product = await _context.Products.FindAsync(productId);
+            if (product == null) return;
+
+            string? title = null;
+            string? message = null;
+
+            if (totalStock == 0)
+            {
+                title = "Stock Alert: Out of Stock";
+                message = $"Product '{product.Name}' is now OUT OF STOCK (0 units remaining).";
+            }
+            else if (totalStock <= criticalThreshold)
+            {
+                title = "Stock Alert: Critical Level";
+                message = $"Product '{product.Name}' has reached CRITICAL stock level ({totalStock} units remaining).";
+            }
+            else if (totalStock <= lowThreshold)
+            {
+                title = "Stock Alert: Low Stock";
+                message = $"Product '{product.Name}' is running low ({totalStock} units remaining).";
+            }
+
+            if (title != null)
+            {
+                var managers = await _userManager.GetUsersInRoleAsync("Manager");
+                var admins = await _userManager.GetUsersInRoleAsync("Admin");
+                var recipients = managers.Concat(admins).DistinctBy(u => u.Id);
+
+                foreach (var user in recipients)
+                {
+                    var notification = await _notificationService.CreateAsync(new CreateEditNotificationDto
+                    {
+                        UserId = user.Id,
+                        Type = "Inventory",
+                        Title = title,
+                        Message = message!
+                    });
+                    await _hubContext.Clients.All.SendAsync("ReceiveNotification", notification);
+                }
+            }
         }
     }
 }

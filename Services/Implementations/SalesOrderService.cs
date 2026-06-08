@@ -117,6 +117,22 @@ namespace Warehouse.Services.Implementations
             await _context.SaveChangesAsync();
             // Anulimi liron demandën pending → AvailableToOrder rritet sërish.
             await _realtime.ResourceChangedAsync("salesorders", "products");
+
+            // Njoftim te Manager-et dhe Admin-et: order u anulua
+            var clientForCancel = await _clientRepository.GetByIdAsync(order.ClientId);
+            var clientNameForCancel = clientForCancel?.FullName ?? $"Client {order.ClientId}";
+            var managersForCancel = await _userManager.GetUsersInRoleAsync("Manager");
+            var adminsForCancel = await _userManager.GetUsersInRoleAsync("Admin");
+            var cancelRecipients = managersForCancel.Concat(adminsForCancel).DistinctBy(u => u.Id);
+            foreach (var user in cancelRecipients)
+            {
+                await SendNotification(
+                    userId: user.Id,
+                    type: "SalesOrder",
+                    title: "Order Cancelled",
+                    message: $"Order ID {salesOrderId} from {clientNameForCancel} has been cancelled."
+                );
+            }
         }
 
         public async Task CancelOrderForUser(string userId, int salesOrderId)
@@ -198,6 +214,10 @@ namespace Warehouse.Services.Implementations
             await _salesOrderRepository.AddAsync(order);
             await _context.SaveChangesAsync();
 
+            // Merr emrin e klientit
+            var client = await _clientRepository.GetByIdAsync(clientId);
+            var clientName = client?.FullName ?? $"Client {clientId}";
+
             // Njoftim te te gjithe Manager-et
             var managers = await _userManager.GetUsersInRoleAsync("Manager");
             foreach (var manager in managers)
@@ -206,7 +226,7 @@ namespace Warehouse.Services.Implementations
                     userId: manager.Id,
                     type: "SalesOrder",
                     title: "New Order",
-                    message: $"Client ID {clientId} created a new order with ID {order.Id}."
+                    message: $"{clientName} created a new order with ID {order.Id}."
                 );
             }
 
@@ -327,6 +347,18 @@ namespace Warehouse.Services.Implementations
                         type: "SalesOrder",
                         title: "Order Confirmed",
                         message: $"Order ID {salesOrderId} has been confirmed by the client."
+                    );
+                }
+
+                // Njoftim te Worker-et: porosi e re e konfirmuar per pergatitje
+                var workers = await _userManager.GetUsersInRoleAsync("Worker");
+                foreach (var worker in workers)
+                {
+                    await SendNotification(
+                        userId: worker.Id,
+                        type: "SalesOrder",
+                        title: "New Confirmed Order",
+                        message: $"Order ID {salesOrderId} has been confirmed and is ready for processing."
                     );
                 }
 
