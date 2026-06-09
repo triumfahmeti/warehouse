@@ -17,8 +17,8 @@ const PRODUCT_TYPES = ['Laptop', 'TV', 'PC', 'Monitor', 'Accessories', 'Phone', 
 const emptyForm = { name: '', sku: '', type: '', description: '', length: '', width: '', height: '', weight: '' };
 
 export default function ProductsPage() {
-  const { user } = useAuth();
-  const canManage = (user?.roles || []).some(r => r === 'Admin' || r === 'Manager');
+  const { hasAnyPermission, hasPermission } = useAuth();
+  const canManage = hasAnyPermission('Products.Create', 'Products.Edit', 'Products.Delete');
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -161,7 +161,7 @@ export default function ProductsPage() {
         onExport={exportCsv}
         action={
           <div style={{ display: 'flex', gap: 8 }}>
-            {(user?.roles || []).includes('Admin') && (
+            {hasPermission('ExportImport.Import') && (
               <ImportButton
                 onImport={async (file) => {
                   const res = await importApi.products(file);

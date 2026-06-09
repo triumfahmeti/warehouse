@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Plus, MoreHorizontal, X, Pencil, Trash2, Search, Eye } from 'lucide-react';
 import { colors } from '../theme/colors';
-import { palletsApi, salesOrdersApi, raftsApi } from '../api';
+import { palletsApi, salesOrdersApi } from '../api';
 import { useAuth } from '../auth/AuthContext';
 import { useLiveResource } from '../realtime/useLiveResource';
 import PageHeader from '../components/ui/PageHeader';
@@ -13,8 +13,11 @@ const PACKAGING_TYPES = ['EuroPallet', 'Box', 'Crate'];
 const emptyForm = { palletCode: '', packingType: 'Standard' };
 
 export default function PalletsPage() {
-  const { user } = useAuth();
-  const canManage = (user?.roles || []).some(r => r === 'Admin' || r === 'Manager');
+  const { hasPermission } = useAuth();
+  // Gat-im sipas lejeve reale (jo rolit).
+  const canManage = hasPermission('Pallets.CreateFromOrder'); // butoni "From Sales Order"
+  const canEdit = hasPermission('Pallets.Edit');
+  const canDelete = hasPermission('Pallets.Delete');
 
   const [pallets, setPallets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -37,8 +40,7 @@ export default function PalletsPage() {
   // Modal "From Sales Order"
   const [orderModal, setOrderModal] = useState(false);
   const [salesOrders, setSalesOrders] = useState([]);
-  const [rafts, setRafts] = useState([]);
-  const [orderForm, setOrderForm] = useState({ salesOrderId: '', packagingType: 'EuroPallet', raftId: '', splitMode: false, itemsPerPallet: '' });
+  const [orderForm, setOrderForm] = useState({ salesOrderId: '', packagingType: 'EuroPallet', splitMode: false, itemsPerPallet: '' });
   const [orderPreview, setOrderPreview] = useState(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [splitResult, setSplitResult] = useState(null); // { pallets: [...], itemsPerPallet }
@@ -106,13 +108,14 @@ export default function PalletsPage() {
 
   const openFromOrder = async () => {
     try {
-      const [ordersData, raftsData] = await Promise.all([
+      const [ordersData, palletsData] = await Promise.all([
         salesOrdersApi.getAll(),
-        raftsApi.getAll(),
+        palletsApi.getAll(),
       ]);
-      setSalesOrders(ordersData.filter(o => o.status === 'Confirmed'));
-      setRafts(raftsData);
-      setOrderForm({ salesOrderId: '', packagingType: 'EuroPallet', raftId: '', splitMode: false, itemsPerPallet: '' });
+      // Përjashto porositë që tashmë janë palletizuar (një porosi palletizohet një herë).
+      const palletizedOrderIds = new Set(palletsData.map(p => p.salesOrderId));
+      setSalesOrders(ordersData.filter(o => o.status === 'Confirmed' && !palletizedOrderIds.has(o.id)));
+      setOrderForm({ salesOrderId: '', packagingType: 'EuroPallet', splitMode: false, itemsPerPallet: '' });
       setOrderPreview(null);
       setOrderModal(true);
     } catch {
@@ -121,7 +124,7 @@ export default function PalletsPage() {
   };
 
   const handleOrderSelect = async (salesOrderId) => {
-    setOrderForm(f => ({ ...f, salesOrderId, raftId: '' }));
+    setOrderForm(f => ({ ...f, salesOrderId }));
     setOrderPreview(null);
     if (!salesOrderId) return;
     setLoadingPreview(true);
@@ -143,7 +146,6 @@ export default function PalletsPage() {
         const result = await palletsApi.fromOrderSplit({
           salesOrderId:  Number(orderForm.salesOrderId),
           packagingType: orderForm.packagingType,
-          raftId:        Number(orderForm.raftId),
           itemsPerPallet: Number(orderForm.itemsPerPallet),
         });
         setOrderModal(false);
@@ -156,7 +158,6 @@ export default function PalletsPage() {
         await palletsApi.fromOrder({
           salesOrderId:  Number(orderForm.salesOrderId),
           packagingType: orderForm.packagingType,
-          raftId:        Number(orderForm.raftId),
         });
         setOrderModal(false);
         await load();
@@ -272,12 +273,8 @@ export default function PalletsPage() {
           <div onClick={() => setRowMenu(null)} style={{ position: 'fixed', inset: 0, zIndex: 1000 }} />
           <div style={{ position: 'fixed', top: rowMenu.y + 4, left: rowMenu.x - 150, width: 150, zIndex: 1001, background: colors.surface, border: `1px solid ${colors.border}`, borderRadius: 10, padding: 6, boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}>
             <MenuItem icon={<Eye size={14} />} label="View details" onClick={() => { setDetail(pallets.find(p => p.id === rowMenu.id)); setRowMenu(null); }} />
-            {canManage && (
-              <>
-                <MenuItem icon={<Pencil size={14} />} label="Edit" onClick={() => openEdit(pallets.find(p => p.id === rowMenu.id))} />
-                <MenuItem icon={<Trash2 size={14} />} label="Delete" danger onClick={() => { setDeleteTarget(pallets.find(p => p.id === rowMenu.id)); setRowMenu(null); }} />
-              </>
-            )}
+            {canEdit && <MenuItem icon={<Pencil size={14} />} label="Edit" onClick={() => openEdit(pallets.find(p => p.id === rowMenu.id))} />}
+            {canDelete && <MenuItem icon={<Trash2 size={14} />} label="Delete" danger onClick={() => { setDeleteTarget(pallets.find(p => p.id === rowMenu.id)); setRowMenu(null); }} />}
           </div>
         </>
       )}
@@ -351,14 +348,6 @@ export default function PalletsPage() {
                 {PACKAGING_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             </Field>
-            <Field label="Raft">
-              <select required style={inputStyle} value={orderForm.raftId} onChange={e => setOrderForm(f => ({ ...f, raftId: e.target.value }))}>
-                <option value="" disabled>Select raft...</option>
-                {rafts.map(r => (
-                  <option key={r.id} value={r.id}>{r.raftNumber} — {r.warehouseName || 'Warehouse'}</option>
-                ))}
-              </select>
-            </Field>
             {/* Toggle: Single vs Split */}
             <div style={{ marginBottom: 16, padding: '12px', background: colors.bg, borderRadius: 8, border: `1px solid ${colors.border}` }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: orderForm.splitMode ? 12 : 0 }}>
@@ -426,8 +415,14 @@ export default function PalletsPage() {
               </div>
               <div style={{ border: `1px solid ${colors.border}`, borderRadius: 8, overflow: 'hidden' }}>
                 {detail.items.map((item, i) => (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', borderTop: i > 0 ? `1px solid ${colors.border}` : 'none', background: i % 2 === 0 ? colors.surface : colors.bg }}>
-                    <span style={{ fontSize: 13, fontFamily: 'var(--font-sans)', color: colors.text }}>{item.productName}</span>
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', borderTop: i > 0 ? `1px solid ${colors.border}` : 'none', background: i % 2 === 0 ? colors.surface : colors.bg }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                      <span style={{ fontSize: 13, fontFamily: 'var(--font-sans)', color: colors.text }}>{item.productName}</span>
+                      <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: colors.textMuted, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        📦 {item.raftNumber ? `Raft ${item.raftNumber}` : 'Raft —'}
+                        {item.warehouseName ? ` · ${item.warehouseName}` : ''}
+                      </span>
+                    </div>
                     <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: colors.textMuted, fontWeight: 500 }}>× {item.quantity}</span>
                   </div>
                 ))}
@@ -436,7 +431,7 @@ export default function PalletsPage() {
           )}
 
           <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
-            {canManage && (
+            {canEdit && (
               <button onClick={() => { const p = detail; setDetail(null); openEdit(p); }} style={cancelBtn}>Edit</button>
             )}
             <button onClick={() => setDetail(null)} style={submitBtn(false)}>Close</button>

@@ -1,6 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import ProtectedRoute from "../auth/ProtectedRoute";
-import RoleRoute from "../auth/RoleRoute";
+import PermissionRoute from "../auth/PermissionRoute";
 import AppLayout from "../components/layout/AppLayout";
 import LoginPage from "../pages/LoginPage";
 import DashboardPage from "../pages/DashboardPage";
@@ -20,13 +20,10 @@ import UserManagementPage from "../pages/UserManagementPage";
 import RolesPage from "../pages/RolesPage";
 import AuditLogsPage from "../pages/AuditLogsPage";
 import SystemSettingsPage from "../pages/SystemSettingsPage";
+import ReportsPage from "../pages/ReportsPage";
 
-// Struktura:
-//   /login - publik
-//   ProtectedRoute - duhet login
-//     AppLayout - shell me sidebar/topbar
-//       Route-et publike për të gjithë rolet (Dashboard)
-//       RoleRoute - mbron grupe sipas rolesh
+// Qasja te faqet gat-ohet nga LEJET (jo emrat e roleve) — i njëjti burim me backend-in.
+// Çdo route kërkon lejen përkatëse 'View'; ndryshe ridrejtohet te '/'.
 export default function AppRoutes() {
   return (
     <Routes>
@@ -34,38 +31,58 @@ export default function AppRoutes() {
 
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
-          {/* Të gjithë rolet */}
+          {/* Dashboard — çdo përdorues i autentikuar */}
           <Route path="/" element={<DashboardPage />} />
-          <Route path="/shipments" element={<ShipmentsPage />} />
-          <Route path="/sales-orders" element={<SalesOrdersPage />} />
-          <Route path="/products" element={<ProductsPage />} />
 
-          {/* Vetëm Admin + Manager */}
-          <Route element={<RoleRoute allowedRoles={["Admin", "Manager"]} />}>
+          <Route element={<PermissionRoute anyOf={["Products.View"]} />}>
+            <Route path="/products" element={<ProductsPage />} />
+          </Route>
+          <Route element={<PermissionRoute anyOf={["Warehouses.View"]} />}>
             <Route path="/warehouses" element={<WarehousesPage />} />
+          </Route>
+          <Route element={<PermissionRoute anyOf={["Rafts.View"]} />}>
             <Route path="/rafts" element={<RaftsPage />} />
+          </Route>
+          <Route element={<PermissionRoute anyOf={["Suppliers.View"]} />}>
             <Route path="/suppliers" element={<SuppliersPage />} />
+          </Route>
+          <Route element={<PermissionRoute anyOf={["Clients.View"]} />}>
             <Route path="/clients" element={<ClientsPage />} />
           </Route>
-
-          {/* Admin + Manager + Worker (jo Client) */}
-          <Route
-            element={
-              <RoleRoute allowedRoles={["Admin", "Manager", "Worker"]} />
-            }
-          >
+          <Route element={<PermissionRoute anyOf={["Inventory.View"]} />}>
             <Route path="/inventory" element={<InventoryPage />} />
+          </Route>
+          <Route element={<PermissionRoute anyOf={["PurchaseOrders.View"]} />}>
             <Route path="/purchase-orders" element={<PurchaseOrdersPage />} />
+          </Route>
+          <Route element={<PermissionRoute anyOf={["Pallets.View"]} />}>
             <Route path="/pallets" element={<PalletsPage />} />
+          </Route>
+          <Route element={<PermissionRoute anyOf={["PackingLists.View"]} />}>
             <Route path="/packing-lists" element={<PackingListsPage />} />
           </Route>
+          <Route element={<PermissionRoute anyOf={["SalesOrders.View", "SalesOrders.ViewOwn"]} />}>
+            <Route path="/sales-orders" element={<SalesOrdersPage />} />
+          </Route>
+          <Route element={<PermissionRoute anyOf={["Shipments.View", "Shipments.ViewOwn"]} />}>
+            <Route path="/shipments" element={<ShipmentsPage />} />
+          </Route>
 
-          {/* Vetëm Admin — Administration panel */}
-          <Route element={<RoleRoute allowedRoles={["Admin"]} />}>
+          {/* Administration */}
+          <Route element={<PermissionRoute anyOf={["Users.View"]} />}>
             <Route path="/admin/users" element={<UserManagementPage />} />
+          </Route>
+          <Route element={<PermissionRoute anyOf={["Roles.View"]} />}>
             <Route path="/admin/roles" element={<RolesPage />} />
+          </Route>
+          <Route element={<PermissionRoute anyOf={["AuditLogs.View"]} />}>
             <Route path="/admin/audit-logs" element={<AuditLogsPage />} />
+          </Route>
+          <Route element={<PermissionRoute anyOf={["Settings.View"]} />}>
             <Route path="/admin/settings" element={<SystemSettingsPage />} />
+          </Route>
+          <Route element={<PermissionRoute anyOf={["Reports.ViewInventory", "Reports.ViewSales", "Reports.ViewShipment"]} />}>
+            <Route path="/reports" element={<ReportsPage />} />
           </Route>
 
           <Route path="*" element={<NotFoundPage />} />

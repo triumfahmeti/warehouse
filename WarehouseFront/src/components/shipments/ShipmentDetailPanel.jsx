@@ -84,17 +84,18 @@ export default function ShipmentDetailPanel({ shipment, onClose, onMarkReady, on
 
       {/* Actions */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {!isClient && shipment.status === 'Draft' && (
+        {/* Butonat shfaqen vetëm nëse faqja ka kaluar handler-in (= useri ka lejen). */}
+        {onMarkReady && shipment.status === 'Draft' && (
           <button style={actionBtn} onClick={onMarkReady}>
             Mark as Ready →
           </button>
         )}
-        {!isClient && shipment.status === 'Ready' && (
+        {onShip && shipment.status === 'Ready' && (
           <button style={{ ...actionBtn, background: colors.accent, color: 'white', border: 'none' }} onClick={onShip}>
             Ship Now <Truck size={14} />
           </button>
         )}
-        {shipment.status === 'Shipped' && (
+        {onDeliver && shipment.status === 'Shipped' && (
           <button style={{ ...actionBtn, background: colors.success, color: 'white', border: 'none' }} onClick={onDeliver}>
             {isClient ? 'Confirm Receipt' : 'Mark Delivered'} <CheckCircle2 size={14} />
           </button>

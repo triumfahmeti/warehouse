@@ -12,7 +12,7 @@ using Warehouse;
 namespace Warehouse.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260604232508_InitialCreate")]
+    [Migration("20260609111417_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -553,9 +553,6 @@ namespace Warehouse.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("RaftId")
-                        .HasColumnType("int");
-
                     b.Property<int>("SalesOrderId")
                         .HasColumnType("int");
 
@@ -568,8 +565,6 @@ namespace Warehouse.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedById");
-
-                    b.HasIndex("RaftId");
 
                     b.HasIndex("SalesOrderId");
 
@@ -595,11 +590,16 @@ namespace Warehouse.Migrations
                     b.Property<int>("Quantity")
                         .HasColumnType("int");
 
+                    b.Property<int?>("RaftId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("PalletId");
 
                     b.HasIndex("ProductId");
+
+                    b.HasIndex("RaftId");
 
                     b.ToTable("PalletItems");
                 });
@@ -930,7 +930,6 @@ namespace Warehouse.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Description")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Key")
@@ -1289,12 +1288,6 @@ namespace Warehouse.Migrations
                         .HasForeignKey("CreatedById")
                         .OnDelete(DeleteBehavior.NoAction);
 
-                    b.HasOne("Warehouse.Models.Raft", "Raft")
-                        .WithMany("Pallets")
-                        .HasForeignKey("RaftId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("Warehouse.Models.SalesOrder", "SalesOrder")
                         .WithMany()
                         .HasForeignKey("SalesOrderId")
@@ -1307,8 +1300,6 @@ namespace Warehouse.Migrations
                         .OnDelete(DeleteBehavior.NoAction);
 
                     b.Navigation("CreatedBy");
-
-                    b.Navigation("Raft");
 
                     b.Navigation("SalesOrder");
 
@@ -1329,9 +1320,16 @@ namespace Warehouse.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Warehouse.Models.Raft", "Raft")
+                        .WithMany()
+                        .HasForeignKey("RaftId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.Navigation("Pallet");
 
                     b.Navigation("Product");
+
+                    b.Navigation("Raft");
                 });
 
             modelBuilder.Entity("Warehouse.Models.PurchaseOrder", b =>
@@ -1592,8 +1590,6 @@ namespace Warehouse.Migrations
             modelBuilder.Entity("Warehouse.Models.Raft", b =>
                 {
                     b.Navigation("Inventories");
-
-                    b.Navigation("Pallets");
                 });
 
             modelBuilder.Entity("Warehouse.Models.SalesOrder", b =>

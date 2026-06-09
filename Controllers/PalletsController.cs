@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Warehouse.DTOs.Pallet;
 using Warehouse.Services.Interfaces;
+using Warehouse.Authorization;
+using Warehouse.Authorization.Constants;
 
 
 namespace Warehouse.Controllers
@@ -17,6 +19,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet]
+        [HasPermission(Permissions.Pallets.View)]
         public async Task<IActionResult> GetAll()
         {
             var pallets = await _service.GetAllAsync();
@@ -24,6 +27,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet("{id}")]
+        [HasPermission(Permissions.Pallets.View)]
         public async Task<IActionResult> GetById(int id)
         {
             var pallet = await _service.GetByIdAsync(id);
@@ -32,6 +36,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet("code/{palletCode}")]
+        [HasPermission(Permissions.Pallets.View)]
         public async Task<IActionResult> GetByPalletCode(string palletCode)
         {
             var pallet = await _service.GetByPalletCodeAsync(palletCode);
@@ -40,6 +45,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPost]
+        [HasPermission(Permissions.Pallets.Create)]
         public async Task<IActionResult> Create(CreateEditPalletDto dto)
         {
             var created = await _service.AddAsync(dto);
@@ -47,6 +53,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet("order-preview/{salesOrderId}")]
+        [HasPermission(Permissions.Pallets.View)]
         public async Task<IActionResult> GetOrderPickingPreview(int salesOrderId)
         {
             var preview = await _service.GetOrderPickingPreviewAsync(salesOrderId);
@@ -55,6 +62,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPut("{id}")]
+        [HasPermission(Permissions.Pallets.Edit)]
         public async Task<IActionResult> Update(int id, CreateEditPalletDto dto)
         {
             await _service.UpdateAsync(id, dto);
@@ -62,6 +70,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpDelete("{id}")]
+        [HasPermission(Permissions.Pallets.Delete)]
         public async Task<IActionResult> Delete(int id)
         {
             await _service.DeleteAsync(id);
@@ -69,6 +78,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPost("from-order")]
+        [HasPermission(Permissions.Pallets.CreateFromOrder)]
         public async Task<IActionResult> CreateFromOrder(CreatePalletDto dto)
         {
             try
@@ -83,6 +93,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPost("from-order-split")]
+        [HasPermission(Permissions.Pallets.CreateFromOrder)]
         public async Task<IActionResult> CreateFromOrderSplit([FromBody] CreatePalletSplitDto dto)
         {
             try
@@ -97,6 +108,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet("by-order/{salesOrderId}")]
+        [HasPermission(Permissions.Pallets.View)]
         public async Task<IActionResult> GetBySalesOrder(int salesOrderId)
         {
             var pallets = await _service.GetAllAsync();

@@ -25,7 +25,6 @@ namespace Warehouse.Services.Implementations
         private readonly INotificationService _notificationService;
         private readonly IHubContext<NotificationHub> _hubContext;
         private readonly UserManager<ApplicationUser> _userManager;
-        private readonly IRealtimeNotifier _realtime;
 
         public SalesOrderService(
             ISalesOrderRepository salesOrderRepository,
@@ -35,8 +34,7 @@ namespace Warehouse.Services.Implementations
             AppDbContext context,
             INotificationService notificationService,
             IHubContext<NotificationHub> hubContext,
-            UserManager<ApplicationUser> userManager,
-            IRealtimeNotifier realtime)
+            UserManager<ApplicationUser> userManager)
         {
             _salesOrderRepository = salesOrderRepository;
             _inventoryRepository = inventoryRepository;
@@ -46,7 +44,6 @@ namespace Warehouse.Services.Implementations
             _notificationService = notificationService;
             _hubContext = hubContext;
             _userManager = userManager;
-            _realtime = realtime;
         }
 
         public async Task<List<SalesOrderDto>> GetAllAsync()
@@ -108,29 +105,28 @@ namespace Warehouse.Services.Implementations
             var order = await _salesOrderRepository.GetOrderWithItems(salesOrderId)
                 ?? throw new InvalidOperationException("Order not found");
 
-            // Vetem porosite e pakonfirmuara (New) mund te anulohen. Pas Confirm s'ka anulim.
             if (order.Status != SalesOrderStatus.New)
                 throw new InvalidOperationException("Only new (unconfirmed) orders can be cancelled");
 
             order.Status = SalesOrderStatus.Cancelled;
             await _salesOrderRepository.UpdateAsync(order);
             await _context.SaveChangesAsync();
-            // Anulimi liron demandën pending → AvailableToOrder rritet sërish.
-            await _realtime.ResourceChangedAsync("salesorders", "products");
 
-            // Njoftim te Manager-et dhe Admin-et: order u anulua
-            var clientForCancel = await _clientRepository.GetByIdAsync(order.ClientId);
-            var clientNameForCancel = clientForCancel?.FullName ?? $"Client {order.ClientId}";
-            var managersForCancel = await _userManager.GetUsersInRoleAsync("Manager");
-            var adminsForCancel = await _userManager.GetUsersInRoleAsync("Admin");
-            var cancelRecipients = managersForCancel.Concat(adminsForCancel).DistinctBy(u => u.Id);
-            foreach (var user in cancelRecipients)
+            // Merr emrin e klientit
+            var clientName = await _context.Clients
+                .Where(c => c.Id == order.ClientId)
+                .Select(c => c.FullName)
+                .FirstOrDefaultAsync() ?? $"Client {order.ClientId}";
+
+            // Njoftim te Manager-et: order u anulua
+            var managers = await _userManager.GetUsersInRoleAsync("Manager");
+            foreach (var manager in managers)
             {
                 await SendNotification(
-                    userId: user.Id,
+                    userId: manager.Id,
                     type: "SalesOrder",
                     title: "Order Cancelled",
-                    message: $"Order ID {salesOrderId} from {clientNameForCancel} has been cancelled."
+                    message: $"Order ID {salesOrderId} from {clientName} has been cancelled."
                 );
             }
         }
@@ -173,9 +169,6 @@ namespace Warehouse.Services.Implementations
             if (items == null || !items.Any())
                 throw new InvalidOperationException("Order must have items");
 
-            // Kontroll stoku qe ne krijim, qe te shmanget overselling nga porosi te shumta:
-            //   available efektiv = stoku fizik i lire − demanda e porosive te tjera ende New
-            //   (porosite New nuk kane rezervuar ende; Confirmed-at jane tashme te zbritura nga ReservedQuantity).
             foreach (var item in items)
             {
                 if (item.Quantity <= 0)
@@ -214,11 +207,13 @@ namespace Warehouse.Services.Implementations
             await _salesOrderRepository.AddAsync(order);
             await _context.SaveChangesAsync();
 
-            // Merr emrin e klientit
-            var client = await _clientRepository.GetByIdAsync(clientId);
-            var clientName = client?.FullName ?? $"Client {clientId}";
+            // Merr emrin e klientit direkt nga DB
+            var clientName = await _context.Clients
+                .Where(c => c.Id == clientId)
+                .Select(c => c.FullName)
+                .FirstOrDefaultAsync() ?? $"Client {clientId}";
 
-            // Njoftim te te gjithe Manager-et
+            // Njoftim te Manager-et: porosi e re
             var managers = await _userManager.GetUsersInRoleAsync("Manager");
             foreach (var manager in managers)
             {
@@ -229,9 +224,6 @@ namespace Warehouse.Services.Implementations
                     message: $"{clientName} created a new order with ID {order.Id}."
                 );
             }
-
-            // Porosia New "zë" stok pa rezervuar → ndryshon AvailableToOrder i produkteve.
-            await _realtime.ResourceChangedAsync("salesorders", "products");
 
             return order.Id;
         }
@@ -255,12 +247,10 @@ namespace Warehouse.Services.Implementations
                 orderItem.UnitPrice = itemDto.UnitPrice;
             }
 
-            // Ruajme totalin sa here qe caktohen/ndryshohen cmimet.
             order.TotalAmount = order.SalesOrderItems.Sum(i => (i.UnitPrice ?? 0) * i.Quantity);
 
             await _salesOrderRepository.UpdateAsync(order);
             await _context.SaveChangesAsync();
-            await _realtime.ResourceChangedAsync("salesorders");
 
             // Njoftim te Clienti: cmimi u caktua
             var client = await _clientRepository.GetByIdAsync(order.ClientId);
@@ -270,12 +260,11 @@ namespace Warehouse.Services.Implementations
                 if (clientUser != null)
                 {
                     var totalAmount = order.SalesOrderItems.Sum(i => (i.UnitPrice ?? 0) * i.Quantity);
-
                     await SendNotification(
                         userId: clientUser.Id,
                         type: "SalesOrder",
                         title: "Order Priced",
-                        message: $"Your order ID {salesOrderId} has been priced. Total: {totalAmount:F2}. Please confirm your order."
+                        message: $"Dear {client.FullName}, your order ID {salesOrderId} has been priced. Total: {totalAmount:F2}. Please confirm your order."
                     );
                 }
             }
@@ -338,7 +327,13 @@ namespace Warehouse.Services.Implementations
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
-                // Njoftim te Manager-et: order u konfirmua nga clienti
+                // Merr emrin e klientit
+                var clientName = await _context.Clients
+                    .Where(c => c.Id == order.ClientId)
+                    .Select(c => c.FullName)
+                    .FirstOrDefaultAsync() ?? $"Client {order.ClientId}";
+
+                // Njoftim te Manager-et: order u konfirmua
                 var managers = await _userManager.GetUsersInRoleAsync("Manager");
                 foreach (var manager in managers)
                 {
@@ -346,11 +341,11 @@ namespace Warehouse.Services.Implementations
                         userId: manager.Id,
                         type: "SalesOrder",
                         title: "Order Confirmed",
-                        message: $"Order ID {salesOrderId} has been confirmed by the client."
+                        message: $"Order ID {salesOrderId} from {clientName} has been confirmed."
                     );
                 }
 
-                // Njoftim te Worker-et: porosi e re e konfirmuar per pergatitje
+                // Njoftim te Worker-et: porosi e re e konfirmuar
                 var workers = await _userManager.GetUsersInRoleAsync("Worker");
                 foreach (var worker in workers)
                 {
@@ -358,12 +353,9 @@ namespace Warehouse.Services.Implementations
                         userId: worker.Id,
                         type: "SalesOrder",
                         title: "New Confirmed Order",
-                        message: $"Order ID {salesOrderId} has been confirmed and is ready for processing."
+                        message: $"Order ID {salesOrderId} from {clientName} has been confirmed and is ready for processing."
                     );
                 }
-
-                // Konfirmimi rezervon stok → ndryshon inventari dhe availability e produkteve.
-                await _realtime.ResourceChangedAsync("salesorders", "inventory", "products");
             }
             catch
             {

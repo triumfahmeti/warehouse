@@ -18,6 +18,9 @@ namespace Warehouse.Repositories.Implementations
             return await _context.Pallets
                 .Include(p => p.Items)
                     .ThenInclude(i => i.Product)
+                .Include(p => p.Items)
+                    .ThenInclude(i => i.Raft)
+                        .ThenInclude(r => r.Warehouse)
                 .FirstOrDefaultAsync(p => p.Id == id);
         }
 
@@ -26,6 +29,9 @@ namespace Warehouse.Repositories.Implementations
             return await _context.Pallets
                 .Include(p => p.Items)
                     .ThenInclude(i => i.Product)
+                .Include(p => p.Items)
+                    .ThenInclude(i => i.Raft)
+                        .ThenInclude(r => r.Warehouse)
                 .ToListAsync();
         }
 

@@ -13,5 +13,10 @@ namespace Warehouse.Models
         public int ProductId { get; set; }
         public Product Product { get; set; }
         public int Quantity { get; set; }
+
+        // Rafti nga u mor fizikisht ky rresht gjatë pick-ut (nullable: rreshtat e
+        // vjetër para këtij ndryshimi nuk e kanë). Vendoset nga inv.RaftId në pick.
+        public int? RaftId { get; set; }
+        public Raft? Raft { get; set; }
     }
 }

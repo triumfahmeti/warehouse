@@ -3,6 +3,8 @@ using Warehouse.DTOs.ShipmentDto;
 using Warehouse.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
+using Warehouse.Authorization;
+using Warehouse.Authorization.Constants;
 
 namespace Warehouse.Controllers
 {
@@ -18,6 +20,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet]
+        [HasPermission(Permissions.Shipments.View)]
         public async Task<IActionResult> GetAll()
         {
             var list = await _service.GetAllAsync();
@@ -25,6 +28,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet("{id}")]
+        [HasPermission(Permissions.Shipments.View)]
         public async Task<IActionResult> GetById(int id)
         {
             var shipment = await _service.GetByIdAsync(id);
@@ -32,6 +36,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPost]
+        [HasPermission(Permissions.Shipments.Create)]
         public async Task<IActionResult> Create([FromBody] CreateEditShipmentDto dto)
         {
             var id = await _service.CreateShipment(dto);
@@ -39,6 +44,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPatch("{id}/ready")]
+        [HasPermission(Permissions.Shipments.MarkReady)]
         public async Task<IActionResult> MarkReady(int id)
         {
             await _service.MarkShipmentReady(id);
@@ -46,6 +52,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPatch("{id}/ship")]
+        [HasPermission(Permissions.Shipments.Ship)]
         public async Task<IActionResult> Ship(int id)
         {
             await _service.Ship(id);
@@ -53,6 +60,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPatch("{id}/deliver")]
+        [HasPermission(Permissions.Shipments.Deliver)]
         public async Task<IActionResult> Deliver(int id)
         {
             await _service.Deliver(id);
@@ -60,6 +68,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPatch("{id}/cancel")]
+        [HasPermission(Permissions.Shipments.Cancel)]
         public async Task<IActionResult> Cancel(int id)
         {
             await _service.CancelAsync(id);
@@ -67,7 +76,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet("mine")]
-        [Authorize]
+        [HasPermission(Permissions.Shipments.ViewOwn)]
         public async Task<IActionResult> GetMine()
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;

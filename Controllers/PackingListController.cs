@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using Warehouse.DTOs.PackingList;
 using Warehouse.Enums;
 using Warehouse.Services.Interfaces;
+using Warehouse.Authorization;
+using Warehouse.Authorization.Constants;
 
 namespace Warehouse.Controllers
 {
@@ -31,6 +33,7 @@ namespace Warehouse.Controllers
         };
 
         [HttpGet]
+        [HasPermission(Permissions.PackingLists.View)]
         public async Task<IActionResult> GetAll()
         {
             var list = await _service.GetAllAsync();
@@ -38,6 +41,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet("{id}")]
+        [HasPermission(Permissions.PackingLists.View)]
         public async Task<IActionResult> GetById(int id)
         {
             var pl = await _service.GetByIdAsync(id);
@@ -45,6 +49,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPost]
+        [HasPermission(Permissions.PackingLists.Create)]
         public async Task<IActionResult> Create([FromBody] CreateEditPackingListDto dto)
         {
             var pl = await _service.CreateAsync(dto);
@@ -52,6 +57,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPut("{id}")]
+        [HasPermission(Permissions.PackingLists.Edit)]
         public async Task<IActionResult> Update(int id, [FromBody] CreateEditPackingListDto dto)
         {
             await _service.UpdateAsync(id, dto);
@@ -59,6 +65,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPatch("{id}/ready")]
+        [HasPermission(Permissions.PackingLists.MarkReady)]
         public async Task<IActionResult> MarkReady(int id)
         {
             await _service.MarkAsReadyAsync(id);
@@ -66,6 +73,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPatch("{id}/cancel")]
+        [HasPermission(Permissions.PackingLists.Cancel)]
         public async Task<IActionResult> Cancel(int id)
         {
             await _service.CancelAsync(id);
@@ -73,6 +81,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet("available")]
+        [HasPermission(Permissions.PackingLists.View)]
         public async Task<IActionResult> GetAvailable()
         {
             var list = await _service.GetAvailableAsync();

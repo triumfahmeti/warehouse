@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Warehouse.DTOs.SalesOrder;
 using Warehouse.Services.Interfaces;
+using Warehouse.Authorization;
+using Warehouse.Authorization.Constants;
 
 namespace Warehouse.Controllers
 {
@@ -20,7 +22,7 @@ namespace Warehouse.Controllers
 
         // Manager/Admin: te gjitha porosite (per t'i cmuar).
         [HttpGet]
-        [Authorize(Roles = "Admin,Manager")]
+        [HasPermission(Permissions.SalesOrders.View)]
         public async Task<IActionResult> GetAll()
         {
             return Ok(await _service.GetAllAsync());
@@ -28,7 +30,7 @@ namespace Warehouse.Controllers
 
         // Client: vetem porosite e veta.
         [HttpGet("mine")]
-        [Authorize(Roles = "Client")]
+        [HasPermission(Permissions.SalesOrders.ViewOwn)]
         public async Task<IActionResult> GetMine()
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -45,7 +47,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet("{id}")]
-        [Authorize(Roles = "Admin,Manager")]
+        [HasPermission(Permissions.SalesOrders.View)]
         public async Task<IActionResult> GetById(int id)
         {
             var order = await _service.GetDtoByIdAsync(id);
@@ -54,7 +56,7 @@ namespace Warehouse.Controllers
 
         // Porosine e krijon vetem Clienti; clientId merret nga JWT.
         [HttpPost]
-        [Authorize(Roles = "Client")]
+        [HasPermission(Permissions.SalesOrders.Create)]
         public async Task<IActionResult> Create([FromBody] CreateOrderRequest request)
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -73,7 +75,7 @@ namespace Warehouse.Controllers
 
         // Cmimet i cakton vetem Manager/Admin.
         [HttpPatch("{id}/set-prices")]
-        [Authorize(Roles = "Admin,Manager")]
+        [HasPermission(Permissions.SalesOrders.SetPrices)]
         public async Task<IActionResult> SetPrices(int id, [FromBody] List<SetPriceDto> items)
         {
             try
@@ -89,7 +91,7 @@ namespace Warehouse.Controllers
 
         // Konfirmimin e ben vetem Clienti, dhe vetem per porosine e vet.
         [HttpPatch("{id}/confirm")]
-        [Authorize(Roles = "Client")]
+        [HasPermission(Permissions.SalesOrders.Confirm)]
         public async Task<IActionResult> Confirm(int id)
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -108,7 +110,7 @@ namespace Warehouse.Controllers
 
         // Anulim: Manager/Admin anulon cilendo; Client vetem te veten.
         [HttpPatch("{id}/cancel")]
-        [Authorize(Roles = "Admin,Manager,Client")]
+        [HasPermission(Permissions.SalesOrders.Cancel)]
         public async Task<IActionResult> Cancel(int id)
         {
             var roles = User.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();

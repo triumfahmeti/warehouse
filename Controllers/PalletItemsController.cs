@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Warehouse.DTOs.PalletItem;
 using Warehouse.Services.Interfaces;
+using Warehouse.Authorization;
+using Warehouse.Authorization.Constants;
 
 namespace Warehouse.Controllers
 {
@@ -16,6 +18,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet]
+        [HasPermission(Permissions.PalletItems.View)]
         public async Task<IActionResult> GetAll()
         {
             var items = await _service.GetAllAsync();
@@ -23,6 +26,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet("{id}")]
+        [HasPermission(Permissions.PalletItems.View)]
         public async Task<IActionResult> GetById(int id)
         {
             var item = await _service.GetByIdAsync(id);
@@ -31,6 +35,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet("pallet/{palletId}")]
+        [HasPermission(Permissions.PalletItems.View)]
         public async Task<IActionResult> GetByPalletId(int palletId)
         {
             var items = await _service.GetByPalletIdAsync(palletId);
@@ -38,6 +43,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet("product/{productId}")]
+        [HasPermission(Permissions.PalletItems.View)]
         public async Task<IActionResult> GetByProductId(int productId)
         {
             var items = await _service.GetByProductIdAsync(productId);
@@ -45,6 +51,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPost]
+        [HasPermission(Permissions.PalletItems.Create)]
         public async Task<IActionResult> Create(CreateEditPalletItemDto dto)
         {
             var created = await _service.AddAsync(dto);
@@ -52,6 +59,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPut("{id}")]
+        [HasPermission(Permissions.PalletItems.Edit)]
         public async Task<IActionResult> Update(int id, CreateEditPalletItemDto dto)
         {
             await _service.UpdateAsync(id, dto);
@@ -59,6 +67,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpDelete("{id}")]
+        [HasPermission(Permissions.PalletItems.Delete)]
         public async Task<IActionResult> Delete(int id)
         {
             await _service.DeleteAsync(id);

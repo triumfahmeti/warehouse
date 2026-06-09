@@ -4,12 +4,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Warehouse.DTOs.Admin;
 using Warehouse.Models;
+using Warehouse.Authorization;
+using Warehouse.Authorization.Constants;
 
 namespace Warehouse.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Admin")]
     public class AdminDashboardController : ControllerBase
     {
         private readonly UserManager<ApplicationUser> _userManager;
@@ -22,6 +23,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet("stats")]
+        [HasPermission(Permissions.Dashboard.View)]
         public async Task<IActionResult> GetStats()
         {
             var totalUsers = await _userManager.Users.CountAsync();

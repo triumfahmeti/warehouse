@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Warehouse.DTOs.Raft;
 using Warehouse.Services.Interfaces;
+using Warehouse.Authorization;
+using Warehouse.Authorization.Constants;
 
 namespace Warehouse.Controllers
 {
@@ -16,6 +18,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet]
+        [HasPermission(Permissions.Rafts.View)]
         public async Task<IActionResult> GetAll()
         {
             var rafts = await _service.GetAllAsync();
@@ -23,6 +26,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet("{id}")]
+        [HasPermission(Permissions.Rafts.View)]
         public async Task<IActionResult> GetById(int id)
         {
             var raft = await _service.GetByIdAsync(id);
@@ -31,6 +35,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet("warehouse/{warehouseId}")]
+        [HasPermission(Permissions.Rafts.View)]
         public async Task<IActionResult> GetByWarehouseId(int warehouseId)
         {
             var rafts = await _service.GetByWarehouseIdAsync(warehouseId);
@@ -38,6 +43,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet("number/{raftNumber}")]
+        [HasPermission(Permissions.Rafts.View)]
         public async Task<IActionResult> GetByRaftNumber(string raftNumber)
         {
             var raft = await _service.GetByRaftNumberAsync(raftNumber);
@@ -46,6 +52,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPost]
+        [HasPermission(Permissions.Rafts.Create)]
         public async Task<IActionResult> Create(CreateEditRaftDto dto)
         {
             try
@@ -60,6 +67,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPut("{id}")]
+        [HasPermission(Permissions.Rafts.Edit)]
         public async Task<IActionResult> Update(int id, CreateEditRaftDto dto)
         {
             try
@@ -74,6 +82,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpDelete("{id}")]
+        [HasPermission(Permissions.Rafts.Delete)]
         public async Task<IActionResult> Delete(int id)
         {
             try

@@ -55,8 +55,7 @@ namespace Warehouse.Services.Implementations
             {
                 PalletCode = dto.PalletCode,
                 PackingType = Enum.Parse<PackagingType>(dto.PackingType!), // string → enum
-                RaftId = dto.RaftId,
-                 SalesOrderId = dto.SalesOrderId
+                SalesOrderId = dto.SalesOrderId
             };
 
             await _repo.AddAsync(pallet);
@@ -70,9 +69,11 @@ namespace Warehouse.Services.Implementations
             var pallet = await _repo.GetByIdAsync(id)
                 ?? throw new Exception("Pallet not found");
 
+            if (await IsPalletLocked(id))
+                throw new InvalidOperationException("Cannot modify a pallet that is part of a packing list.");
+
             pallet.PalletCode = dto.PalletCode;
             pallet.PackingType = Enum.Parse<PackagingType>(dto.PackingType!); // string → enum
-            pallet.RaftId = dto.RaftId;
 
             await _repo.UpdateAsync(pallet);
             await _context.SaveChangesAsync();
@@ -84,9 +85,22 @@ namespace Warehouse.Services.Implementations
             var pallet = await _repo.GetByIdAsync(id)
                 ?? throw new Exception("Pallet not found");
 
+            if (await IsPalletLocked(id))
+                throw new InvalidOperationException("Cannot delete a pallet that is part of a packing list.");
+
             await _repo.DeleteAsync(id);
             await _context.SaveChangesAsync();
             await _realtime.ResourceChangedAsync("pallets");
+        }
+
+        // True nëse paleta është caktuar në një packing list ende aktiv (jo Cancelled).
+        // Atëherë është "e angazhuar" në procesin e dërgesës dhe s'duhet ndryshuar/fshirë.
+        private async Task<bool> IsPalletLocked(int palletId)
+        {
+            return await _context.PackingListPallets
+                .Where(plp => plp.PalletId == palletId)
+                .AnyAsync(plp => _context.PackingLists.Any(pl =>
+                    pl.Id == plp.PackingListId && pl.Status != PackingListStatus.Cancelled));
         }
 
         public async Task<OrderPickingPreviewDto?> GetOrderPickingPreviewAsync(int salesOrderId)
@@ -144,11 +158,14 @@ namespace Warehouse.Services.Implementations
             if (order.Status != SalesOrderStatus.Confirmed)
                 throw new InvalidOperationException("Order must be confirmed");
 
+            // Një porosi palletizohet vetëm një herë (e gjithë sasia hyn në paleta).
+            if (await _context.Pallets.AnyAsync(p => p.SalesOrderId == dto.SalesOrderId))
+                throw new InvalidOperationException("Pallets have already been created for this order.");
+
             var pallet = new Pallet
             {
                 SalesOrderId = dto.SalesOrderId,
                 PackingType = dto.PackagingType, // direkt enum → enum
-                    RaftId = dto.RaftId, // ← shto këtë
                 PalletCode = $"PALT-{dto.SalesOrderId}-{dto.PackagingType}-{DateTime.UtcNow.Ticks}",
                 Items = new List<PalletItem>()
             };
@@ -170,10 +187,12 @@ namespace Warehouse.Services.Implementations
                     inv.ReservedQuantity -= toPick;
                     await _inventoryRepository.UpdateAsync(inv);
 
+                    // Rafti burim merret nga rreshti i inventarit ku ishte rezervuar stoku.
                     pallet.Items.Add(new PalletItem
                     {
                         ProductId = item.ProductId,
-                        Quantity = toPick
+                        Quantity = toPick,
+                        RaftId = inv.RaftId
                     });
 
                     remaining -= toPick;
@@ -187,10 +206,14 @@ namespace Warehouse.Services.Implementations
             }
 
             await _repo.AddAsync(pallet);
+
+            // Porosia kalon në Processing sapo krijohen pallet-at për të.
+            order.Status = SalesOrderStatus.Processing;
+
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
             // Pick-u nga porosia zbret ReservedQuantity → ndryshon edhe inventari.
-            await _realtime.ResourceChangedAsync("pallets", "inventory");
+            await _realtime.ResourceChangedAsync("pallets", "inventory", "salesorders");
 
             return pallet.Id;
         }
@@ -206,6 +229,10 @@ namespace Warehouse.Services.Implementations
 
             if (order.Status != SalesOrderStatus.Confirmed)
                 throw new InvalidOperationException("Order must be confirmed");
+
+            // Një porosi palletizohet vetëm një herë (e gjithë sasia hyn në paleta).
+            if (await _context.Pallets.AnyAsync(p => p.SalesOrderId == dto.SalesOrderId))
+                throw new InvalidOperationException("Pallets have already been created for this order.");
 
             if (dto.ItemsPerPallet <= 0)
                 throw new InvalidOperationException("ItemsPerPallet must be greater than zero");
@@ -227,7 +254,6 @@ namespace Warehouse.Services.Implementations
                     {
                         SalesOrderId = dto.SalesOrderId,
                         PackingType = dto.PackagingType,
-                        RaftId = dto.RaftId,
                         PalletCode = $"PALT-{dto.SalesOrderId}-{dto.PackagingType}-{DateTime.UtcNow.Ticks}-{palletIds.Count + 1}",
                         Items = new List<PalletItem>()
                     };
@@ -247,10 +273,12 @@ namespace Warehouse.Services.Implementations
                         inv.ReservedQuantity -= toPick;
                         await _inventoryRepository.UpdateAsync(inv);
 
+                        // Rafti burim merret nga rreshti i inventarit ku ishte rezervuar stoku.
                         pallet.Items.Add(new PalletItem
                         {
                             ProductId = item.ProductId,
-                            Quantity = toPick
+                            Quantity = toPick,
+                            RaftId = inv.RaftId
                         });
 
                         pickedForPallet += toPick;
@@ -267,8 +295,12 @@ namespace Warehouse.Services.Implementations
                 }
             }
 
+            // Porosia kalon në Processing sapo krijohen pallet-at për të.
+            order.Status = SalesOrderStatus.Processing;
+            await _context.SaveChangesAsync();
+
             await transaction.CommitAsync();
-            await _realtime.ResourceChangedAsync("pallets", "inventory");
+            await _realtime.ResourceChangedAsync("pallets", "inventory", "salesorders");
             return palletIds;
         }
 
@@ -286,6 +318,9 @@ namespace Warehouse.Services.Implementations
                 ProductId   = i.ProductId,
                 ProductName = i.Product?.Name ?? $"Product #{i.ProductId}",
                 Quantity    = i.Quantity,
+                RaftId      = i.RaftId,
+                RaftNumber  = i.Raft?.RaftNumber,
+                WarehouseName = i.Raft?.Warehouse?.Name,
             }).ToList(),
         };
     }

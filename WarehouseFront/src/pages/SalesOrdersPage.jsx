@@ -14,10 +14,13 @@ import { settingsApi } from '../api';
 const emptyLine = () => ({ productId: '', quantity: '' });
 
 export default function SalesOrdersPage() {
-  const { user } = useAuth();
-  const roles = user?.roles || [];
-  const isManager = roles.includes('Admin') || roles.includes('Manager');
-  const isClient = roles.includes('Client') && !isManager;
+  const { hasPermission } = useAuth();
+  // Gat-im sipas lejeve reale (jo rolit).
+  const canViewAll = hasPermission('SalesOrders.View');   // sheh të gjitha vs. vetëm të vetat
+  const canCreate = hasPermission('SalesOrders.Create');
+  const canSetPrices = hasPermission('SalesOrders.SetPrices');
+  const canConfirm = hasPermission('SalesOrders.Confirm');
+  const canCancel = hasPermission('SalesOrders.Cancel');
   const [currency, setCurrency] = useState('€');
   const [orders, setOrders] = useState([]);
   const [products, setProducts] = useState([]);
@@ -50,7 +53,7 @@ const money = v => `${Number(v || 0).toFixed(2)} ${currency}`;
   const load = async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const data = isManager ? await salesOrdersApi.getAll() : await salesOrdersApi.getMine();
+      const data = canViewAll ? await salesOrdersApi.getAll() : await salesOrdersApi.getMine();
       setOrders(data);
       setError(null);
     } catch (err) {
@@ -61,7 +64,7 @@ const money = v => `${Number(v || 0).toFixed(2)} ${currency}`;
   };
 
   // Produktet i ngarkojmë veçmas (klienti i zgjedh kur krijon porosi).
-  const loadProducts = () => { if (isClient) productsApi.getAll().then(setProducts).catch(() => {}); };
+  const loadProducts = () => { if (canCreate) productsApi.getAll().then(setProducts).catch(() => {}); };
 
   useEffect(() => {
   load();
@@ -151,14 +154,14 @@ const money = v => `${Number(v || 0).toFixed(2)} ${currency}`;
 
   const menuActions = (o) => {
     const acts = [{ label: 'View details', icon: <Eye size={14} />, onClick: () => { setViewOrder(o); setRowMenu(null); } }];
-    if (isManager && o.status === 'New') {
+    if (canSetPrices && o.status === 'New') {
       acts.push({ label: o.isPriced ? 'Edit prices' : 'Set prices', icon: <Tag size={14} />, onClick: () => openPrices(o) });
     }
-    if (isClient && o.status === 'New' && o.isPriced) {
+    if (canConfirm && o.status === 'New' && o.isPriced) {
       acts.push({ label: 'Confirm', icon: <CheckCircle size={14} />, onClick: () => doConfirm(o) });
     }
     // Anulim vetëm përpara konfirmimit (status New). Pas Confirm s'ka anulim.
-    if (o.status === 'New') {
+    if (canCancel && o.status === 'New') {
       acts.push({ label: 'Cancel order', icon: <Ban size={14} />, danger: true, onClick: () => doCancel(o) });
     }
     return acts;
@@ -170,9 +173,9 @@ const money = v => `${Number(v || 0).toFixed(2)} ${currency}`;
 
   const columns = [
     { key: 'id', label: 'ID', width: '60px', render: r => <span style={{ fontFamily: 'var(--font-mono)', color: colors.textMuted, fontSize: 12 }}>#{r.id}</span> },
-    ...(isManager ? [{ key: 'clientName', label: 'Client', render: r => <span style={{ fontWeight: 500 }}>{r.clientName || '—'}</span> }] : []),
+    ...(canViewAll ? [{ key: 'clientName', label: 'Client', render: r => <span style={{ fontWeight: 500 }}>{r.clientName || '—'}</span> }] : []),
     { key: 'items', label: 'Items', width: '80px', render: r => <span style={{ fontFamily: 'var(--font-mono)' }}>{r.items?.length || 0}</span> },
-    { key: 'total', label: 'Total', width: isManager ? '130px' : undefined, render: r => r.isPriced
+    { key: 'total', label: 'Total', width: canViewAll ? '130px' : undefined, render: r => r.isPriced
       ? <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 500 }}>{money(r.totalAmount)}</span>
       : <span style={{ fontSize: 12, color: colors.textDim, fontFamily: 'var(--font-mono)' }}>not priced</span> },
     { key: 'date', label: 'Date', width: '120px', render: r => <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: colors.textMuted }}>{new Date(r.orderDate).toLocaleDateString('sq-AL')}</span> },
@@ -231,7 +234,7 @@ const money = v => `${Number(v || 0).toFixed(2)} ${currency}`;
         onFilter={toggleFilter}
         filterActive={showFilter}
         onExport={exportCsv}
-        action={isClient ? <PrimaryButton icon={Plus} onClick={openCreate}>New Order</PrimaryButton> : undefined}
+        action={canCreate ? <PrimaryButton icon={Plus} onClick={openCreate}>New Order</PrimaryButton> : undefined}
       />
 
       {showFilter && (
@@ -239,7 +242,7 @@ const money = v => `${Number(v || 0).toFixed(2)} ${currency}`;
           <div style={{ position: 'relative', flex: 1, minWidth: 220, maxWidth: 320 }}>
             <Search size={14} color={colors.textMuted} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
             <input autoFocus value={query} onChange={e => setQuery(e.target.value)}
-              placeholder={isManager ? 'Search by id, client or product...' : 'Search by id or product...'}
+              placeholder={canViewAll ? 'Search by id, client or product...' : 'Search by id or product...'}
               style={{ width: '100%', padding: '8px 12px 8px 32px', borderRadius: 8, border: `1px solid ${colors.border}`, background: colors.surface, color: colors.text, fontSize: 13, fontFamily: 'var(--font-sans)', outline: 'none', boxSizing: 'border-box' }} />
           </div>
           <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
@@ -273,7 +276,7 @@ const money = v => `${Number(v || 0).toFixed(2)} ${currency}`;
             <div style={{ padding: 32, textAlign: 'center', color: colors.textMuted, fontFamily: 'var(--font-sans)', fontSize: 13 }}>
               {query || statusFilter
                 ? 'No orders match your filter.'
-                : (isClient ? 'You have no orders yet.' : 'No sales orders yet.')}
+                : (canViewAll ? 'No sales orders yet.' : 'You have no orders yet.')}
             </div>
           )}
         </>

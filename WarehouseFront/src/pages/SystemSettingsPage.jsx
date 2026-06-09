@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Save, RotateCcw } from 'lucide-react';
 import { colors } from '../theme/colors';
 import { settingsApi } from '../api';
+import { useAuth } from '../auth/AuthContext';
 import { useTheme } from '../theme/ThemeContext';
 import { Sun, Moon } from 'lucide-react';
 // const GROUPS = {
@@ -28,6 +29,8 @@ export default function SystemSettingsPage() {
   const [descriptions, setDescriptions] = useState({});
   const [ids, setIds] = useState({});
   const { isDark, toggle } = useTheme();
+  const { hasPermission } = useAuth();
+  const canEdit = hasPermission('Settings.Edit');
   const showFeedback = (msg, ok = true) => {
     setFeedback({ msg, ok });
     setTimeout(() => setFeedback(null), 3000);
@@ -106,7 +109,7 @@ export default function SystemSettingsPage() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          {hasChanges && (
+          {canEdit && hasChanges && (
             <button onClick={handleReset} style={{
               display: 'flex', alignItems: 'center', gap: 6,
               padding: '8px 14px', borderRadius: 8, border: `1px solid ${colors.border}`,
@@ -116,17 +119,19 @@ export default function SystemSettingsPage() {
               <RotateCcw size={14} /> Reset
             </button>
           )}
-          <button onClick={handleSave} disabled={!hasChanges || saving} style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            padding: '8px 14px', borderRadius: 8, border: 'none',
-            background: hasChanges ? colors.text : colors.border,
-            cursor: hasChanges ? 'pointer' : 'not-allowed',
-            fontSize: 13, fontFamily: 'var(--font-sans)',
-            color: hasChanges ? colors.surface : colors.textMuted,
-            fontWeight: 500,
-          }}>
-            <Save size={14} /> {saving ? 'Saving...' : 'Save Changes'}
-          </button>
+          {canEdit && (
+            <button onClick={handleSave} disabled={!hasChanges || saving} style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '8px 14px', borderRadius: 8, border: 'none',
+              background: hasChanges ? colors.text : colors.border,
+              cursor: hasChanges ? 'pointer' : 'not-allowed',
+              fontSize: 13, fontFamily: 'var(--font-sans)',
+              color: hasChanges ? colors.surface : colors.textMuted,
+              fontWeight: 500,
+            }}>
+              <Save size={14} /> {saving ? 'Saving...' : 'Save Changes'}
+            </button>
+          )}
         </div>
       </div>
 

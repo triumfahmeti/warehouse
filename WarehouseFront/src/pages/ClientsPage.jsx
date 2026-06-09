@@ -17,8 +17,8 @@ import ImportButton from "../components/ui/ImportButton";
 import { useLiveResource } from "../realtime/useLiveResource";
 
 export default function ClientsPage() {
-  const { user } = useAuth();
-  const isAdmin = (user?.roles || []).includes('Admin');
+  const { hasPermission } = useAuth();
+  const canImport = hasPermission('ExportImport.Import');
   const [clients, setClients] = useState([]);
   const [feedback, setFeedback] = useState(null);
   const showFeedback = (msg, ok = true) => { setFeedback({ msg, ok }); setTimeout(() => setFeedback(null), 3000); };
@@ -114,7 +114,7 @@ export default function ClientsPage() {
         onFilter={toggleFilter}
         onExport={exportCsv}
         filterActive={showFilter}
-        action={isAdmin && (
+        action={canImport && (
           <ImportButton
             onImport={async (file) => {
               const res = await importApi.clients(file);

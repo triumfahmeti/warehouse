@@ -112,8 +112,7 @@ namespace Warehouse.Services.Implementations
             var refreshToken = GenerateRefreshToken();
             await SaveRefreshTokenAsync(user.Id, refreshToken);
             var roles = await _userManager.GetRolesAsync(user);
-
-
+            var permissions = await GetUserPermissionsAsync(user.Id);
 
             return new AuthResponseDto
             {
@@ -122,8 +121,26 @@ namespace Warehouse.Services.Implementations
                 ExpiresAt = DateTime.UtcNow.AddMinutes(int.Parse(_configuration["JwtSettings:AccessTokenExpirationMinutes"]!)),
                 Email = user.Email ?? string.Empty,
                 UserId = user.Id,
-                Roles = roles.ToList()
+                Roles = roles.ToList(),
+                Permissions = permissions
             };
+        }
+
+        // Lejet e një përdoruesi = bashkimi i lejeve të roleve të tij (RolePermissions).
+        private async Task<List<string>> GetUserPermissionsAsync(string userId)
+        {
+            return await _context.UserRoles
+                .Where(ur => ur.UserId == userId)
+                .Join(_context.RolePermissions,
+                        ur => ur.RoleId,
+                        rp => rp.RoleId,
+                        (ur, rp) => rp.PermissionId)
+                .Join(_context.Permissions,
+                        permId => permId,
+                        p => p.Id,
+                        (permId, p) => p.Name)
+                .Distinct()
+                .ToListAsync();
         }
 
         private async Task<string> GenerateJwtToken(ApplicationUser user)
@@ -136,18 +153,7 @@ namespace Warehouse.Services.Implementations
             if (Encoding.UTF8.GetByteCount(secretKey) < 16)
                 throw new InvalidOperationException("JwtSettings:SecretKey must be at least 16 bytes for HS256.");
 
-            var permissions = await _context.UserRoles
-                .Where(ur => ur.UserId == user.Id)
-                .Join(_context.RolePermissions,
-                        ur => ur.RoleId,
-                        rp => rp.RoleId,
-                        (ur, rp) => rp.PermissionId)
-                .Join(_context.Permissions,
-                        permId => permId,
-                        p => p.Id,
-                        (permId, p) => p.Name)
-                .Distinct()
-                .ToListAsync();
+            var permissions = await GetUserPermissionsAsync(user.Id);
 
             var claims = new List<Claim>
             {
@@ -242,6 +248,7 @@ namespace Warehouse.Services.Implementations
             var newRefreshToken = GenerateRefreshToken();
             await SaveRefreshTokenAsync(existingToken.UserId, newRefreshToken);
             var roles = await _userManager.GetRolesAsync(existingToken.User);
+            var permissions = await GetUserPermissionsAsync(existingToken.UserId);
 
             return new AuthResponseDto
             {
@@ -250,7 +257,8 @@ namespace Warehouse.Services.Implementations
                 ExpiresAt = DateTime.UtcNow.AddMinutes(int.Parse(_configuration["JwtSettings:AccessTokenExpirationMinutes"]!)),
                 Email = existingToken.User.Email ?? string.Empty,
                 UserId = existingToken.User.Id,
-                Roles = roles.ToList()
+                Roles = roles.ToList(),
+                Permissions = permissions
             };
         }
 

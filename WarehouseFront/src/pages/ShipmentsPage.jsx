@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Plus, ChevronRight, X, Search } from 'lucide-react';
 import { colors } from '../theme/colors';
-import { shipmentsApi, packingListsApi, warehousesApi } from '../api';
+import { shipmentsApi, packingListsApi } from '../api';
 import PageHeader from '../components/ui/PageHeader';
 import Table from '../components/ui/Table';
 import StatusBadge from '../components/ui/StatusBadge';
@@ -9,15 +9,15 @@ import { PrimaryButton } from '../components/ui/Button';
 import { Stat } from '../components/ui/Stat';
 import ShipmentDetailPanel from '../components/shipments/ShipmentDetailPanel';
 import { useAuth } from '../auth/AuthContext';
+import { useLiveResource } from '../realtime/useLiveResource';
 import { exportToCsv } from '../utils/exportCsv';
 
 
-const emptyForm = { packingListId: '', warehouseId: '', notes: '' };
+const emptyForm = { packingListId: '', notes: '' };
 
 export default function ShipmentsPage() {
   const [shipments, setShipments] = useState([]);
   const [packingListOptions, setPackingListOptions] = useState([]);
-  const [warehouseOptions, setWarehouseOptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -30,54 +30,49 @@ export default function ShipmentsPage() {
   const [showFilter, setShowFilter] = useState(false);
   const [query, setQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
-  const { user } = useAuth();
-  const isClient = user?.roles?.includes('Client');
+  const { user, hasPermission } = useAuth();
+  const isClient = user?.roles?.includes('Client'); // vetëm për etiketa kozmetike te paneli
+  // Gat-im sipas lejeve reale.
+  const canViewAll = hasPermission('Shipments.View'); // sheh të gjitha vs. vetëm të vetat
+  const canCreate = hasPermission('Shipments.Create');
+  const canMarkReady = hasPermission('Shipments.MarkReady');
+  const canShip = hasPermission('Shipments.Ship');
+  const canDeliver = hasPermission('Shipments.Deliver');
 
   const showFeedback = (msg, ok = true) => {
     setFeedback({ msg, ok });
     setTimeout(() => setFeedback(null), 3000);
   };
 
-  const load = async () => {
-  setLoading(true);
-  try {
-    const data = isClient
-      ? await shipmentsApi.getMine()   // ← vetëm shipmentet e klientit
-      : await shipmentsApi.getAll();
-    setShipments(data);
-    setError(null);
-  } catch (err) {
-    setError(err.message);
-  } finally {
-    setLoading(false);
-  }
-};
-
-  useEffect(() => {
-  let cancelled = false;
-  const fetchData = async () => {
-    setLoading(true);
+  // silent=true: rifreskim live në sfond pa flash "Loading...".
+  const load = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
-      const [shData, plData, whData] = await Promise.all([
-        isClient ? shipmentsApi.getMine() : shipmentsApi.getAll(), // ← ndrysho
+      const [shData, plData] = await Promise.all([
+        canViewAll ? shipmentsApi.getAll() : shipmentsApi.getMine(),
         packingListsApi.getAvailable().catch(() => []),
-        warehousesApi.getAll().catch(() => []),
       ]);
-      if (!cancelled) {
-        setShipments(shData);
-        setPackingListOptions(plData);
-        setWarehouseOptions(whData);
-        setError(null);
-      }
+      setShipments(shData);
+      // Ri-sinkronizo panelin e hapur me të dhënat e freskëta → status flow live
+      // edhe kur ndryshimin e bën dikush tjetër (p.sh. klienti konfirmon marrjen).
+      setSelected(prev => prev ? (shData.find(s => s.id === prev.id) ?? prev) : prev);
+      setPackingListOptions(plData);
+      setError(null);
     } catch (err) {
-      if (!cancelled) setError(err.message);
+      if (!silent) setError(err.message);
     } finally {
-      if (!cancelled) setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
-  fetchData();
-  return () => { cancelled = true; };
-}, [isClient]); // ← shto isClient si dependency
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canViewAll]);
+
+  // Rifreskim live për të gjitha rolet: kur ndryshon ndonjë shipment (ready/ship/
+  // deliver/cancel) ose packing list, tabela përditësohet pa refresh manual.
+  useLiveResource(['shipments', 'packinglists'], () => load(true));
 
   const count = status => shipments.filter(s => s.status === status).length;
 
@@ -87,7 +82,6 @@ export default function ShipmentsPage() {
     try {
       await shipmentsApi.create({
         packingListId: Number(form.packingListId),
-        warehouseId: Number(form.warehouseId),
         notes: form.notes || null,
       });
       showFeedback('Shipment created successfully.');
@@ -177,7 +171,7 @@ export default function ShipmentsPage() {
           ]);
           exportToCsv(headers, rows, 'shipments');
         }}
-        action={!isClient && (
+        action={canCreate && (
           <PrimaryButton icon={Plus} onClick={() => { setForm(emptyForm); setModalMode('create'); }}>
             New Shipment
           </PrimaryButton>
@@ -237,11 +231,11 @@ export default function ShipmentsPage() {
           <ShipmentDetailPanel
             shipment={selected}
             onClose={() => setSelected(null)}
-            onMarkReady={!isClient ? () => handleMarkReady(selected.id) : undefined}
-            onShip={!isClient ? () => handleShip(selected.id) : undefined}
-            onDeliver={() => handleDeliver(selected.id)}  // ← të gjithë mund ta bëjnë
-            readOnly={false}  // ← mos e bëj readOnly
-            isClient={isClient}  // ← kalos rolin
+            onMarkReady={canMarkReady ? () => handleMarkReady(selected.id) : undefined}
+            onShip={canShip ? () => handleShip(selected.id) : undefined}
+            onDeliver={canDeliver ? () => handleDeliver(selected.id) : undefined}
+            readOnly={false}
+            isClient={isClient}  // etiketë kozmetike ("Confirm Receipt" vs "Mark Delivered")
           />
         )}
       </div>
@@ -256,12 +250,6 @@ export default function ShipmentsPage() {
                 {packingListOptions.filter(pl => pl.status === 'Ready').map(pl => (
                   <option key={pl.id} value={pl.id}>{pl.packingListNumber} — {pl.status}</option>
                 ))}
-              </select>
-            </Field>
-            <Field label="Warehouse">
-              <select required style={inputStyle} value={form.warehouseId} onChange={e => setForm(f => ({ ...f, warehouseId: e.target.value }))}>
-                <option value="" disabled>Select warehouse...</option>
-                {warehouseOptions.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
               </select>
             </Field>
             <Field label="Notes (optional)">

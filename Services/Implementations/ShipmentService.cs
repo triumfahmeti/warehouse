@@ -75,8 +75,8 @@ namespace Warehouse.Services.Implementations
             var shipment = new Shipment
             {
                 PackingListId = dto.PackingListId,
-                WarehouseId = dto.WarehouseId,
-                ShipmentNumber = $"SHP-{dto.WarehouseId}-{DateTime.UtcNow.Ticks}",
+                WarehouseId = packingList.WarehouseId,
+                ShipmentNumber = $"SHP-{packingList.WarehouseId}-{DateTime.UtcNow.Ticks}",
                 Status = ShipmentStatus.Draft,
                 Notes = dto.Notes
             };
@@ -112,45 +112,68 @@ namespace Warehouse.Services.Implementations
                 if (shipment.Status != ShipmentStatus.Ready)
                     throw new InvalidOperationException("Shipment must be Ready to ship");
 
+                var shippedProductIds = new HashSet<int>();
+
                 foreach (var pallet in shipment.PackingList.Pallets)
                 {
                     foreach (var item in pallet.Pallet.Items)
                     {
-                        var inventories = await _inventoryRepository.GetInventoriesByProduct(item.ProductId);
-                        var remaining = item.Quantity;
+                        shippedProductIds.Add(item.ProductId);
 
-                        foreach (var inv in inventories.OrderBy(i => i.Id))
+                        if (item.RaftId.HasValue)
                         {
-                            if (inv.QuantityOnHand <= 0)
-                                continue;
+                            var inv = await _inventoryRepository
+                                .GetInventoryByProductAndRaft(item.ProductId, item.RaftId.Value);
 
-                            var toDeduct = Math.Min(inv.QuantityOnHand, remaining);
-                            inv.QuantityOnHand -= toDeduct;
+                            if (inv == null || inv.QuantityOnHand < item.Quantity)
+                                throw new InvalidOperationException(
+                                    $"Stock inconsistency: raft {item.RaftId} does not have enough stock for product {item.ProductId}.");
+
+                            inv.QuantityOnHand -= item.Quantity;
                             await _inventoryRepository.UpdateAsync(inv);
-                            remaining -= toDeduct;
-
-                            if (remaining == 0)
-                                break;
                         }
+                        else
+                        {
+                            var inventories = await _inventoryRepository.GetInventoriesByProduct(item.ProductId);
+                            var remaining = item.Quantity;
 
-                        if (remaining > 0)
-                            throw new InvalidOperationException("Stock inconsistency detected");
+                            foreach (var inv in inventories.OrderBy(i => i.Id))
+                            {
+                                if (inv.QuantityOnHand <= 0) continue;
+                                var toDeduct = Math.Min(inv.QuantityOnHand, remaining);
+                                inv.QuantityOnHand -= toDeduct;
+                                await _inventoryRepository.UpdateAsync(inv);
+                                remaining -= toDeduct;
+                                if (remaining == 0) break;
+                            }
+
+                            if (remaining > 0)
+                                throw new InvalidOperationException("Stock inconsistency detected");
+                        }
                     }
                 }
 
                 shipment.Status = ShipmentStatus.Shipped;
                 await _shipmentRepository.UpdateAsync(shipment);
+
+                if (shipment.PackingList != null)
+                    shipment.PackingList.Status = PackingListStatus.Closed;
+
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
-                await _realtime.ResourceChangedAsync("shipments", "inventory", "products");
+                await _realtime.ResourceChangedAsync("shipments", "inventory", "products", "packinglists");
 
-                // Njoftim te Manager-et dhe Admin-et: dergesa u nis
+                // Low stock check per cdo produkt
+                foreach (var productId in shippedProductIds)
+                    await CheckAndNotifyLowStock(productId);
+
+                // Njoftim te Manager-et dhe Admin-et
                 var managers = await _userManager.GetUsersInRoleAsync("Manager");
                 var admins = await _userManager.GetUsersInRoleAsync("Admin");
-                var recipients = managers.Concat(admins).DistinctBy(u => u.Id);
+                var managersAndAdmins = managers.Concat(admins).DistinctBy(u => u.Id);
 
-                foreach (var user in recipients)
+                foreach (var user in managersAndAdmins)
                 {
                     await SendNotification(
                         userId: user.Id,
@@ -160,7 +183,7 @@ namespace Warehouse.Services.Implementations
                     );
                 }
 
-                // Njoftim te Worker-et: dergesa u nis
+                // Njoftim te Worker-et
                 var workers = await _userManager.GetUsersInRoleAsync("Worker");
                 foreach (var worker in workers)
                 {
@@ -172,7 +195,7 @@ namespace Warehouse.Services.Implementations
                     );
                 }
 
-                // Njoftim te Clienti: porosia u nis
+                // Njoftim te Clienti
                 var salesOrder = shipment.PackingList?.SalesOrder;
                 if (salesOrder != null)
                 {
@@ -184,11 +207,12 @@ namespace Warehouse.Services.Implementations
 
                     if (clientUser != null)
                     {
+                        var clientFullName = salesOrder.Client?.FullName ?? "Client";
                         await SendNotification(
                             userId: clientUser.Id,
                             type: "Shipment",
                             title: "Your Order Has Been Shipped",
-                            message: $"Dear {salesOrder.Client?.FullName}, your order (ID: {salesOrder.Id}) has been shipped. Shipment: {shipment.ShipmentNumber}."
+                            message: $"Dear {clientFullName}, your order (ID: {salesOrder.Id}) has been shipped. Shipment: {shipment.ShipmentNumber}."
                         );
                     }
                 }
@@ -202,7 +226,7 @@ namespace Warehouse.Services.Implementations
 
         public async Task Deliver(int shipmentId)
         {
-            var shipment = await _shipmentRepository.GetByIdAsync(shipmentId)
+            var shipment = await _shipmentRepository.GetWithDetails(shipmentId)
                 ?? throw new InvalidOperationException("Shipment not found");
 
             if (shipment.Status != ShipmentStatus.Shipped)
@@ -210,15 +234,19 @@ namespace Warehouse.Services.Implementations
 
             shipment.Status = ShipmentStatus.Delivered;
             await _shipmentRepository.UpdateAsync(shipment);
-            await _context.SaveChangesAsync();
-            await _realtime.ResourceChangedAsync("shipments");
 
-            // Njoftim te Manager-et dhe Admin-et: dergesa u dorezua
+            if (shipment.PackingList?.SalesOrder != null)
+                shipment.PackingList.SalesOrder.Status = SalesOrderStatus.Completed;
+
+            await _context.SaveChangesAsync();
+            await _realtime.ResourceChangedAsync("shipments", "salesorders");
+
+            // Njoftim te Manager-et dhe Admin-et
             var managers = await _userManager.GetUsersInRoleAsync("Manager");
             var admins = await _userManager.GetUsersInRoleAsync("Admin");
-            var recipients = managers.Concat(admins).DistinctBy(u => u.Id);
+            var managersAndAdmins = managers.Concat(admins).DistinctBy(u => u.Id);
 
-            foreach (var user in recipients)
+            foreach (var user in managersAndAdmins)
             {
                 await SendNotification(
                     userId: user.Id,
@@ -241,6 +269,58 @@ namespace Warehouse.Services.Implementations
             await _shipmentRepository.UpdateAsync(shipment);
             await _context.SaveChangesAsync();
             await _realtime.ResourceChangedAsync("shipments");
+        }
+
+        // Low stock check - thirret pas Ship()
+        private async Task CheckAndNotifyLowStock(int productId)
+        {
+            var lowThresholdSetting = await _context.Settings.FirstOrDefaultAsync(s => s.Key == "low_stock_threshold");
+            var criticalThresholdSetting = await _context.Settings.FirstOrDefaultAsync(s => s.Key == "critical_stock_threshold");
+            var lowThreshold = int.TryParse(lowThresholdSetting?.Value, out var lt) ? lt : 10;
+            var criticalThreshold = int.TryParse(criticalThresholdSetting?.Value, out var ct) ? ct : 5;
+
+            var totalStock = await _context.Inventories
+                .Where(i => i.ProductId == productId)
+                .SumAsync(i => i.QuantityOnHand);
+
+            var product = await _context.Products.FindAsync(productId);
+            if (product == null) return;
+
+            string? title = null;
+            string? message = null;
+
+            if (totalStock == 0)
+            {
+                title = "Stock Alert: Out of Stock";
+                message = $"Product '{product.Name}' is now OUT OF STOCK (0 units remaining).";
+            }
+            else if (totalStock <= criticalThreshold)
+            {
+                title = "Stock Alert: Critical Level";
+                message = $"Product '{product.Name}' has reached CRITICAL stock level ({totalStock} units remaining).";
+            }
+            else if (totalStock <= lowThreshold)
+            {
+                title = "Stock Alert: Low Stock";
+                message = $"Product '{product.Name}' is running low ({totalStock} units remaining).";
+            }
+
+            if (title != null)
+            {
+                // Vetëm Admin-et marrin low stock alerts
+                var admins = await _userManager.GetUsersInRoleAsync("Admin");
+                foreach (var admin in admins)
+                {
+                    var notification = await _notificationService.CreateAsync(new CreateEditNotificationDto
+                    {
+                        UserId = admin.Id,
+                        Type = "Inventory",
+                        Title = title,
+                        Message = message!
+                    });
+                    await _hubContext.Clients.All.SendAsync("ReceiveNotification", notification);
+                }
+            }
         }
 
         private async Task SendNotification(string userId, string type, string title, string message)

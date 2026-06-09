@@ -20,7 +20,7 @@ export function AuthProvider({ children }) {
     setLoading(true);
     try {
       const data = await authApi.login({ email, password });
-      const u = { email: data.email, userId: data.userId, roles: data.roles || [] };
+      const u = { email: data.email, userId: data.userId, roles: data.roles || [], permissions: data.permissions || [] };
       tokenStorage.setSession({
         accessToken: data.accessToken,
         refreshToken: data.refreshToken,
@@ -54,7 +54,18 @@ export function AuthProvider({ children }) {
     return () => window.removeEventListener('storage', onStorage);
   }, []);
 
-  const value = { user, isAuthenticated, loading, login, logout };
+  // Kontroll i lejeve për UI — i njëjti burim si backend-i (lejet vijnë nga login/refresh).
+  const hasPermission = useCallback(
+    (perm) => (user?.permissions || []).includes(perm),
+    [user],
+  );
+  // True nëse user-i ka të paktën një nga lejet e dhëna.
+  const hasAnyPermission = useCallback(
+    (...perms) => perms.flat().some(p => (user?.permissions || []).includes(p)),
+    [user],
+  );
+
+  const value = { user, isAuthenticated, loading, login, logout, hasPermission, hasAnyPermission };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

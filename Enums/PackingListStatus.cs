@@ -4,6 +4,7 @@ namespace Warehouse.Enums
     {
         Draft = 0,
         Ready = 1,
-        Closed = 2
+        Closed = 2,    // mbyllet automatikisht kur shipment-i niset
+        Cancelled = 3  // anulim manual para nisjes
     }
 }

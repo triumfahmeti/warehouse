@@ -106,7 +106,7 @@ namespace Warehouse.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Key = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Value = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
@@ -631,7 +631,6 @@ namespace Warehouse.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     SalesOrderId = table.Column<int>(type: "int", nullable: false),
                     PalletCode = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    RaftId = table.Column<int>(type: "int", nullable: false),
                     PackingType = table.Column<int>(type: "int", nullable: false),
                     CreatedById = table.Column<string>(type: "nvarchar(450)", nullable: true),
                     UpdatedById = table.Column<string>(type: "nvarchar(450)", nullable: true),
@@ -651,12 +650,6 @@ namespace Warehouse.Migrations
                         column: x => x.UpdatedById,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id");
-                    table.ForeignKey(
-                        name: "FK_Pallets_Rafts_RaftId",
-                        column: x => x.RaftId,
-                        principalTable: "Rafts",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_Pallets_SalesOrders_SalesOrderId",
                         column: x => x.SalesOrderId,
@@ -796,7 +789,8 @@ namespace Warehouse.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     PalletId = table.Column<int>(type: "int", nullable: false),
                     ProductId = table.Column<int>(type: "int", nullable: false),
-                    Quantity = table.Column<int>(type: "int", nullable: false)
+                    Quantity = table.Column<int>(type: "int", nullable: false),
+                    RaftId = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -813,6 +807,11 @@ namespace Warehouse.Migrations
                         principalTable: "Products",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_PalletItems_Rafts_RaftId",
+                        column: x => x.RaftId,
+                        principalTable: "Rafts",
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateIndex(
@@ -953,14 +952,14 @@ namespace Warehouse.Migrations
                 column: "ProductId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_PalletItems_RaftId",
+                table: "PalletItems",
+                column: "RaftId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Pallets_CreatedById",
                 table: "Pallets",
                 column: "CreatedById");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Pallets_RaftId",
-                table: "Pallets",
-                column: "RaftId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Pallets_SalesOrderId",
@@ -1148,6 +1147,9 @@ namespace Warehouse.Migrations
                 name: "Pallets");
 
             migrationBuilder.DropTable(
+                name: "Rafts");
+
+            migrationBuilder.DropTable(
                 name: "PurchaseOrders");
 
             migrationBuilder.DropTable(
@@ -1161,9 +1163,6 @@ namespace Warehouse.Migrations
 
             migrationBuilder.DropTable(
                 name: "PackingLists");
-
-            migrationBuilder.DropTable(
-                name: "Rafts");
 
             migrationBuilder.DropTable(
                 name: "Suppliers");

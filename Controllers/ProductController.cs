@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Warehouse.DTOs.Product;
 using Warehouse.Services.Interfaces;
+using Warehouse.Authorization;
+using Warehouse.Authorization.Constants;
 
 namespace Warehouse.Controllers
 {
@@ -16,6 +18,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet]
+        [HasPermission(Permissions.Products.View)]
         public async Task<IActionResult> GetAll()
         {
             var list = await _service.GetAllAsync();
@@ -23,6 +26,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet("{id}")]
+        [HasPermission(Permissions.Products.View)]
         public async Task<IActionResult> GetById(int id)
         {
             var product = await _service.GetByIdAsync(id);
@@ -30,6 +34,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet("sku/{sku}")]
+        [HasPermission(Permissions.Products.View)]
         public async Task<IActionResult> GetBySKU(string sku)
         {
             var product = await _service.GetBySKUAsync(sku);
@@ -37,6 +42,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet("type/{type}")]
+        [HasPermission(Permissions.Products.View)]
         public async Task<IActionResult> GetByType(string type)
         {
             var list = await _service.GetByTypeAsync(type);
@@ -44,6 +50,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPost]
+        [HasPermission(Permissions.Products.Create)]
         public async Task<IActionResult> Create([FromBody] CreateEditProductDto dto)
         {
             try
@@ -58,6 +65,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPut("{id}")]
+        [HasPermission(Permissions.Products.Edit)]
         public async Task<IActionResult> Update(int id, [FromBody] CreateEditProductDto dto)
         {
             try
@@ -72,6 +80,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpDelete("{id}")]
+        [HasPermission(Permissions.Products.Delete)]
         public async Task<IActionResult> Delete(int id)
         {
             try

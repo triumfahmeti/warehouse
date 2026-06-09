@@ -78,14 +78,12 @@ export const purchaseOrdersApi = {
 };
 
 export const palletsApi = {
-  getAll:          ()         => http.get('/pallets'),
-  getById:         id         => http.get(`/pallets/${id}`),
-  create:          data       => http.post('/pallets', data),
-  update:          (id, data) => http.put(`/pallets/${id}`, data),
-  remove:          id         => http.del(`/pallets/${id}`),
-  fromOrder:       data       => http.post('/pallets/from-order', data),
-  fromOrderSplit:  data       => http.post('/pallets/from-order-split', data),
-  orderPreview:    id         => http.get(`/pallets/order-preview/${id}`),
+  getAll:       ()         => http.get('/pallets'),
+  getById:      id         => http.get(`/pallets/${id}`),
+  create:       data       => http.post('/pallets', data),
+  update:       (id, data) => http.put(`/pallets/${id}`, data),
+  remove:       id         => http.del(`/pallets/${id}`),
+  fromOrder:    data       => http.post('/pallets/from-order', data),
 };
 
 export const packingListsApi = {
@@ -157,6 +155,7 @@ export const auditLogsApi = {
   },
 };
 
+
 // System Settings — vetëm Admin.
 export const settingsApi = {
   getAll: () => http.get('/setting'),
@@ -166,16 +165,47 @@ export const settingsApi = {
   remove: id => http.del(`/setting/${id}`),
 };
 
+export const importApi = {
+  products: file => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return http.upload('/exportimport/import/products', formData);
+  },
+  suppliers: file => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return http.upload('/exportimport/import/suppliers', formData);
+  },
+  clients: file => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return http.upload('/exportimport/import/clients', formData);
+  },
+  inventory: file => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return http.upload('/exportimport/import/inventory', formData);
+  },
+};
+
 // Admin Dashboard — statistikat e sistemit.
 export const adminDashboardApi = {
   getStats: () => http.get('/admindashboard/stats'),
 };
 
-// Import — vetëm Admin. Pranon CSV/XLSX/JSON.
-const makeFormData = file => { const fd = new FormData(); fd.append('file', file); return fd; };
-export const importApi = {
-  products:  file => http.upload('/exportimport/import/products',  makeFormData(file)),
-  suppliers: file => http.upload('/exportimport/import/suppliers', makeFormData(file)),
-  clients:   file => http.upload('/exportimport/import/clients',   makeFormData(file)),
-  inventory: file => http.upload('/exportimport/import/inventory', makeFormData(file)),
+export const reportsApi = {
+  generate: (type, filter) => http.post(`/report/${type}`, filter),
+  export: async (type, filter) => {
+    const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5138/api';
+    const { tokenStorage } = await import('../auth/tokenStorage');
+    const response = await fetch(`${API_BASE}/report/${type}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${tokenStorage.getAccessToken()}`,
+      },
+      body: JSON.stringify(filter),
+    });
+    return response.blob();
+  },
 };

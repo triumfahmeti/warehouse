@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Warehouse.DTOs.Reports;
 using Warehouse.Services.Interfaces;
+using Warehouse.Authorization;
+using Warehouse.Authorization.Constants;
 
 namespace Warehouse.Controllers
 {
@@ -16,6 +18,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPost("inventory")]
+        [HasPermission(Permissions.Reports.ViewInventory)]
         public async Task<IActionResult> InventoryReport([FromBody] ReportFilterDto filter)
         {
             var data = await _service.GetInventoryReport(filter);
@@ -36,6 +39,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPost("sales-orders")]
+        [HasPermission(Permissions.Reports.ViewSales)]
         public async Task<IActionResult> SalesOrderReport([FromBody] ReportFilterDto filter)
         {
             var data = await _service.GetSalesOrderReport(filter);
@@ -56,6 +60,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPost("shipments")]
+        [HasPermission(Permissions.Reports.ViewShipment)]
         public async Task<IActionResult> ShipmentReport([FromBody] ReportFilterDto filter)
         {
             var data = await _service.GetShipmentReport(filter);

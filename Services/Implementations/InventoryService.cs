@@ -50,8 +50,6 @@ namespace Warehouse.Services.Implementations
             var userId = _httpContextAccessor?.HttpContext?.User?
                 .FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-            // UserId eshte i detyrueshem (NOT NULL + FK). Pa nje user te identifikuar
-            // nuk e shkruajme logun, qe te mos deshtoje ruajtja.
             if (string.IsNullOrEmpty(userId))
                 return;
 
@@ -69,6 +67,7 @@ namespace Warehouse.Services.Implementations
                 NewValue = BuildStateString(newQoh, newReserved)
             });
         }
+
         public async Task<List<InventoryDto>> GetAllAsync()
         {
             return await _context.Inventories
@@ -93,7 +92,6 @@ namespace Warehouse.Services.Implementations
 
         public async Task AddStock(int productId, int raftId, int quantity)
         {
-            // Kontroll kapaciteti: shuma e QuantityOnHand ne raft + sasia e re nuk duhet ta kaloje MaxCapacity.
             var raft = await _context.Rafts.FindAsync(raftId);
             if (raft == null)
                 throw new InvalidOperationException("Raft not found");
@@ -129,9 +127,7 @@ namespace Warehouse.Services.Implementations
             }
 
             await _realtime.ResourceChangedAsync("inventory", "products");
-
-            // Kontroll low stock pas shtimit (ne rast qe stoku eshte ende i ulet)
-            await CheckAndNotifyLowStock(productId);
+            await CheckLowStockForProduct(productId);
         }
 
         public async Task RemoveStock(int productId, int raftId, int quantity)
@@ -145,9 +141,7 @@ namespace Warehouse.Services.Implementations
             await _inventoryRepository.UpdateAsync(inventory);
             await _context.SaveChangesAsync();
             await _realtime.ResourceChangedAsync("inventory", "products");
-
-            // Kontroll low stock pas heqjes
-            await CheckAndNotifyLowStock(productId);
+            await CheckLowStockForProduct(productId);
         }
 
         public async Task<int> GetAvailableStock(int productId)
@@ -496,14 +490,19 @@ namespace Warehouse.Services.Implementations
 
             return result;
         }
-        private async Task CheckAndNotifyLowStock(int productId)
+
+        // PUBLIC - thirret edhe nga ShipmentService pas Ship()
+        public async Task CheckLowStockForProduct(int productId)
         {
             var lowThresholdSetting = await _context.Settings.FirstOrDefaultAsync(s => s.Key == "low_stock_threshold");
             var criticalThresholdSetting = await _context.Settings.FirstOrDefaultAsync(s => s.Key == "critical_stock_threshold");
             var lowThreshold = int.TryParse(lowThresholdSetting?.Value, out var lt) ? lt : 10;
             var criticalThreshold = int.TryParse(criticalThresholdSetting?.Value, out var ct) ? ct : 5;
 
-            var totalStock = await _inventoryRepository.GetAvailableStock(productId);
+            var totalStock = await _context.Inventories
+                .Where(i => i.ProductId == productId)
+                .SumAsync(i => i.QuantityOnHand);
+
             var product = await _context.Products.FindAsync(productId);
             if (product == null) return;
 
@@ -528,15 +527,12 @@ namespace Warehouse.Services.Implementations
 
             if (title != null)
             {
-                var managers = await _userManager.GetUsersInRoleAsync("Manager");
                 var admins = await _userManager.GetUsersInRoleAsync("Admin");
-                var recipients = managers.Concat(admins).DistinctBy(u => u.Id);
-
-                foreach (var user in recipients)
+                foreach (var admin in admins)
                 {
                     var notification = await _notificationService.CreateAsync(new CreateEditNotificationDto
                     {
-                        UserId = user.Id,
+                        UserId = admin.Id,
                         Type = "Inventory",
                         Title = title,
                         Message = message!

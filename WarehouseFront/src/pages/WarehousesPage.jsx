@@ -7,10 +7,15 @@ import Table from '../components/ui/Table';
 import { PrimaryButton } from '../components/ui/Button';
 import { exportToCsv } from '../utils/exportCsv';
 import { useLiveResource } from '../realtime/useLiveResource';
+import { useAuth } from '../auth/AuthContext';
 
 const emptyForm = { name: '', location: '', phone: '', email: '' };
 
 export default function WarehousesPage() {
+  const { hasPermission } = useAuth();
+  const canCreate = hasPermission('Warehouses.Create');
+  const canEdit = hasPermission('Warehouses.Edit');
+  const canDelete = hasPermission('Warehouses.Delete');
   const [warehouses, setWarehouses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -140,7 +145,7 @@ export default function WarehousesPage() {
         onFilter={toggleFilter}
         filterActive={showFilter}
         onExport={exportCsv}
-        action={<PrimaryButton icon={Plus} onClick={openCreate}>New Warehouse</PrimaryButton>}
+        action={canCreate ? <PrimaryButton icon={Plus} onClick={openCreate}>New Warehouse</PrimaryButton> : undefined}
       />
 
       {/* Shiriti i filtrit: kërkim + renditje */}
@@ -199,7 +204,7 @@ export default function WarehousesPage() {
                 </div>
               );
             } },
-            { key: 'action', label: '', width: '48px', render: r => (
+            { key: 'action', label: '', width: '48px', render: r => (canEdit || canDelete) && (
               <button
                 onClick={e => toggleRowMenu(e, r)}
                 title="Veprime"
@@ -223,8 +228,8 @@ export default function WarehousesPage() {
             background: colors.surface, border: `1px solid ${colors.border}`, borderRadius: 10,
             padding: 6, boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
           }}>
-            <MenuItem icon={<Pencil size={14} />} label="Edit" onClick={() => openEdit(warehouses.find(w => w.id === rowMenu.id))} />
-            <MenuItem icon={<Trash2 size={14} />} label="Delete" danger onClick={() => { setDeleteTarget(warehouses.find(w => w.id === rowMenu.id)); setRowMenu(null); }} />
+            {canEdit && <MenuItem icon={<Pencil size={14} />} label="Edit" onClick={() => openEdit(warehouses.find(w => w.id === rowMenu.id))} />}
+            {canDelete && <MenuItem icon={<Trash2 size={14} />} label="Delete" danger onClick={() => { setDeleteTarget(warehouses.find(w => w.id === rowMenu.id)); setRowMenu(null); }} />}
           </div>
         </>
       )}

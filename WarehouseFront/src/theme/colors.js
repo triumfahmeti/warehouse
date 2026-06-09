@@ -55,6 +55,7 @@ export const statusConfig = {
   Shipped:    { bg: '#E5DFFB', fg: '#5B3FBC', dot: '#5B3FBC' },
   Delivered:  { bg: lightColors.successSoft, fg: lightColors.success, dot: lightColors.success },
   Completed:  { bg: lightColors.successSoft, fg: lightColors.success, dot: lightColors.success },
+  Closed:     { bg: '#E5DFFB', fg: '#5B3FBC', dot: '#5B3FBC' },
   Cancelled:  { bg: lightColors.dangerSoft, fg: lightColors.danger, dot: lightColors.danger },
 };
 

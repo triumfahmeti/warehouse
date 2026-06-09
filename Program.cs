@@ -15,6 +15,13 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using MongoDB.Driver;
 using Microsoft.AspNetCore.Http.Features;
 
+// Ngarko .env (nga rrënja e projektit) në environment variables PARA se të ndërtohet
+// konfigurimi. .NET-i (AddEnvironmentVariables, default) i lexon dhe override-on
+// appsettings. Variablat përdorin konventën hierarkike me '__' (p.sh.
+// JwtSettings__SecretKey → JwtSettings:SecretKey). Sekretet/connection strings rrinë
+// vetëm te .env (i gitignore-uar), jo te appsettings.
+DotNetEnv.Env.TraversePath().Load();
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers()
@@ -55,10 +62,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:5173")
+        policy.WithOrigins("http://localhost:5173", "http://localhost:5174", "http://127.0.0.1:5173", "http://127.0.0.1:5174")
               .AllowAnyHeader()
               .AllowAnyMethod()
-                 .AllowCredentials();
+              .AllowCredentials();
     });
 });
 
@@ -121,7 +128,27 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
         ClockSkew = TimeSpan.Zero
     };
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/notificationHub"))
+            {
+                context.Token = accessToken;
+            }
+            return Task.CompletedTask;
+        }
+    };
 });
+
+// Autorizimi i bazuar në leje: policy provider që zgjidh policy-t "PERMISSION_*" dhe
+// handler-i që kontrollon claim-in "permission" te JWT-ja (shih [HasPermission]).
+builder.Services.AddAuthorization();
+builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationPolicyProvider, Warehouse.Authorization.PermissionPolicyProvider>();
+builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, Warehouse.Authorization.PermissionAuthorizationHandler>();
+
 
 builder.Services.AddScoped<IExportImportService, ExportImportService>();
 builder.Services.AddHttpContextAccessor();
@@ -174,6 +201,10 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("AllowFrontend");
 
+// Trajtuesi global i gabimeve — herët në pipeline që të kapë gabimet e endpoint-eve
+// dhe t'i kthejë si { message } miqësore (p.sh. guard-et e pallet/packing list/shipment).
+app.UseMiddleware<Warehouse.Middleware.ExceptionHandlingMiddleware>();
+
 app.UseSwagger();
 app.UseSwaggerUI(options =>
 {
@@ -191,32 +222,11 @@ app.UseAuthorization();
 app.MapHub<NotificationHub>("/notificationHub");
 app.MapControllers();
 
+// Seed i plotë: migrime + leje + role (përfshirë Worker) + caktime leje/rol + admin.
+// Pa këtë, lejet e reja s'do mbilleshin dhe çdo endpoint i mbrojtur do jepte 403.
 using (var scope = app.Services.CreateScope())
 {
-    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
-
-    string[] roles = { "Admin", "Manager", "Client" };
-    foreach (var role in roles)
-    {
-        if (!await roleManager.RoleExistsAsync(role))
-            await roleManager.CreateAsync(new ApplicationRole { Name = role });
-    }
-
-    var adminEmail = "admin@warehouse.com";
-    if (await userManager.FindByEmailAsync(adminEmail) == null)
-    {
-        var admin = new ApplicationUser
-        {
-            Name = "Admin",
-            Email = adminEmail,
-            UserName = adminEmail,
-            IsActive = true,
-            CreatedAt = DateTime.UtcNow
-        };
-        await userManager.CreateAsync(admin, "Admin123!");
-        await userManager.AddToRoleAsync(admin, "Admin");
-    }
+    await Warehouse.Data.DataSeeder.SeedAsync(scope.ServiceProvider);
 }
 
 using (var scope = app.Services.CreateScope())

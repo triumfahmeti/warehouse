@@ -6,12 +6,13 @@ using System.Security.Claims;
 using System.Text.Json;
 using Warehouse.DTOs.UserManagement;
 using Warehouse.Models;
+using Warehouse.Authorization;
+using Warehouse.Authorization.Constants;
 
 namespace Warehouse.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Admin")]
     public class UserManagementController : ControllerBase
     {
         private readonly UserManager<ApplicationUser> _userManager;
@@ -29,6 +30,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpGet]
+        [HasPermission(Permissions.Users.View)]
         public async Task<IActionResult> GetAll()
         {
             var users = await _userManager.Users
@@ -70,6 +72,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPut("{id}")]
+        [HasPermission(Permissions.Users.Edit)]
         public async Task<IActionResult> Update(string id, [FromBody] UpdateUserDto dto)
         {
             var user = await _userManager.FindByIdAsync(id);
@@ -112,6 +115,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPatch("{id}/deactivate")]
+        [HasPermission(Permissions.Users.Deactivate)]
         public async Task<IActionResult> Deactivate(string id)
         {
             var user = await _userManager.FindByIdAsync(id);
@@ -129,6 +133,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPatch("{id}/activate")]
+        [HasPermission(Permissions.Users.Activate)]
         public async Task<IActionResult> Activate(string id)
         {
             var user = await _userManager.FindByIdAsync(id);
@@ -142,6 +147,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpPost("{id}/roles")]
+        [HasPermission(Permissions.Users.ManageRoles)]
         public async Task<IActionResult> AssignRole(string id, [FromBody] AssignRoleDto dto)
         {
             var user = await _userManager.FindByIdAsync(id);
@@ -159,6 +165,7 @@ namespace Warehouse.Controllers
         }
 
         [HttpDelete("{id}/roles/{role}")]
+        [HasPermission(Permissions.Users.ManageRoles)]
         public async Task<IActionResult> RemoveRole(string id, string role)
         {
             var user = await _userManager.FindByIdAsync(id);
