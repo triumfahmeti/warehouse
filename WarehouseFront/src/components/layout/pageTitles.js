@@ -1,7 +1,7 @@
 // Titujt e topbar-it për çdo route. Çelësi është path-i i react-router.
 // AppLayout e lexon path-in aktual dhe shfaq titull/subtitle përkatës.
 export const pageTitles = {
-  '/':              { title: 'Dashboard',     subtitle: 'Overview · Lab 2' },
+  '/':              { title: 'Dashboard',     subtitle: '' },
   '/warehouses':    { title: 'Warehouses',    subtitle: 'Inventory Management' },
   '/rafts':         { title: 'Rafts',         subtitle: 'Storage Locations' },
   '/products':      { title: 'Products',      subtitle: 'Catalog' },

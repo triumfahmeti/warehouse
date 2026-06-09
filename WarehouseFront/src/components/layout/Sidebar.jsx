@@ -150,63 +150,7 @@ export default function Sidebar({ isOpen = false, onClose, companyName = 'Wareho
         ))}
       </nav>
 
-      {/* API status */}
-      <div
-        style={{
-          margin: "0 12px",
-          padding: 14,
-          borderRadius: 10,
-          background: colors.text,
-          color: colors.surface,
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            position: "absolute",
-            right: -10,
-            top: -10,
-            width: 80,
-            height: 80,
-            borderRadius: "50%",
-            background: `radial-gradient(circle, ${colors.accent} 0%, transparent 70%)`,
-            opacity: 0.5,
-          }}
-        />
-        <div style={{ position: "relative" }}>
-          <div
-            style={{
-              fontSize: 11,
-              opacity: 0.6,
-              fontFamily: "var(--font-mono)",
-              textTransform: "uppercase",
-              letterSpacing: "0.1em",
-            }}
-          >
-            API Status
-          </div>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              marginTop: 6,
-            }}
-          >
-            <span
-              style={{
-                width: 6,
-                height: 6,
-                borderRadius: 999,
-                background: "#3DD68C",
-                boxShadow: "0 0 0 3px rgba(61,214,140,0.2)",
-              }}
-            />
-            <span style={{ fontSize: 12, fontWeight: 500 }}>Connected</span>
-          </div>
-        </div>
-      </div>
+      
     </aside>
   );
 }
