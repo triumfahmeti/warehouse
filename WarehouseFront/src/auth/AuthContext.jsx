@@ -17,21 +17,27 @@ export function AuthProvider({ children }) {
 
   // LOGIN: thërret backend-in, ruan token-et + user-in.
   const login = useCallback(async (email, password) => {
-    setLoading(true);
-    try {
-      const data = await authApi.login({ email, password });
-      const u = { email: data.email, userId: data.userId, roles: data.roles || [], permissions: data.permissions || [] };
-      tokenStorage.setSession({
-        accessToken: data.accessToken,
-        refreshToken: data.refreshToken,
-        user: u,
-      });
-      setUser(u);
-      return u;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  setLoading(true);
+  try {
+    const data = await authApi.login({ email, password });
+    const u = { 
+      email: data.email, 
+      userId: data.userId, 
+      roles: data.roles || [],
+      permissions: data.permissions || []
+    };
+    tokenStorage.clear();  // ← shto këtë
+    tokenStorage.setSession({
+      accessToken: data.accessToken,
+      refreshToken: data.refreshToken,
+      user: u,
+    });
+    setUser(u);
+    return u;
+  } finally {
+    setLoading(false);
+  }
+}, []);
 
   // LOGOUT: anulon refresh token-in te backend (best-effort), pastron lokal.
   const logout = useCallback(async () => {
@@ -47,12 +53,13 @@ export function AuthProvider({ children }) {
 
   // Nëse një tab tjetër bën logout, sinkronizojmë edhe këtë.
   useEffect(() => {
-    const onStorage = e => {
-      if (e.key === 'accessToken' && !e.newValue) setUser(null);
-    };
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
-  }, []);
+  const handleLogout = () => {
+    tokenStorage.clear();
+    setUser(null);
+  };
+  window.addEventListener('auth:logout', handleLogout);
+  return () => window.removeEventListener('auth:logout', handleLogout);
+}, []);
 
   // Kontroll i lejeve për UI — i njëjti burim si backend-i (lejet vijnë nga login/refresh).
   const hasPermission = useCallback(
