@@ -185,6 +185,7 @@ namespace Warehouse.Services.Implementations
                     var toPick = Math.Min(inv.ReservedQuantity, remaining);
 
                     inv.ReservedQuantity -= toPick;
+                    inv.QuantityOnHand -= toPick;  // ← shto
                     await _inventoryRepository.UpdateAsync(inv);
 
                     // Rafti burim merret nga rreshti i inventarit ku ishte rezervuar stoku.
@@ -271,6 +272,8 @@ namespace Warehouse.Services.Implementations
                         var toPick = Math.Min(inv.ReservedQuantity, toPickThisPallet - pickedForPallet);
 
                         inv.ReservedQuantity -= toPick;
+                        inv.QuantityOnHand -= toPick;  // ← shto
+
                         await _inventoryRepository.UpdateAsync(inv);
 
                         // Rafti burim merret nga rreshti i inventarit ku ishte rezervuar stoku.

@@ -101,128 +101,89 @@ namespace Warehouse.Services.Implementations
             await _realtime.ResourceChangedAsync("shipments");
         }
 
-        public async Task Ship(int shipmentId)
+public async Task Ship(int shipmentId)
+{
+    using var transaction = await _context.Database.BeginTransactionAsync();
+    try
+    {
+        var shipment = await _shipmentRepository.GetWithDetails(shipmentId)
+            ?? throw new InvalidOperationException("Shipment not found");
+
+        if (shipment.Status != ShipmentStatus.Ready)
+            throw new InvalidOperationException("Shipment must be Ready to ship");
+
+        // Inventory tashmë zbritet kur krijohet paleta — nuk nevojitet këtu
+        var shippedProductIds = new HashSet<int>();
+        foreach (var pallet in shipment.PackingList.Pallets)
+            foreach (var item in pallet.Pallet.Items)
+                shippedProductIds.Add(item.ProductId);
+
+        shipment.Status = ShipmentStatus.Shipped;
+        await _shipmentRepository.UpdateAsync(shipment);
+
+        if (shipment.PackingList != null)
+            shipment.PackingList.Status = PackingListStatus.Closed;
+
+        await _context.SaveChangesAsync();
+        await transaction.CommitAsync();
+
+        await _realtime.ResourceChangedAsync("shipments", "inventory", "products", "packinglists");
+
+        foreach (var productId in shippedProductIds)
+            await CheckAndNotifyLowStock(productId);
+
+        var managers = await _userManager.GetUsersInRoleAsync("Manager");
+        var admins = await _userManager.GetUsersInRoleAsync("Admin");
+        var managersAndAdmins = managers.Concat(admins).DistinctBy(u => u.Id);
+
+        foreach (var user in managersAndAdmins)
         {
-            using var transaction = await _context.Database.BeginTransactionAsync();
-            try
+            await SendNotification(
+                userId: user.Id,
+                type: "Shipment",
+                title: "Shipment Shipped",
+                message: $"Shipment {shipment.ShipmentNumber} has been shipped successfully."
+            );
+        }
+
+        var workers = await _userManager.GetUsersInRoleAsync("Worker");
+        foreach (var worker in workers)
+        {
+            await SendNotification(
+                userId: worker.Id,
+                type: "Shipment",
+                title: "Shipment Shipped",
+                message: $"Shipment {shipment.ShipmentNumber} has been shipped and is on its way. Please prepare for delivery."
+            );
+        }
+
+        var salesOrder = shipment.PackingList?.SalesOrder;
+        if (salesOrder != null)
+        {
+            var clientUser = salesOrder.Client?.UserId != null
+                ? await _userManager.FindByIdAsync(salesOrder.Client.UserId)
+                : salesOrder.Client?.Email != null
+                    ? await _userManager.FindByEmailAsync(salesOrder.Client.Email)
+                    : null;
+
+            if (clientUser != null)
             {
-                var shipment = await _shipmentRepository.GetWithDetails(shipmentId)
-                    ?? throw new InvalidOperationException("Shipment not found");
-
-                if (shipment.Status != ShipmentStatus.Ready)
-                    throw new InvalidOperationException("Shipment must be Ready to ship");
-
-                var shippedProductIds = new HashSet<int>();
-
-                foreach (var pallet in shipment.PackingList.Pallets)
-                {
-                    foreach (var item in pallet.Pallet.Items)
-                    {
-                        shippedProductIds.Add(item.ProductId);
-
-                        if (item.RaftId.HasValue)
-                        {
-                            var inv = await _inventoryRepository
-                                .GetInventoryByProductAndRaft(item.ProductId, item.RaftId.Value);
-
-                            if (inv == null || inv.QuantityOnHand < item.Quantity)
-                                throw new InvalidOperationException(
-                                    $"Stock inconsistency: raft {item.RaftId} does not have enough stock for product {item.ProductId}.");
-
-                            inv.QuantityOnHand -= item.Quantity;
-                            await _inventoryRepository.UpdateAsync(inv);
-                        }
-                        else
-                        {
-                            var inventories = await _inventoryRepository.GetInventoriesByProduct(item.ProductId);
-                            var remaining = item.Quantity;
-
-                            foreach (var inv in inventories.OrderBy(i => i.Id))
-                            {
-                                if (inv.QuantityOnHand <= 0) continue;
-                                var toDeduct = Math.Min(inv.QuantityOnHand, remaining);
-                                inv.QuantityOnHand -= toDeduct;
-                                await _inventoryRepository.UpdateAsync(inv);
-                                remaining -= toDeduct;
-                                if (remaining == 0) break;
-                            }
-
-                            if (remaining > 0)
-                                throw new InvalidOperationException("Stock inconsistency detected");
-                        }
-                    }
-                }
-
-                shipment.Status = ShipmentStatus.Shipped;
-                await _shipmentRepository.UpdateAsync(shipment);
-
-                if (shipment.PackingList != null)
-                    shipment.PackingList.Status = PackingListStatus.Closed;
-
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
-
-                await _realtime.ResourceChangedAsync("shipments", "inventory", "products", "packinglists");
-
-                // Low stock check per cdo produkt
-                foreach (var productId in shippedProductIds)
-                    await CheckAndNotifyLowStock(productId);
-
-                // Njoftim te Manager-et dhe Admin-et
-                var managers = await _userManager.GetUsersInRoleAsync("Manager");
-                var admins = await _userManager.GetUsersInRoleAsync("Admin");
-                var managersAndAdmins = managers.Concat(admins).DistinctBy(u => u.Id);
-
-                foreach (var user in managersAndAdmins)
-                {
-                    await SendNotification(
-                        userId: user.Id,
-                        type: "Shipment",
-                        title: "Shipment Shipped",
-                        message: $"Shipment {shipment.ShipmentNumber} has been shipped successfully."
-                    );
-                }
-
-                // Njoftim te Worker-et
-                var workers = await _userManager.GetUsersInRoleAsync("Worker");
-                foreach (var worker in workers)
-                {
-                    await SendNotification(
-                        userId: worker.Id,
-                        type: "Shipment",
-                        title: "Shipment Shipped",
-                        message: $"Shipment {shipment.ShipmentNumber} has been shipped and is on its way. Please prepare for delivery."
-                    );
-                }
-
-                // Njoftim te Clienti
-                var salesOrder = shipment.PackingList?.SalesOrder;
-                if (salesOrder != null)
-                {
-                    var clientUser = salesOrder.Client?.UserId != null
-                        ? await _userManager.FindByIdAsync(salesOrder.Client.UserId)
-                        : salesOrder.Client?.Email != null
-                            ? await _userManager.FindByEmailAsync(salesOrder.Client.Email)
-                            : null;
-
-                    if (clientUser != null)
-                    {
-                        var clientFullName = salesOrder.Client?.FullName ?? "Client";
-                        await SendNotification(
-                            userId: clientUser.Id,
-                            type: "Shipment",
-                            title: "Your Order Has Been Shipped",
-                            message: $"Dear {clientFullName}, your order (ID: {salesOrder.Id}) has been shipped. Shipment: {shipment.ShipmentNumber}."
-                        );
-                    }
-                }
-            }
-            catch
-            {
-                await transaction.RollbackAsync();
-                throw;
+                var clientFullName = salesOrder.Client?.FullName ?? "Client";
+                await SendNotification(
+                    userId: clientUser.Id,
+                    type: "Shipment",
+                    title: "Your Order Has Been Shipped",
+                    message: $"Dear {clientFullName}, your order (ID: {salesOrder.Id}) has been shipped. Shipment: {shipment.ShipmentNumber}."
+                );
             }
         }
+    }
+    catch
+    {
+        await transaction.RollbackAsync();
+        throw;
+    }
+}
 
         public async Task Deliver(int shipmentId)
         {

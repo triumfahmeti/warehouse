@@ -71,30 +71,47 @@ export default function PackingListsPage() {
   useLiveResource("packinglists", () => load(true));
 
   useEffect(() => {
-    let cancelled = false;
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const [plData, soData] = await Promise.all([
-          packingListsApi.getAll(),
-          salesOrdersApi.getAll().catch(() => []),
-        ]);
-        if (!cancelled) {
-          setPackingLists(plData);
-          setSalesOrderOptions(soData);
-          setError(null);
-        }
-      } catch (err) {
-        if (!cancelled) setError(err.message);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-    fetchData();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  let cancelled = false;
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [plData, soData, palletsData] = await Promise.all([
+  packingListsApi.getAll(),
+  salesOrdersApi.getAll().catch(() => []),
+  palletsApi.getAll().catch(() => []),
+]);
+
+if (!cancelled) {
+  setPackingLists(plData);
+
+  // Orders që tashmë janë në packing list aktive
+  const assignedOrderIds = new Set(
+    plData
+      .filter(pl => pl.status !== 'Cancelled')
+      .map(pl => pl.salesOrderId)
+  );
+
+  // Orders që kanë paleta të krijuara
+  const palletizedOrderIds = new Set(palletsData.map(p => p.salesOrderId));
+
+  // Shfaq vetëm orders me paleta të krijuara dhe jo ende në packing list
+  setSalesOrderOptions(soData.filter(so =>
+    palletizedOrderIds.has(so.id) && !assignedOrderIds.has(so.id)
+  ));
+
+  setError(null);
+}
+    } catch (err) {
+      if (!cancelled) setError(err.message);
+    } finally {
+      if (!cancelled) setLoading(false);
+    }
+  };
+  fetchData();
+  return () => { cancelled = true; };
+}, []);
+
+ 
 
   // Kur zgjedhet packing list, merr paletat e asaj order
   const handleSelectRow = async (pl) => {
@@ -754,13 +771,11 @@ export default function PackingListsPage() {
                 <option value="" disabled>
                   Select sales order...
                 </option>
-                {salesOrderOptions
-                  .filter((so) => so.status === "Processing")
-                  .map((so) => (
-                    <option key={so.id} value={so.id}>
-                      #{so.id} — {so.status}
-                    </option>
-                  ))}
+                {salesOrderOptions.map((so) => (
+  <option key={so.id} value={so.id}>
+    #{so.id} — {so.clientName || so.status}
+  </option>
+))}
               </select>
             </Field>
             <p style={{ margin: "0 0 14px", fontSize: 12, color: colors.textMuted, fontFamily: "var(--font-sans)", lineHeight: 1.5 }}>
