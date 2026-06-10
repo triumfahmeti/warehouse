@@ -17,7 +17,7 @@ namespace Warehouse.Data
             var roleMgr = services.GetRequiredService<RoleManager<ApplicationRole>>();
             var userMgr = services.GetRequiredService<UserManager<ApplicationUser>>();
 
-            // await db.Database.MigrateAsync();
+
 
             // Seed permissions
             var allPerms = Permissions.GetAll().ToList();
@@ -28,8 +28,7 @@ namespace Warehouse.Data
             }
             await db.SaveChangesAsync();
 
-            // Pastro lejet që s'janë më në katalog (p.sh. të hequrat legacy) — që të
-            // mos mbeten "fantazma" në DB dhe te ekrani Roles. Heq edhe caktimet e tyre.
+
             var validNames = allPerms.ToHashSet();
             var stalePerms = await db.Permissions.Where(p => !validNames.Contains(p.Name)).ToListAsync();
             if (stalePerms.Count > 0)
@@ -41,7 +40,7 @@ namespace Warehouse.Data
                 await db.SaveChangesAsync();
             }
 
-            // Seed roles
+
             string[] roles = { "Admin", "Manager", "Worker", "Client" };
             foreach (var r in roles)
                 if (!await roleMgr.RoleExistsAsync(r))
@@ -50,7 +49,7 @@ namespace Warehouse.Data
             // Assign permissions to roles
             await AssignPermissions(db, "Admin", allPerms); // Admin merr të gjitha
 
-            // Manager — menaxhim operacional (pa user/role/settings admin).
+
             await AssignPermissions(db, "Manager", new[] {
                 Permissions.SalesOrders.View, Permissions.SalesOrders.SetPrices, Permissions.SalesOrders.Cancel,
                 Permissions.PurchaseOrders.View, Permissions.PurchaseOrders.Create, Permissions.PurchaseOrders.Receive, Permissions.PurchaseOrders.Cancel, Permissions.PurchaseOrders.Close,
@@ -70,9 +69,9 @@ namespace Warehouse.Data
                 Permissions.Dashboard.View, Permissions.Notifications.View,
             });
 
-            // Worker — operacionet e fulfillment-it.
+
             await AssignPermissions(db, "Worker", new[] {
-                // Sheh porositë e konfirmuara për t'i palletizuar (modali "From Sales Order").
+
                 Permissions.SalesOrders.View,
                 Permissions.Products.View,
                 Permissions.Inventory.View, Permissions.Inventory.AddStock, Permissions.Inventory.RemoveStock, Permissions.Inventory.Transfer, Permissions.Inventory.Adjust, Permissions.Inventory.CycleCount, Permissions.Inventory.ViewMovements,
@@ -85,7 +84,7 @@ namespace Warehouse.Data
                 Permissions.Notifications.View, Permissions.Dashboard.View,
             });
 
-            // Client — vetëshërbim.
+
             await AssignPermissions(db, "Client", new[] {
                 Permissions.SalesOrders.ViewOwn, Permissions.SalesOrders.Create, Permissions.SalesOrders.Confirm, Permissions.SalesOrders.Cancel,
                 Permissions.Products.View,
@@ -93,7 +92,7 @@ namespace Warehouse.Data
                 Permissions.Notifications.View,
             });
 
-            // Default admin user
+
             var adminUser = await userMgr.FindByEmailAsync("admin@warehouse.com");
             if (adminUser == null)
             {

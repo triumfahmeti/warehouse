@@ -3,9 +3,7 @@ using System.Linq;
 
 namespace Warehouse.Authorization.Constants
 {
-    // Katalogu qendror i lejeve. Çdo nën-klasë = një resurs; çdo const = një veprim
-    // (Resource.Action). Lexime të shumta (GetAll/GetById/GetBy...) përmblidhen në "View".
-    // GetAll() i mbledh të gjitha përmes reflektimit (përdoret nga DataSeeder).
+
     public class Permissions
     {
         // ---- Sales orders ----
