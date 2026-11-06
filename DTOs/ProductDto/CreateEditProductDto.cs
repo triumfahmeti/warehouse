@@ -6,6 +6,7 @@ namespace Warehouse.DTOs.Product
         public string Name { get; set; } = null!;
         public string Description { get; set; } = null!;
         public string SKU { get; set; } = null!;
+        public string? Barcode { get; set; }
         public decimal Length { get; set; }
         public decimal Width { get; set; }
         public decimal Height { get; set; }

@@ -59,6 +59,13 @@ namespace Warehouse.Services.Implementations
             var product = await _repository.GetBySKU(sku);
             return product == null ? null : ToDto(product);
         }
+        public Task<Product?> GetByBarcodeAsync(string barcode)
+        {
+            if (string.IsNullOrWhiteSpace(barcode))
+                return Task.FromResult<Product?>(null);
+
+            return _repository.GetByBarcodeAsync(barcode.Trim());
+        }
 
         public async Task<List<ProductDto>> GetByTypeAsync(string type)
         {
@@ -68,6 +75,10 @@ namespace Warehouse.Services.Implementations
 
         public async Task<ProductDto> CreateAsync(CreateEditProductDto dto)
         {
+            var barcode = NormalizeBarcode(dto.Barcode);
+            if (barcode != null && await _repository.BarcodeExistsAsync(barcode))
+                throw new InvalidOperationException($"Barkodi '{barcode}' ekziston tashmë për një produkt tjetër.");
+
             var existing = await _repository.GetBySKU(dto.SKU);
             if (existing != null)
                 throw new InvalidOperationException($"Product with SKU '{dto.SKU}' already exists");
@@ -77,6 +88,7 @@ namespace Warehouse.Services.Implementations
                 Name = dto.Name,
                 Description = dto.Description,
                 SKU = dto.SKU,
+                Barcode = barcode,
                 Length = dto.Length,
                 Width = dto.Width,
                 Height = dto.Height,
@@ -95,6 +107,12 @@ namespace Warehouse.Services.Implementations
             var product = await _repository.GetByIdAsync(id)
                 ?? throw new InvalidOperationException("Product not found");
 
+            var barcode = NormalizeBarcode(dto.Barcode);
+
+            // Kontrollo dublikatin, por jo për vetveten
+            if (barcode != null && await _repository.BarcodeExistsAsync(barcode, excludeId: id))
+                throw new InvalidOperationException($"Barkodi '{barcode}' ekziston tashmë për një produkt tjetër.");
+
             var existing = await _repository.GetBySKU(dto.SKU);
             if (existing != null && existing.Id != id)
                 throw new InvalidOperationException($"Product with SKU '{dto.SKU}' already exists");
@@ -102,6 +120,7 @@ namespace Warehouse.Services.Implementations
             product.Name = dto.Name;
             product.Description = dto.Description;
             product.SKU = dto.SKU;
+            product.Barcode = barcode;
             product.Length = dto.Length;
             product.Width = dto.Width;
             product.Height = dto.Height;
@@ -123,12 +142,17 @@ namespace Warehouse.Services.Implementations
             await _realtime.ResourceChangedAsync("products");
         }
 
+        // Heq hapësirat dhe e kthen bosh në null
+        private static string? NormalizeBarcode(string? barcode)
+            => string.IsNullOrWhiteSpace(barcode) ? null : barcode.Trim();
+
         private static ProductDto ToDto(Product p) => new()
         {
             Id = p.Id,
             Name = p.Name,
             Description = p.Description,
             SKU = p.SKU,
+            Barcode = p.Barcode,
             Length = p.Length,
             Width = p.Width,
             Height = p.Height,

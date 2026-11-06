@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace Warehouse.DTOs.PurchaseOrder
 {
     public class ReceivePurchaseOrderItemDto

@@ -7,5 +7,7 @@ namespace Warehouse.Repositories.Interfaces
     {
         Task<Product?> GetBySKU(string sku);
         Task<List<Product>> GetByType(string type);
+        Task<Product?> GetByBarcodeAsync(string barcode);
+        Task<bool> BarcodeExistsAsync(string barcode, int? excludeId = null);
     }
 }

@@ -26,11 +26,17 @@ namespace Warehouse.Controllers
         [HasPermission(Permissions.Dashboard.View)]
         public async Task<IActionResult> GetStats()
         {
-            var totalUsers = await _userManager.Users.CountAsync();
-            var activeUsers = await _userManager.Users.CountAsync(u => u.IsActive);
+            // ApplicationUser dhe RefreshToken nuk kane query filter (duhen te
+            // aksesueshem para se tenanti te jete i njohur, gjate login/refresh),
+            // prandaj ketu filtrohen me dore. 0 nuk i perket asnje tenanti.
+            var tenantId = _context.CurrentTenantId;
+
+            var tenantUsers = _userManager.Users.Where(u => u.TenantId == tenantId);
+            var totalUsers = await tenantUsers.CountAsync();
+            var activeUsers = await tenantUsers.CountAsync(u => u.IsActive);
 
             var recentLogins = await _context.RefreshTokens
-                .Include(rt => rt.User)
+                .Where(rt => rt.User.TenantId == tenantId)
                 .OrderByDescending(rt => rt.CreatedAt)
                 .Take(10)
                 .Select(rt => new RecentLoginDto
@@ -49,7 +55,10 @@ namespace Warehouse.Controllers
                 .Select(a => new CriticalActionDto
                 {
                     Id = a.Id,
-                    UserName = a.User != null ? a.User.Name : "System",
+                    // SuperAdmin-i (TenantId == null) maskohet, njesoj si te AuditLogService.
+                    UserName = a.User == null ? "System"
+                             : a.User.TenantId == null ? "Sys Admin"
+                             : a.User.Name,
                     Action = a.Action,
                     Entity = a.Entity,
                     EntityId = a.EntityId,

@@ -48,7 +48,7 @@ namespace Warehouse.Controllers
 
         [HttpPost("register")]
         // [Authorize]
-        // [HasPermission(Permissions.Users.Create)]
+        [HasPermission(Permissions.Users.Create)]
         public async Task<IActionResult> Register([FromBody] RegisterDto dto)
         {
             if (!ModelState.IsValid)

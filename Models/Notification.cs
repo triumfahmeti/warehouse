@@ -5,11 +5,9 @@ using System.Threading.Tasks;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
-using MongoDB.Bson;
-using MongoDB.Bson.Serialization.Attributes;
-
 namespace Warehouse.Models
 {
+    // Dokument MongoDB — nuk eshte entitet EF. Shih modelBuilder.Ignore<Notification>().
     public class Notification
     {
         [BsonId]
@@ -17,6 +15,7 @@ namespace Warehouse.Models
         public string Id { get; set; } = null!;
 
         public string UserId { get; set; } = null!;
+        public int TenantId { get; set; }
         public string Type { get; set; } = null!;
         public string Title { get; set; } = null!;
         public string Message { get; set; } = null!;

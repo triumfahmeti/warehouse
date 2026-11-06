@@ -18,5 +18,10 @@ namespace Warehouse.Services.Interfaces
         Task CycleCount(int productId, int raftId, int countedQuantity);
         Task ReleaseReservedStock(int salesOrderId);
         Task<List<InventoryMovementDto>> GetInventoryMovements(int productId, DateTime? from = null, DateTime? to = null);
+
+        // Shton stok në raft pa transaksion dhe pa SaveChanges.
+        // Thirret nga një metodë që e menaxhon transaksionin vetë.
+        Task IncreaseStockCore(int productId, int raftId, int quantity);
+        Task CheckLowStockForProduct(int productId);
     }
 }

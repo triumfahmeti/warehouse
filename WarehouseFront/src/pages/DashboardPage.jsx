@@ -15,12 +15,17 @@ import { shipmentsApi, warehousesApi, palletsApi, packingListsApi } from "../api
 import { useLiveResource } from "../realtime/useLiveResource";
 import ClientDashboard from "./ClientDashboard";
 import AdminDashboard from "./AdminDashboard";
+import SuperAdminDashboard from "./SuperAdminDashboard";
 import KpiCard from "../components/ui/KpiCard";
 import StatusBadge from "../components/ui/StatusBadge";
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, isSuperAdmin, activeTenantId } = useAuth();
   const roles = user?.roles || [];
+
+  // SuperAdmin pa tenant aktiv -> pamje platforme. Sapo "hyn" në një tenant,
+  // vazhdon me dashboard-in normal të atij tenanti.
+  if (isSuperAdmin && !activeTenantId) return <SuperAdminDashboard />;
 
   if (roles.includes("Client")) return <ClientDashboard />;
   if (roles.includes("Admin")) return <AdminDashboard />;

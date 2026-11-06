@@ -29,5 +29,18 @@ namespace Warehouse.Repositories.Implementations
                 .Where(p => p.Type == parsed)
                 .ToListAsync();
         }
+
+        public async Task<Product?> GetByBarcodeAsync(string barcode)
+        {
+            return await _context.Products
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.Barcode == barcode);
+        }
+        public async Task<bool> BarcodeExistsAsync(string barcode, int? excludeId = null)
+        {
+            // Global Query Filter e kufizon automatikisht te tenant-i aktual
+            return await _context.Products.AnyAsync(p =>
+                p.Barcode == barcode && (excludeId == null || p.Id != excludeId));
+        }
     }
 }

@@ -5,12 +5,13 @@ using System.Threading.Tasks;
 
 namespace Warehouse.Models
 {
-    public class AuditLog
+    public class AuditLog : ITenantEntity
     {
         public int Id { get; set; }
 
         public string UserId { get; set; }
         public ApplicationUser User { get; set; }
+        public int TenantId { get; set; }
 
         public string Action { get; set; }
         public string Entity { get; set; }

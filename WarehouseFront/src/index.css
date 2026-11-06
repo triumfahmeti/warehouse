@@ -45,6 +45,12 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
+.packing-list-layout > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+
 /* Shipments hero */
 .shipment-hero {
   padding: 20px;
@@ -63,6 +69,9 @@ body {
 /* Sidebar */
 .sidebar-responsive {
   flex-shrink: 0;
+  height: 100dvh !important;
+  max-height: 100dvh;
+  padding-bottom: max(20px, env(safe-area-inset-bottom)) !important;
   transition: transform 0.25s ease;
 }
 
@@ -133,6 +142,10 @@ body {
 
 /* Tablet */
 @media (max-width: 768px) {
+  .packing-list-layout {
+    grid-template-columns: 1fr !important;
+  }
+
   .sidebar-responsive {
     position: fixed !important;
     top: 0;
@@ -207,6 +220,10 @@ body {
 
 /* Mobile */
 @media (max-width: 540px) {
+  .table-scroll-wrapper .table-grid-content {
+    min-width: 760px;
+  }
+
   .flow-row {
     flex-wrap: wrap;
     justify-content: center;

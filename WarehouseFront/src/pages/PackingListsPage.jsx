@@ -8,11 +8,7 @@ import {
   Package,
 } from "lucide-react";
 import { colors } from "../theme/colors";
-import {
-  packingListsApi,
-  salesOrdersApi,
-  palletsApi,
-} from "../api";
+import { packingListsApi, salesOrdersApi, palletsApi } from "../api";
 import PageHeader from "../components/ui/PageHeader";
 import Table from "../components/ui/Table";
 import StatusBadge from "../components/ui/StatusBadge";
@@ -25,9 +21,9 @@ const emptyForm = { salesOrderId: "", notes: "" };
 
 export default function PackingListsPage() {
   const { hasPermission } = useAuth();
-  const canCreate = hasPermission('PackingLists.Create');
-  const canMarkReady = hasPermission('PackingLists.MarkReady');
-  const canCancel = hasPermission('PackingLists.Cancel');
+  const canCreate = hasPermission("PackingLists.Create");
+  const canMarkReady = hasPermission("PackingLists.MarkReady");
+  const canCancel = hasPermission("PackingLists.Cancel");
   const [packingLists, setPackingLists] = useState([]);
   const [salesOrderOptions, setSalesOrderOptions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -71,47 +67,52 @@ export default function PackingListsPage() {
   useLiveResource("packinglists", () => load(true));
 
   useEffect(() => {
-  let cancelled = false;
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const [plData, soData, palletsData] = await Promise.all([
-  packingListsApi.getAll(),
-  salesOrdersApi.getAll().catch(() => []),
-  palletsApi.getAll().catch(() => []),
-]);
+    let cancelled = false;
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [plData, soData, palletsData] = await Promise.all([
+          packingListsApi.getAll(),
+          salesOrdersApi.getAll().catch(() => []),
+          palletsApi.getAll().catch(() => []),
+        ]);
 
-if (!cancelled) {
-  setPackingLists(plData);
+        if (!cancelled) {
+          setPackingLists(plData);
 
-  // Orders që tashmë janë në packing list aktive
-  const assignedOrderIds = new Set(
-    plData
-      .filter(pl => pl.status !== 'Cancelled')
-      .map(pl => pl.salesOrderId)
-  );
+          // Orders që tashmë janë në packing list aktive
+          const assignedOrderIds = new Set(
+            plData
+              .filter((pl) => pl.status !== "Cancelled")
+              .map((pl) => pl.salesOrderId),
+          );
 
-  // Orders që kanë paleta të krijuara
-  const palletizedOrderIds = new Set(palletsData.map(p => p.salesOrderId));
+          // Orders që kanë paleta të krijuara
+          const palletizedOrderIds = new Set(
+            palletsData.map((p) => p.salesOrderId),
+          );
 
-  // Shfaq vetëm orders me paleta të krijuara dhe jo ende në packing list
-  setSalesOrderOptions(soData.filter(so =>
-    palletizedOrderIds.has(so.id) && !assignedOrderIds.has(so.id)
-  ));
+          // Shfaq vetëm orders me paleta të krijuara dhe jo ende në packing list
+          setSalesOrderOptions(
+            soData.filter(
+              (so) =>
+                palletizedOrderIds.has(so.id) && !assignedOrderIds.has(so.id),
+            ),
+          );
 
-  setError(null);
-}
-    } catch (err) {
-      if (!cancelled) setError(err.message);
-    } finally {
-      if (!cancelled) setLoading(false);
-    }
-  };
-  fetchData();
-  return () => { cancelled = true; };
-}, []);
-
- 
+          setError(null);
+        }
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    fetchData();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Kur zgjedhet packing list, merr paletat e asaj order
   const handleSelectRow = async (pl) => {
@@ -239,11 +240,13 @@ if (!cancelled) {
           ]);
           exportToCsv(headers, rows, "packing-lists");
         }}
-        action={canCreate ? (
-          <PrimaryButton icon={Plus} onClick={openCreate}>
-            New Packing List
-          </PrimaryButton>
-        ) : undefined}
+        action={
+          canCreate ? (
+            <PrimaryButton icon={Plus} onClick={openCreate}>
+              New Packing List
+            </PrimaryButton>
+          ) : undefined
+        }
       />
 
       {showFilter && (
@@ -338,6 +341,7 @@ if (!cancelled) {
       )}
 
       <div
+        className="packing-list-layout"
         style={{
           display: "grid",
           gridTemplateColumns: selected ? "1fr 340px" : "1fr",
@@ -346,7 +350,7 @@ if (!cancelled) {
         }}
       >
         {/* Tabela */}
-        <div>
+        <div style={{ minWidth: 0, maxWidth: "100%" }}>
           {loading ? (
             <div
               style={{
@@ -583,13 +587,40 @@ if (!cancelled) {
             </div>
 
             {/* Pallets */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <div style={{ fontSize: 11, color: colors.textMuted, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 10,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 11,
+                  color: colors.textMuted,
+                  fontFamily: "var(--font-mono)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.1em",
+                }}
+              >
                 Pallets ({pallets.length})
               </div>
               {pallets.length > 0 && (
-                <div style={{ fontSize: 11, color: colors.textMuted, fontFamily: "var(--font-mono)" }}>
-                  Total: {pallets.reduce((s, p) => s + (p.items?.reduce((si, i) => si + i.quantity, 0) ?? 0), 0)} pcs
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: colors.textMuted,
+                    fontFamily: "var(--font-mono)",
+                  }}
+                >
+                  Total:{" "}
+                  {pallets.reduce(
+                    (s, p) =>
+                      s + (p.items?.reduce((si, i) => si + i.quantity, 0) ?? 0),
+                    0,
+                  )}{" "}
+                  pcs
                 </div>
               )}
             </div>
@@ -652,16 +683,18 @@ if (!cancelled) {
                         {p.packingType}
                       </div>
                     </div>
-                    <div style={{
-                      fontSize: 12,
-                      fontFamily: "var(--font-mono)",
-                      fontWeight: 600,
-                      color: colors.text,
-                      background: colors.surface,
-                      border: `1px solid ${colors.border}`,
-                      borderRadius: 6,
-                      padding: "2px 8px",
-                    }}>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        fontFamily: "var(--font-mono)",
+                        fontWeight: 600,
+                        color: colors.text,
+                        background: colors.surface,
+                        border: `1px solid ${colors.border}`,
+                        borderRadius: 6,
+                        padding: "2px 8px",
+                      }}
+                    >
                       {p.items?.reduce((s, i) => s + i.quantity, 0) ?? 0} pcs
                     </div>
                   </div>
@@ -695,23 +728,24 @@ if (!cancelled) {
                   Mark as Ready →
                 </button>
               )}
-              {(selected.status === "Draft" || selected.status === "Ready") && canCancel && (
-                <button
-                  onClick={() => handleCancel(selected.id)}
-                  style={{
-                    padding: "9px 0",
-                    border: "none",
-                    borderRadius: 8,
-                    background: colors.dangerSoft,
-                    cursor: "pointer",
-                    fontSize: 13,
-                    fontFamily: "var(--font-sans)",
-                    color: colors.danger,
-                  }}
-                >
-                  Cancel
-                </button>
-              )}
+              {(selected.status === "Draft" || selected.status === "Ready") &&
+                canCancel && (
+                  <button
+                    onClick={() => handleCancel(selected.id)}
+                    style={{
+                      padding: "9px 0",
+                      border: "none",
+                      borderRadius: 8,
+                      background: colors.dangerSoft,
+                      cursor: "pointer",
+                      fontSize: 13,
+                      fontFamily: "var(--font-sans)",
+                      color: colors.danger,
+                    }}
+                  >
+                    Cancel
+                  </button>
+                )}
             </div>
           </div>
         )}
@@ -744,13 +778,14 @@ if (!cancelled) {
                 onClick={() => handleMarkReady(rowMenu.id)}
               />
             )}
-            {(rowMenu.status === "Draft" || rowMenu.status === "Ready") && canCancel && (
-              <MenuItem
-                label="Cancel"
-                danger
-                onClick={() => handleCancel(rowMenu.id)}
-              />
-            )}
+            {(rowMenu.status === "Draft" || rowMenu.status === "Ready") &&
+              canCancel && (
+                <MenuItem
+                  label="Cancel"
+                  danger
+                  onClick={() => handleCancel(rowMenu.id)}
+                />
+              )}
           </div>
         </>
       )}
@@ -772,15 +807,23 @@ if (!cancelled) {
                   Select sales order...
                 </option>
                 {salesOrderOptions.map((so) => (
-  <option key={so.id} value={so.id}>
-    #{so.id} — {so.clientName || so.status}
-  </option>
-))}
+                  <option key={so.id} value={so.id}>
+                    #{so.id} — {so.clientName || so.status}
+                  </option>
+                ))}
               </select>
             </Field>
-            <p style={{ margin: "0 0 14px", fontSize: 12, color: colors.textMuted, fontFamily: "var(--font-sans)", lineHeight: 1.5 }}>
-              The packing list groups all of this order's pallets. The warehouse is
-              determined automatically from where the pallets are stored.
+            <p
+              style={{
+                margin: "0 0 14px",
+                fontSize: 12,
+                color: colors.textMuted,
+                fontFamily: "var(--font-sans)",
+                lineHeight: 1.5,
+              }}
+            >
+              The packing list groups all of this order's pallets. The warehouse
+              is determined automatically from where the pallets are stored.
             </p>
             <Field label="Notes (optional)">
               <input

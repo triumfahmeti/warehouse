@@ -65,7 +65,9 @@ namespace Warehouse.Services.Implementations
                 ProductId = i.ProductId,
                 ProductName = i.Product?.Name,
                 Quantity = i.Quantity,
-                UnitPrice = i.UnitPrice
+                UnitPrice = i.UnitPrice,
+                ReceivedQuantity = i.ReceivedQuantity,
+                RemainingQuantity = i.RemainingQuantity,
             }).ToList() ?? new List<PurchaseOrderItemDto>()
         };
 
@@ -91,6 +93,8 @@ namespace Warehouse.Services.Implementations
             {
                 throw new InvalidOperationException("Unit price must be greater than zero");
             }
+            if (items.Select(i => i.ProductId).Distinct().Count() != items.Count)
+                throw new InvalidOperationException("A product can only appear once in the order items.");
 
             var order = new PurchaseOrder
             {
@@ -111,37 +115,62 @@ namespace Warehouse.Services.Implementations
             return order.Id;
         }
 
-        public async Task ReceivePurchaseOrder(int purchaseOrderId, List<ReceivePurchaseOrderItemDto> items)
+        public async Task ReceiveLineAsync(int purchaseOrderId, ReceivePurchaseOrderItemDto dto)
         {
-            using var transaction = await _context.Database.BeginTransactionAsync();
+            if (dto.QuantityReceived <= 0)
+                throw new InvalidOperationException("Quantity received must be greater than zero");
 
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            int productId;
             try
             {
-                await AddReceivedStock(purchaseOrderId, items);
+                // Të ngarkuar me tracking, që ndryshimet të ruhen dhe RowVersion të kontrollohet
+                var order = await _purchaseOrderRepository.GetOrderWithItems(purchaseOrderId)
+                    ?? throw new InvalidOperationException("Purchase order not found");
 
-                var order = await _purchaseOrderRepository.GetOrderWithItems(purchaseOrderId);
-                if (order == null)
-                {
-                    throw new InvalidOperationException("Purchase order not found");
-                }
+                if (order.Status is PurchaseOrderStatus.Cancelled
+                                 or PurchaseOrderStatus.Received
+                                 or PurchaseOrderStatus.Closed)
+                    throw new InvalidOperationException("Order cannot be received in its current status.");
 
-                if (order.Status != PurchaseOrderStatus.Pending)
-                {
-                    throw new InvalidOperationException("Only pending orders can be received");
-                }
+                var line = order.Items.FirstOrDefault(i => i.Id == dto.PurchaseOrderItemId)
+                    ?? throw new InvalidOperationException("Received line not found in the purchase order");
 
-                order.Status = PurchaseOrderStatus.Received;
-                await _purchaseOrderRepository.UpdateAsync(order);
+                if (dto.QuantityReceived > line.RemainingQuantity)
+                    throw new InvalidOperationException(
+                        $"Quantity received {dto.QuantityReceived} exceeds the remaining quantity ({line.RemainingQuantity}).");
+
+                productId = line.ProductId;
+
+                // Stoku dhe StockMovement shtohen në të njëjtin transaksion
+                await _inventoryService.IncreaseStockCore(
+                    line.ProductId, dto.RaftId, dto.QuantityReceived);
+
+                line.ReceivedQuantity += dto.QuantityReceived;
+                order.LastReceivedAt = DateTime.UtcNow;
+                order.Status = order.Items.All(i => i.RemainingQuantity == 0)
+                    ? PurchaseOrderStatus.Received
+                    : PurchaseOrderStatus.Receiving;
+
+                // Këtu kontrollohet RowVersion. Dy pranime paralele të së njëjtës porosi
+                // njëri dështon, dhe transaksioni i tij rrotullohet mbrapsht.
                 await _context.SaveChangesAsync();
-
                 await transaction.CommitAsync();
-                await _realtime.ResourceChangedAsync("purchaseorders", "inventory", "products");
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                await transaction.RollbackAsync();
+                throw new InvalidOperationException(
+                    "Order has been updated by another user. Please refresh and try again.");
             }
             catch
             {
                 await transaction.RollbackAsync();
                 throw;
             }
+
+            await _realtime.ResourceChangedAsync("purchaseorders", "inventory", "products");
+            await _inventoryService.CheckLowStockForProduct(productId);
         }
 
         public async Task CancelPurchaseOrder(int purchaseOrderId)
@@ -153,10 +182,9 @@ namespace Warehouse.Services.Implementations
                 throw new InvalidOperationException("Purchase order not found");
             }
 
-            if (order.Status == PurchaseOrderStatus.Received || order.Status == PurchaseOrderStatus.Closed)
-            {
-                throw new InvalidOperationException("Received or closed orders cannot be cancelled");
-            }
+            if (order.Status is not (PurchaseOrderStatus.Pending or PurchaseOrderStatus.Approved))
+                throw new InvalidOperationException(
+                    $"Order with status '{order.Status}' cannot be cancelled.");
 
             order.Status = PurchaseOrderStatus.Cancelled;
             await _purchaseOrderRepository.UpdateAsync(order);
@@ -184,63 +212,6 @@ namespace Warehouse.Services.Implementations
             await _realtime.ResourceChangedAsync("purchaseorders");
         }
 
-        public async Task AddReceivedStock(int purchaseOrderId, List<ReceivePurchaseOrderItemDto> items)
-        {
-            if (items == null || items.Count == 0)
-            {
-                throw new InvalidOperationException("Received items are required");
-            }
 
-            var order = await _purchaseOrderRepository.GetOrderWithItems(purchaseOrderId);
-            if (order == null)
-            {
-                throw new InvalidOperationException("Purchase order not found");
-            }
-
-            if (order.Status != PurchaseOrderStatus.Pending)
-            {
-                throw new InvalidOperationException("Only pending orders can add received stock");
-            }
-
-            if (order.Items == null || !order.Items.Any())
-            {
-                throw new InvalidOperationException("Purchase order has no items");
-            }
-
-            if (items.Any(i => i.QuantityReceived <= 0))
-            {
-                throw new InvalidOperationException("Received quantity must be greater than zero");
-            }
-
-            var quantitiesByItem = items
-                .GroupBy(i => i.PurchaseOrderItemId)
-                .ToDictionary(g => g.Key, g => g.Sum(x => x.QuantityReceived));
-
-            foreach (var orderItem in order.Items)
-            {
-                if (!quantitiesByItem.TryGetValue(orderItem.Id, out var receivedQty))
-                {
-                    throw new InvalidOperationException("Received items must include all order items");
-                }
-
-                if (receivedQty != orderItem.Quantity)
-                {
-                    throw new InvalidOperationException(
-                        $"Received quantity must match ordered quantity for item {orderItem.Id}");
-                }
-            }
-
-            foreach (var receiveItem in items)
-            {
-                var orderItem = order.Items.FirstOrDefault(i => i.Id == receiveItem.PurchaseOrderItemId);
-                if (orderItem == null)
-                {
-                    throw new InvalidOperationException(
-                        $"Order item with id {receiveItem.PurchaseOrderItemId} not found");
-                }
-
-                await _inventoryService.AddStock(orderItem.ProductId, receiveItem.RaftId, receiveItem.QuantityReceived);
-            }
-        }
     }
 }

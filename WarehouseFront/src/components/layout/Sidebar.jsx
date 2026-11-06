@@ -4,7 +4,12 @@ import { getVisibleNavItems, getVisibleGroups } from "./navItems";
 import NavLink from "./NavLink";
 import { useAuth } from "../../auth/AuthContext";
 
-export default function Sidebar({ isOpen = false, onClose, companyName = 'Warehouse OS' }) {  const { user, hasAnyPermission } = useAuth();
+export default function Sidebar({
+  isOpen = false,
+  onClose,
+  companyName = "Warehouse OS",
+}) {
+  const { user, hasAnyPermission } = useAuth();
 
   // Filtrim sipas lejeve të user-it
   const visibleItems = getVisibleNavItems(hasAnyPermission);
@@ -125,6 +130,8 @@ export default function Sidebar({ isOpen = false, onClose, companyName = 'Wareho
           flexDirection: "column",
           gap: 1,
           overflowY: "auto",
+          WebkitOverflowScrolling: "touch",
+          paddingBottom: "max(16px, env(safe-area-inset-bottom))",
         }}
       >
         {visibleGroups.map((group, gi) => (
@@ -149,8 +156,6 @@ export default function Sidebar({ isOpen = false, onClose, companyName = 'Wareho
           </div>
         ))}
       </nav>
-
-      
     </aside>
   );
 }

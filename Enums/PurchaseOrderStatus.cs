@@ -6,6 +6,7 @@ namespace Warehouse.Enums
         Approved = 1,
         Received = 2,
         Cancelled = 3,
-        Closed = 4
+        Closed = 4,
+        Receiving = 5,
     }
 }

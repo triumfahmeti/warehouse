@@ -28,6 +28,7 @@ export const raftsApi = {
 export const productsApi = {
   getAll: () => http.get('/product'),
   getById: id => http.get(`/product/${id}`),
+  getByBarcode: barcode => http.get(`/product/by-barcode/${encodeURIComponent(barcode)}`),
   create: data => http.post('/product', data),
   update: (id, data) => http.put(`/product/${id}`, data),
   remove: id => http.del(`/product/${id}`),
@@ -36,7 +37,7 @@ export const productsApi = {
 export const inventoryApi = {
   getAll: () => http.get('/inventory'),
   getById: id => http.get(`/inventory/${id}`),
-  addStock: data => http.post('/inventory', data),
+  addStock: data => http.post('/inventory/add-stock', data),
 };
 
 export const clientsApi = {
@@ -72,7 +73,7 @@ export const purchaseOrdersApi = {
   getAll: () => http.get('/purchaseorders'),
   getById: id => http.get(`/purchaseorders/${id}`),
   create: data => http.post('/purchaseorders', data),
-  receive: (id, data) => http.post(`/purchaseorders/${id}/receive`, data),
+  receiveLine: (id, data) => http.post(`/purchaseorders/${id}/receive-line`, data),
   cancel: id => http.post(`/purchaseorders/${id}/cancel`),
   close: id => http.post(`/purchaseorders/${id}/close`),
 };
@@ -142,6 +143,16 @@ export const rolesApi = {
     http.put(`/roles/${roleId}/permissions`, { permissionNames }),
 };
 
+// Tenants — vetëm SuperAdmin.
+export const tenantsApi = {
+  getAll:        ()         => http.get('/tenant'),
+  platformStats: ()         => http.get('/tenant/platform-stats'),
+  create:        data       => http.post('/tenant', data),
+  update:        (id, data) => http.put(`/tenant/${id}`, data),
+  activate:      id         => http.patch(`/tenant/${id}/activate`),
+  deactivate:    id         => http.patch(`/tenant/${id}/deactivate`),
+};
+
 // Audit Logs — me filter opsional.
 export const auditLogsApi = {
   getAll: () => http.get('/auditlog'),
@@ -198,13 +209,15 @@ export const adminDashboardApi = {
 export const reportsApi = {
   generate: (type, filter) => http.post(`/report/${type}`, filter),
   export: async (type, filter) => {
-    const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5138/api';
+    const API_BASE = import.meta.env.VITE_API_BASE || '/api';
     const { tokenStorage } = await import('../auth/tokenStorage');
     const response = await fetch(`${API_BASE}/report/${type}`, {
       method: 'POST',
-      headers: {
+        headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${tokenStorage.getAccessToken()}`,
+        ...(tokenStorage.getActiveTenantId()
+            ? { 'X-Tenant-Id': tokenStorage.getActiveTenantId() } : {}),
       },
       body: JSON.stringify(filter),
     });

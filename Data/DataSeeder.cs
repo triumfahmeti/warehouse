@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Warehouse.Authorization.Constants;
 using Warehouse.Models;
+using Warehouse.Services.Interfaces;
+using Warehouse.Services.Tenancy;
 
 namespace Warehouse.Data
 {
@@ -16,6 +18,8 @@ namespace Warehouse.Data
             var db = services.GetRequiredService<AppDbContext>();
             var roleMgr = services.GetRequiredService<RoleManager<ApplicationRole>>();
             var userMgr = services.GetRequiredService<UserManager<ApplicationUser>>();
+            var tenantProvider = services.GetRequiredService<ITenantProvider>();
+            var provisioning = services.GetRequiredService<ITenantProvisioningService>();
 
 
 
@@ -41,13 +45,15 @@ namespace Warehouse.Data
             }
 
 
-            string[] roles = { "Admin", "Manager", "Worker", "Client" };
+            string[] roles = { "SuperAdmin", "Admin", "Manager", "Worker", "Client" };
             foreach (var r in roles)
                 if (!await roleMgr.RoleExistsAsync(r))
                     await roleMgr.CreateAsync(new ApplicationRole { Name = r, Description = $"{r} role" });
 
             // Assign permissions to roles
-            await AssignPermissions(db, "Admin", allPerms); // Admin merr të gjitha
+            var tenantAdminPerms = allPerms.Where(p => !p.StartsWith("Tenants.")).ToList();
+            await AssignPermissions(db, "Admin", tenantAdminPerms);
+            await AssignPermissions(db, "SuperAdmin", allPerms);
 
 
             await AssignPermissions(db, "Manager", new[] {
@@ -92,6 +98,44 @@ namespace Warehouse.Data
                 Permissions.Notifications.View,
             });
 
+            // ---- Tenant-i default: ketu migrohen te gjitha te dhenat ekzistuese ----
+            var defaultTenant = await db.Tenants.FirstOrDefaultAsync(t => t.Slug == "default");
+            if (defaultTenant == null)
+            {
+                defaultTenant = new Tenant
+                {
+                    Name = "Warehouse Co.",
+                    Slug = "default",
+                    ContactEmail = "admin@warehouse.com",
+                    IsActive = true
+                };
+                db.Tenants.Add(defaultTenant);
+                await db.SaveChangesAsync();
+            }
+
+            tenantProvider.SetTenant(defaultTenant.Id);
+
+            // ---- SuperAdmin: TenantId = null, nuk i perket asnje tenanti ----
+            var superAdmin = await userMgr.FindByEmailAsync("superadmin@warehouse.com");
+            if (superAdmin == null)
+            {
+                superAdmin = new ApplicationUser
+                {
+                    UserName = "superadmin@warehouse.com",
+                    Email = "superadmin@warehouse.com",
+                    Name = "Sys Admin",
+                    EmailConfirmed = true,
+                    IsActive = true,
+                    TenantId = null
+                };
+                var createSuperResult = await userMgr.CreateAsync(superAdmin, "SuperAdmin123!");
+                if (!createSuperResult.Succeeded)
+                    throw new InvalidOperationException(string.Join("; ", createSuperResult.Errors.Select(e => e.Description)));
+            }
+
+            if (!await userMgr.IsInRoleAsync(superAdmin, "SuperAdmin"))
+                await userMgr.AddToRoleAsync(superAdmin, "SuperAdmin");
+
 
             var adminUser = await userMgr.FindByEmailAsync("admin@warehouse.com");
             if (adminUser == null)
@@ -102,7 +146,8 @@ namespace Warehouse.Data
                     Email = "admin@warehouse.com",
                     Name = "System Admin",
                     EmailConfirmed = true,
-                    IsActive = true
+                    IsActive = true,
+                    TenantId = defaultTenant.Id
                 };
                 var createAdminResult = await userMgr.CreateAsync(adminUser, "Admin123!");
                 if (!createAdminResult.Succeeded)
@@ -113,6 +158,7 @@ namespace Warehouse.Data
             adminUser.IsActive = true;
             adminUser.UserName = "admin@warehouse.com";
             adminUser.Email = "admin@warehouse.com";
+            adminUser.TenantId ??= defaultTenant.Id;
 
             var updateAdminResult = await userMgr.UpdateAsync(adminUser);
             if (!updateAdminResult.Succeeded)
@@ -128,6 +174,7 @@ namespace Warehouse.Data
 
             if (!await userMgr.IsInRoleAsync(adminUser, "Admin"))
                 await userMgr.AddToRoleAsync(adminUser, "Admin");
+            await provisioning.SeedDefaultSettingsAsync(defaultTenant.Id);
         }
 
         private static async Task AssignPermissions(AppDbContext db, string roleName, IEnumerable<string> perms)

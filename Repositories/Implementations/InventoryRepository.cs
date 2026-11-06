@@ -49,21 +49,31 @@ namespace Warehouse.Repositories.Implementations
 
         public async Task<int> ReserveStockAtomicAsync(int inventoryId, int quantityToReserve)
         {
+            // Query filter-i nuk aplikohet ne SQL raw — tenanti filtrohet manualisht.
             return await _context.Database.ExecuteSqlRawAsync(@"
-                UPDATE Inventories 
-                SET ReservedQuantity = ReservedQuantity + {0} 
-                WHERE Id = {1} AND (QuantityOnHand - ReservedQuantity) >= {0}",
-                quantityToReserve, inventoryId);
+        UPDATE Inventories 
+        SET ReservedQuantity = ReservedQuantity + {0} 
+        WHERE Id = {1} AND TenantId = {2} AND (QuantityOnHand - ReservedQuantity) >= {0}",
+                quantityToReserve, inventoryId, _context.CurrentTenantId);
         }
 
         public async Task<int> ReleaseReservedStockAtomicAsync(int inventoryId, int quantityToRelease)
         {
             return await _context.Database.ExecuteSqlRawAsync(@"
-                UPDATE Inventories 
-                SET ReservedQuantity = ReservedQuantity - {0} 
-                WHERE Id = {1} AND ReservedQuantity >= {0}",
-                quantityToRelease, inventoryId);
+        UPDATE Inventories 
+        SET ReservedQuantity = ReservedQuantity - {0} 
+        WHERE Id = {1} AND TenantId = {2} AND ReservedQuantity >= {0}",
+                quantityToRelease, inventoryId, _context.CurrentTenantId);
         }
+
+        public Task<bool> RaftExistsAsync(int raftId)
+            => _context.Rafts.AnyAsync(r => r.Id == raftId);
+
+
+
+
+
+
 
     }
 }

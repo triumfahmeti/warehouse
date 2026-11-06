@@ -21,6 +21,9 @@ import RolesPage from "../pages/RolesPage";
 import AuditLogsPage from "../pages/AuditLogsPage";
 import SystemSettingsPage from "../pages/SystemSettingsPage";
 import ReportsPage from "../pages/ReportsPage";
+import TenantsPage from "../pages/TenantsPage";
+import ReceivingPage from "../pages/ReceivingPage";
+import PurchaseReceivingPage from "../pages/PurchaseReceivingPage";
 
 // Qasja te faqet gat-ohet nga LEJET (jo emrat e roleve) — i njëjti burim me backend-in.
 // Çdo route kërkon lejen përkatëse 'View'; ndryshe ridrejtohet te '/'.
@@ -52,6 +55,17 @@ export default function AppRoutes() {
           <Route element={<PermissionRoute anyOf={["Inventory.View"]} />}>
             <Route path="/inventory" element={<InventoryPage />} />
           </Route>
+          {/* Recieve individual per ndonje produkt te mbetur, te transferuar apo raste te veqanta */}
+          <Route element={<PermissionRoute anyOf={["Inventory.AddStock"]} />}>
+            <Route path="/receiving" element={<ReceivingPage />} />
+          </Route>
+          {/* Recieve nga PurchaseOrder  */}
+          <Route element={<PermissionRoute anyOf={["Inventory.AddStock"]} />}>
+            <Route
+              path="/purchase-receiving"
+              element={<PurchaseReceivingPage />}
+            />
+          </Route>
           <Route element={<PermissionRoute anyOf={["PurchaseOrders.View"]} />}>
             <Route path="/purchase-orders" element={<PurchaseOrdersPage />} />
           </Route>
@@ -61,10 +75,22 @@ export default function AppRoutes() {
           <Route element={<PermissionRoute anyOf={["PackingLists.View"]} />}>
             <Route path="/packing-lists" element={<PackingListsPage />} />
           </Route>
-          <Route element={<PermissionRoute anyOf={["SalesOrders.View", "SalesOrders.ViewOwn"]} />}>
+          <Route
+            element={
+              <PermissionRoute
+                anyOf={["SalesOrders.View", "SalesOrders.ViewOwn"]}
+              />
+            }
+          >
             <Route path="/sales-orders" element={<SalesOrdersPage />} />
           </Route>
-          <Route element={<PermissionRoute anyOf={["Shipments.View", "Shipments.ViewOwn"]} />}>
+          <Route
+            element={
+              <PermissionRoute
+                anyOf={["Shipments.View", "Shipments.ViewOwn"]}
+              />
+            }
+          >
             <Route path="/shipments" element={<ShipmentsPage />} />
           </Route>
 
@@ -81,7 +107,20 @@ export default function AppRoutes() {
           <Route element={<PermissionRoute anyOf={["Settings.View"]} />}>
             <Route path="/admin/settings" element={<SystemSettingsPage />} />
           </Route>
-          <Route element={<PermissionRoute anyOf={["Reports.ViewInventory", "Reports.ViewSales", "Reports.ViewShipment"]} />}>
+          <Route element={<PermissionRoute anyOf={["Tenants.View"]} />}>
+            <Route path="/admin/tenants" element={<TenantsPage />} />
+          </Route>
+          <Route
+            element={
+              <PermissionRoute
+                anyOf={[
+                  "Reports.ViewInventory",
+                  "Reports.ViewSales",
+                  "Reports.ViewShipment",
+                ]}
+              />
+            }
+          >
             <Route path="/reports" element={<ReportsPage />} />
           </Route>
 

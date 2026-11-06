@@ -203,6 +203,14 @@ namespace Warehouse.Authorization.Constants
             public const string View = "Dashboard.View";
         }
 
+        // ---- Tenants (vetem SuperAdmin) ----
+        public static class Tenants
+        {
+            public const string View = "Tenants.View";
+            public const string Create = "Tenants.Create";
+            public const string Edit = "Tenants.Edit";
+        }
+
         public static IEnumerable<string> GetAll()
         {
             return typeof(Permissions).GetNestedTypes()

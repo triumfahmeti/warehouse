@@ -5,12 +5,13 @@ using System.Threading.Tasks;
 
 namespace Warehouse.Models
 {
-    public class File
+    public class File : ITenantEntity
     {
         public int Id { get; set; }
 
         public string Entity { get; set; }
         public int EntityId { get; set; }
+        public int TenantId { get; set; }
 
         public string FileName { get; set; }
         public string FilePath { get; set; }

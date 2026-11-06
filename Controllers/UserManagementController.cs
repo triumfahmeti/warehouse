@@ -8,6 +8,7 @@ using Warehouse.DTOs.UserManagement;
 using Warehouse.Models;
 using Warehouse.Authorization;
 using Warehouse.Authorization.Constants;
+using Warehouse.Services.Tenancy;
 
 namespace Warehouse.Controllers
 {
@@ -18,24 +19,30 @@ namespace Warehouse.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<ApplicationRole> _roleManager;
         private readonly AppDbContext _context;
+        private readonly ITenantProvider _tenantProvider;
 
         public UserManagementController(
             UserManager<ApplicationUser> userManager,
             RoleManager<ApplicationRole> roleManager,
-            AppDbContext context)
+            AppDbContext context,
+            ITenantProvider tenantProvider)
         {
             _userManager = userManager;
             _roleManager = roleManager;
             _context = context;
+            _tenantProvider = tenantProvider;
         }
 
         [HttpGet]
         [HasPermission(Permissions.Users.View)]
         public async Task<IActionResult> GetAll()
         {
-            var users = await _userManager.Users
+
+            var tenantId = _tenantProvider.TenantId;
+            var users = await _userManager.Users.Where(u => u.TenantId == tenantId)
                 .OrderByDescending(u => u.CreatedAt)
                 .ToListAsync();
+
 
             var lastLogins = await _context.RefreshTokens
                 .GroupBy(rt => rt.UserId)
@@ -75,7 +82,7 @@ namespace Warehouse.Controllers
         [HasPermission(Permissions.Users.Edit)]
         public async Task<IActionResult> Update(string id, [FromBody] UpdateUserDto dto)
         {
-            var user = await _userManager.FindByIdAsync(id);
+            var user = await FindInTenantAsync(id);
             if (user == null) return NotFound();
 
             // Kontroll eksplicit per email te zene nga nje user tjeter,
@@ -118,7 +125,7 @@ namespace Warehouse.Controllers
         [HasPermission(Permissions.Users.Deactivate)]
         public async Task<IActionResult> Deactivate(string id)
         {
-            var user = await _userManager.FindByIdAsync(id);
+            var user = await FindInTenantAsync(id);
             if (user == null) return NotFound();
 
             var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -136,7 +143,7 @@ namespace Warehouse.Controllers
         [HasPermission(Permissions.Users.Activate)]
         public async Task<IActionResult> Activate(string id)
         {
-            var user = await _userManager.FindByIdAsync(id);
+            var user = await FindInTenantAsync(id);
             if (user == null) return NotFound();
 
             user.IsActive = true;
@@ -150,8 +157,11 @@ namespace Warehouse.Controllers
         [HasPermission(Permissions.Users.ManageRoles)]
         public async Task<IActionResult> AssignRole(string id, [FromBody] AssignRoleDto dto)
         {
-            var user = await _userManager.FindByIdAsync(id);
+            var user = await FindInTenantAsync(id);
             if (user == null) return NotFound();
+
+            if (string.Equals(dto.Role, TenantProvider.SuperAdminRole, StringComparison.OrdinalIgnoreCase))
+                return BadRequest(new { message = "SuperAdmin role cannot be assigned here." });
 
             if (!await _roleManager.RoleExistsAsync(dto.Role))
                 return BadRequest(new { message = $"Role '{dto.Role}' does not exist." });
@@ -168,7 +178,7 @@ namespace Warehouse.Controllers
         [HasPermission(Permissions.Users.ManageRoles)]
         public async Task<IActionResult> RemoveRole(string id, string role)
         {
-            var user = await _userManager.FindByIdAsync(id);
+            var user = await FindInTenantAsync(id);
             if (user == null) return NotFound();
 
             if (!await _userManager.IsInRoleAsync(user, role))
@@ -199,6 +209,15 @@ namespace Warehouse.Controllers
             });
 
             await _context.SaveChangesAsync();
+        }
+
+        // ApplicationUser s'ka query filter — login-i duhet ta gjeje perdoruesin para se
+        // te dihet tenanti. Prandaj izolimi behet me dore ne cdo kerkim sipas id-se.
+        private async Task<ApplicationUser?> FindInTenantAsync(string id)
+        {
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null) return null;
+            return user.TenantId == _tenantProvider.TenantId ? user : null;
         }
     }
 }

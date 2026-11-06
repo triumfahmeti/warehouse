@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace Warehouse.Models
 {
-    public class PurchaseOrderItem
+    public class PurchaseOrderItem : ITenantEntity
     {
         public int Id { get; set; }
         public int PurchaseOrderId { get; set; }
@@ -13,8 +13,12 @@ namespace Warehouse.Models
 
         public int ProductId { get; set; }
         public Product Product { get; set; }
+        public int TenantId { get; set; }
 
         public int Quantity { get; set; }
+
+        public int ReceivedQuantity { get; set; } = 0;
+        public int RemainingQuantity => Quantity - ReceivedQuantity;
         public decimal UnitPrice { get; set; }
     }
 }

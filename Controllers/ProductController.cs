@@ -41,6 +41,23 @@ namespace Warehouse.Controllers
             return product == null ? NotFound() : Ok(product);
         }
 
+        [HttpGet("by-barcode/{barcode}")]
+        [HasPermission(Permissions.Products.View)]
+        public async Task<IActionResult> GetByBarcode(string barcode)
+        {
+            var product = await _service.GetByBarcodeAsync(barcode);
+            if (product == null)
+                return NotFound(new { message = $"Produkti me barkod '{barcode}' nuk u gjet." });
+
+            return Ok(new
+            {
+                product.Id,
+                product.SKU,
+                product.Name,
+                product.Barcode
+            });
+        }
+
         [HttpGet("type/{type}")]
         [HasPermission(Permissions.Products.View)]
         public async Task<IActionResult> GetByType(string type)

@@ -1,7 +1,7 @@
 // ============ API CLIENT ============
 import { tokenStorage } from '../auth/tokenStorage';
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5138/api';
+const API_BASE = import.meta.env.VITE_API_BASE || '/api';
 
 export class AuthError extends Error {
   constructor(message = 'Session expired') {
@@ -36,7 +36,13 @@ async function doRefresh() {
   tokenStorage.setSession({
     accessToken: data.accessToken,
     refreshToken: data.refreshToken,
-    user: { email: data.email, userId: data.userId, roles: data.roles, permissions: data.permissions || [] },
+    user: { email: data.email,
+       userId: data.userId,
+       roles: data.roles,
+       permissions: data.permissions || [],
+       tenantId: data.tenantId,
+       tenantName: data.tenantName,
+       isSuperAdmin: data.isSuperAdmin, },
   });
   return data.accessToken;
 }
@@ -51,11 +57,13 @@ function refreshAccessToken() {
 }
 
 async function rawFetch(path, options, token) {
+  const activeTenantId = tokenStorage.getActiveTenantId();
   return fetch(`${API_BASE}${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(activeTenantId ? { 'X-Tenant-Id': activeTenantId } : {}),
       ...options.headers,
     },
     body: options.body ? JSON.stringify(options.body) : undefined,
@@ -104,9 +112,13 @@ export const http = {
   del: path => api(path, { method: 'DELETE' }),
   upload: async (path, formData) => {
     let token = tokenStorage.getAccessToken();
+    const activeTenantId = tokenStorage.getActiveTenantId();
     const res = await fetch(`${API_BASE}${path}`, {
       method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(activeTenantId ? { 'X-Tenant-Id': activeTenantId } : {}),
+      },
       body: formData,
     });
     if (!res.ok) {

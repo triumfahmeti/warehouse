@@ -13,6 +13,8 @@ using Warehouse;
 using Warehouse.DTOs.Auth;
 using Warehouse.Models;
 using Warehouse.Services.Interfaces;
+using Warehouse.Services.Tenancy;
+using static Warehouse.Authorization.Constants.Permissions;
 
 namespace Warehouse.Services.Implementations
 {
@@ -22,13 +24,14 @@ namespace Warehouse.Services.Implementations
         private readonly RoleManager<ApplicationRole> _roleManager;
         private readonly IConfiguration _configuration;
         private readonly AppDbContext _context;
-        public AuthService(UserManager<ApplicationUser> userManager, RoleManager<ApplicationRole> roleManager, IConfiguration configuration, AppDbContext context)
+        private readonly ITenantProvider _tenantProvider;
+        public AuthService(UserManager<ApplicationUser> userManager, RoleManager<ApplicationRole> roleManager, IConfiguration configuration, AppDbContext context, ITenantProvider tenantProvider)
         {
             _userManager = userManager;
             _roleManager = roleManager;
             _configuration = configuration;
             _context = context;
-
+            _tenantProvider = tenantProvider;
 
         }
         public async Task<string> RegisterAsync(RegisterDto dto, string? currentUserId, IList<string> currentUserRoles)
@@ -50,6 +53,8 @@ namespace Warehouse.Services.Implementations
             var validRoles = new[] { "Admin", "Manager", "Worker", "Client" };
             if (!validRoles.Contains(dto.Role))
                 return "Invalid role specified.";
+            var tenantId = _tenantProvider.TenantId
+               ?? throw new InvalidOperationException("Nuk mund te krijohet perdorues pa tenant aktiv.");
 
             var user = new ApplicationUser
             {
@@ -57,6 +62,7 @@ namespace Warehouse.Services.Implementations
                 Email = dto.Email,
                 Name = dto.Name,
                 IsActive = true,
+                TenantId = tenantId,
                 CreatedById = currentUserId,
                 CreatedAt = DateTime.UtcNow
             };
@@ -107,6 +113,16 @@ namespace Warehouse.Services.Implementations
             if (!user.IsActive)
                 throw new Exception("Account is deactivated.");
 
+            // Pezullimi i nje kompanie bllokon te gjithe perdoruesit e saj menjehere,
+            // pa u prekur llogarite individuale.
+            Tenant? tenant = null;
+            if (user.TenantId is int tid)
+            {
+                tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.Id == tid);
+                if (tenant is null || !tenant.IsActive)
+                    throw new Exception("Your organization's account is suspended.");
+            }
+
 
             var accessToken = await GenerateJwtToken(user);
             var refreshToken = GenerateRefreshToken();
@@ -119,6 +135,9 @@ namespace Warehouse.Services.Implementations
                 AccessToken = accessToken,
                 RefreshToken = refreshToken,
                 ExpiresAt = DateTime.UtcNow.AddMinutes(int.Parse(_configuration["JwtSettings:AccessTokenExpirationMinutes"]!)),
+                TenantId = user.TenantId,
+                TenantName = tenant?.Name,
+                IsSuperAdmin = roles.Contains(TenantProvider.SuperAdminRole),
                 Email = user.Email ?? string.Empty,
                 UserId = user.Id,
                 Roles = roles.ToList(),
@@ -161,6 +180,10 @@ namespace Warehouse.Services.Implementations
                 new Claim(ClaimTypes.Email, user.Email ?? string.Empty),
             };
 
+            // SuperAdmin-i nuk ka tenant — ai e zgjedh me header kur hyn ne nje kompani.
+            if (user.TenantId is int tenantId)
+                claims.Add(new Claim(TenantProvider.TenantClaimType, tenantId.ToString()));
+
             foreach (var role in roles)
             {
                 claims.Add(new Claim(ClaimTypes.Role, role));
@@ -197,7 +220,7 @@ namespace Warehouse.Services.Implementations
             return Convert.ToBase64String(randomNumber);
         }
 
-        //Metoda per hash te tokenit.
+        //Metoda per hash te tokenit
         private string HashToken(string token)
         {
             using var sha256 = SHA256.Create();
@@ -206,7 +229,7 @@ namespace Warehouse.Services.Implementations
             return Convert.ToBase64String(hash);
         }
 
-        //Metoda per ruajtjen e refresh tokenit ne database sa her qe krijohet.
+        //Metoda per ruajtjen e refresh tokenit 
         public async Task<RefreshToken> SaveRefreshTokenAsync(string userId, string token)
         {
             var jwtSettings = _configuration.GetSection("JwtSettings");
@@ -228,7 +251,7 @@ namespace Warehouse.Services.Implementations
             return refreshToken;
         }
 
-        //Metoda per refreskim te tokenit.
+
         public async Task<AuthResponseDto> RefreshTokenAsync(RefreshTokenRequestDto dto)
         {
             var tokenHash = HashToken(dto.RefreshToken);
@@ -238,6 +261,18 @@ namespace Warehouse.Services.Implementations
 
             if (existingToken == null || existingToken.RevokedAt != null || existingToken.ExpiresAt < DateTime.UtcNow)
                 throw new Exception("Invalid refresh token.");
+
+            var user = existingToken.User;
+
+            // Nese kompania eshte pezulluar pasi perdoruesi kishte bere login,
+            // rifreskimi nuk duhet ta zgjase sesionin.
+            Tenant? tenant = null;
+            if (user.TenantId is int tid)
+            {
+                tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.Id == tid);
+                if (tenant is null || !tenant.IsActive)
+                    throw new Exception("Your organization's account is suspended.");
+            }
 
             // Revoke the old token
             existingToken.RevokedAt = DateTime.UtcNow;
@@ -255,8 +290,11 @@ namespace Warehouse.Services.Implementations
                 AccessToken = newAccessToken,
                 RefreshToken = newRefreshToken,
                 ExpiresAt = DateTime.UtcNow.AddMinutes(int.Parse(_configuration["JwtSettings:AccessTokenExpirationMinutes"]!)),
-                Email = existingToken.User.Email ?? string.Empty,
-                UserId = existingToken.User.Id,
+                TenantId = user.TenantId,
+                TenantName = tenant?.Name,
+                IsSuperAdmin = roles.Contains(TenantProvider.SuperAdminRole),
+                Email = user.Email ?? string.Empty,
+                UserId = user.Id,
                 Roles = roles.ToList(),
                 Permissions = permissions
             };

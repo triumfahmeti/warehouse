@@ -52,23 +52,26 @@ namespace Warehouse.Controllers
             }
         }
 
-        [HttpPost("{id}/receive")]
-        [HasPermission(Permissions.PurchaseOrders.Receive)]
-        public async Task<IActionResult> Receive(int id, [FromBody] ReceivePurchaseOrderDto dto)
+        // POST /api/purchaseorder/{id}/receive-line
+        [HttpPost("{id:int}/receive-line")]
+        [HasPermission(Permissions.Inventory.AddStock)] // i njëjti permission si te Inventory.AddStock
+        public async Task<IActionResult> ReceiveLine(int id, [FromBody] ReceivePurchaseOrderItemDto dto)
         {
-            if (dto == null)
-                return BadRequest(new { message = "Request body is required" });
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
 
             try
             {
-                await _service.ReceivePurchaseOrder(id, dto.Items);
-                return NoContent();
+                await _service.ReceiveLineAsync(id, dto);
+                return Ok(new { message = "Linja u pranua." });
             }
-            catch (Exception ex)
+            catch (InvalidOperationException ex)
             {
                 return BadRequest(new { message = ex.Message });
             }
         }
+
+
 
         [HttpPost("{id}/cancel")]
         [HasPermission(Permissions.PurchaseOrders.Cancel)]

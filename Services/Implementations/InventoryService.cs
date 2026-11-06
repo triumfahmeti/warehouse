@@ -90,11 +90,13 @@ namespace Warehouse.Services.Implementations
                 .ToListAsync();
         }
 
-        public async Task AddStock(int productId, int raftId, int quantity)
+        public async Task IncreaseStockCore(int productId, int raftId, int quantity)
         {
-            var raft = await _context.Rafts.FindAsync(raftId);
-            if (raft == null)
-                throw new InvalidOperationException("Raft not found");
+            if (quantity <= 0)
+                throw new InvalidOperationException("Quantity must be greater than zero");
+
+            var raft = await _context.Rafts.FindAsync(raftId)
+                ?? throw new InvalidOperationException("Raft not found");
 
             var currentUsed = await _context.Inventories
                 .Where(i => i.RaftId == raftId)
@@ -115,15 +117,49 @@ namespace Warehouse.Services.Implementations
                     ProductId = productId,
                     RaftId = raftId,
                     QuantityOnHand = quantity,
+                    ReservedQuantity = 0,
+                    LastUpdated = DateTime.UtcNow
                 };
                 await _inventoryRepository.AddAsync(inventory);
-                await _context.SaveChangesAsync();
             }
             else
             {
                 inventory.QuantityOnHand += quantity;
+                inventory.LastUpdated = DateTime.UtcNow;
                 await _inventoryRepository.UpdateAsync(inventory);
+            }
+
+            _context.StockMovements.Add(new StockMovement
+            {
+                ProductId = productId,
+                RaftId = raftId,
+                MovementType = StockMovementType.Receive,
+                QuantityOnHand = quantity
+
+            });
+        }
+
+        public async Task AddStock(int productId, int raftId, int quantity)
+        {
+            if (quantity <= 0)
+                throw new InvalidOperationException("Quantity must be greater than zero");
+
+            if (!await _context.Products.AnyAsync(p => p.Id == productId))
+                throw new InvalidOperationException("Product not found");
+
+            using var transaction = await _context.Database.BeginTransactionAsync(
+                System.Data.IsolationLevel.Serializable);
+
+            try
+            {
+                await IncreaseStockCore(productId, raftId, quantity);
                 await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
             }
 
             await _realtime.ResourceChangedAsync("inventory", "products");

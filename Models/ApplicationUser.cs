@@ -9,6 +9,7 @@ namespace Warehouse.Models
     public class ApplicationUser : IdentityUser
     {
         public string Name { get; set; }
+        public int? TenantId { get; set; }
 
         public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -18,7 +19,7 @@ namespace Warehouse.Models
         public ApplicationUser CreatedByUser { get; set; }
         public ICollection<RefreshToken> RefreshTokens { get; set; }
         public ICollection<AuditLog> AuditLogs { get; set; }
-        public ICollection<Notification> Notifications { get; set; }
+        // Pa navigacion drejt Notification: ato jetojne ne MongoDB, jo ne SQL Server.
         public ICollection<UserRoles> UserRoles { get; set; } = new List<UserRoles>();
 
     }

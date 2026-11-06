@@ -103,7 +103,9 @@ namespace Warehouse.Services.Implementations
         {
             Id = a.Id,
             UserId = a.UserId,
-            UserName = a.User?.Name ?? a.User?.UserName ?? "",
+            UserName = a.User == null ? ""
+             : a.User.TenantId == null ? "Sys Admin"
+             : (a.User.Name ?? a.User.UserName ?? ""),
             Action = a.Action,
             Entity = a.Entity,
             EntityId = a.EntityId,

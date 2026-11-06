@@ -5,9 +5,10 @@ using System.Threading.Tasks;
 
 namespace Warehouse.Models
 {
-    public class Supplier : BaseEntity
+    public class Supplier : BaseEntity, ITenantEntity
     {
         public int Id { get; set; }
+        public int TenantId { get; set; }
         public string Name { get; set; }
         public string Email { get; set; }
         public string Phone { get; set; }

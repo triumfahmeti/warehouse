@@ -7,7 +7,7 @@ using Warehouse.Enums;
 
 namespace Warehouse.Models
 {
-    public class Shipment : BaseEntity
+    public class Shipment : BaseEntity, ITenantEntity
     {
         public int Id { get; set; }
         public string ShipmentNumber { get; set; }
@@ -15,6 +15,7 @@ namespace Warehouse.Models
         public Warehouse Warehouse { get; set; }
         public int PackingListId { get; set; }
         public PackingList PackingList { get; set; }
+        public int TenantId { get; set; }
 
         public ShipmentStatus Status { get; set; } = ShipmentStatus.Draft;
         //  public DateTime? ShippedAt { get; set; }

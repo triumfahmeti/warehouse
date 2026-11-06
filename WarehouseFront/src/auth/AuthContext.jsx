@@ -25,6 +25,9 @@ export function AuthProvider({ children }) {
         userId: data.userId,
         roles: data.roles || [],
         permissions: data.permissions || [],
+        tenantId: data.tenantId,
+        tenantName: data.tenantName,
+        isSuperAdmin: data.isSuperAdmin,
       };
       tokenStorage.clear();
       tokenStorage.setSession({
@@ -68,6 +71,31 @@ export function AuthProvider({ children }) {
     [user],
   );
 
+  const isSuperAdmin = !!user?.isSuperAdmin;
+
+  const [activeTenantId, setActiveTenantIdState] = useState(() =>
+    tokenStorage.getActiveTenantId(),
+  );
+
+  // SuperAdmin-i "hyn" në një tenant. Rilexojmë faqen sepse çdo listë e
+  // ngarkuar deri tani i përket tenantit të mëparshëm — më e sigurt se të
+  // provojmë t'i rifreskojmë një nga një.
+  const enterTenant = useCallback((tenantId, tenantName) => {
+    tokenStorage.setActiveTenantId(tenantId);
+    setActiveTenantIdState(String(tenantId));
+    const u = { ...tokenStorage.getUser(), tenantName };
+    tokenStorage.setSession({ user: u });
+    window.location.href = "/";
+  }, []);
+
+  const exitTenant = useCallback(() => {
+    tokenStorage.setActiveTenantId(null);
+    setActiveTenantIdState(null);
+    const u = { ...tokenStorage.getUser(), tenantName: null };
+    tokenStorage.setSession({ user: u });
+    window.location.href = "/admin/tenants";
+  }, []);
+
   const value = {
     user,
     isAuthenticated,
@@ -76,6 +104,10 @@ export function AuthProvider({ children }) {
     logout,
     hasPermission,
     hasAnyPermission,
+    isSuperAdmin,
+    activeTenantId,
+    enterTenant,
+    exitTenant,
   };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

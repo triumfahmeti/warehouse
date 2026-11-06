@@ -6,6 +6,7 @@ export const pageTitles = {
   '/rafts':         { title: 'Rafts',         subtitle: 'Storage Locations' },
   '/products':      { title: 'Products',      subtitle: 'Catalog' },
   '/inventory':     { title: 'Inventory',     subtitle: 'Stock Levels' },
+  '/purchase-receiving': { title: 'Purchase Receiving', subtitle: 'Receive depending by order' },
   '/clients':       { title: 'Clients',       subtitle: 'Customer Management' },
   '/sales-orders':  { title: 'Sales Orders',  subtitle: 'Fulfillment' },
   '/pallets':       { title: 'Pallets',       subtitle: 'Packaging' },

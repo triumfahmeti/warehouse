@@ -14,12 +14,10 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using MongoDB.Driver;
 using Microsoft.AspNetCore.Http.Features;
+using Warehouse.Services.Tenancy;
+using System.Net;
 
-// Ngarko .env (nga rrënja e projektit) në environment variables PARA se të ndërtohet
-// konfigurimi. .NET-i (AddEnvironmentVariables, default) i lexon dhe override-on
-// appsettings. Variablat përdorin konventën hierarkike me '__' (p.sh.
-// JwtSettings__SecretKey → JwtSettings:SecretKey). Sekretet/connection strings rrinë
-// vetëm te .env (i gitignore-uar), jo te appsettings.
+
 DotNetEnv.Env.TraversePath().Load();
 
 var builder = WebApplication.CreateBuilder(args);
@@ -62,10 +60,43 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "http://localhost:5174", "http://127.0.0.1:5173", "http://127.0.0.1:5174")
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();
+        if (builder.Environment.IsDevelopment())
+        {
+            policy.SetIsOriginAllowed(origin =>
+            {
+                if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri)
+                    || uri.Port != 5173)
+                    return false;
+
+                if (uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+                    )
+                    return true;
+
+                var addresses = IPAddress.TryParse(uri.Host, out var parsedAddress)
+                    ? new[] { parsedAddress }
+                    : Dns.GetHostAddresses(uri.Host);
+
+                return addresses.Any(address =>
+                {
+                    if (IPAddress.IsLoopback(address))
+                        return true;
+
+                    var bytes = address.GetAddressBytes();
+                    return bytes.Length == 4 &&
+                        (bytes[0] == 10
+                         || (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31)
+                         || (bytes[0] == 192 && bytes[1] == 168));
+                });
+            });
+        }
+        else
+        {
+            policy.WithOrigins("https://warehouse.example.com");
+        }
+
+        policy.AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
     });
 });
 
@@ -180,14 +211,16 @@ builder.Services.AddScoped<IPalletRepository, PalletRepository>();
 builder.Services.AddScoped<IPalletItemRepository, PalletItemRepository>();
 builder.Services.AddScoped<IPackingListRepository, PackingListRepository>();
 builder.Services.Configure<MongoDbSettings>(builder.Configuration.GetSection("MongoDb"));
-builder.Services.AddSingleton<INotificationService, NotificationService>();
-builder.Services.AddSingleton<IRealtimeNotifier, RealtimeNotifier>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IRealtimeNotifier, RealtimeNotifier>();
 builder.Services.AddScoped<IPalletService, PalletService>();
 builder.Services.AddScoped<IPalletItemService, PalletItemService>();
 builder.Services.AddScoped<IPackingListService, PackingListService>();
 builder.Services.AddScoped<IShipmentRepository, ShipmentRepository>();
 builder.Services.AddScoped<IShipmentService, ShipmentService>();
 builder.Services.AddScoped<IReportService, ReportService>();
+builder.Services.AddScoped<ITenantProvider, TenantProvider>();
+builder.Services.AddScoped<ITenantProvisioningService, TenantProvisioningService>();
 
 
 builder.Services.AddSignalR();
@@ -217,6 +250,11 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseAuthentication();
+
+// Pas autentikimit (duhet User-i i mbushur): bllokon SuperAdmin-in që provon të
+// punojë brenda një tenanti të pezulluar përmes header-it X-Tenant-Id.
+app.UseMiddleware<Warehouse.Middleware.SuspendedTenantMiddleware>();
+
 app.UseAuthorization();
 
 app.MapHub<NotificationHub>("/notificationHub");
@@ -229,48 +267,6 @@ using (var scope = app.Services.CreateScope())
     await Warehouse.Data.DataSeeder.SeedAsync(scope.ServiceProvider);
 }
 
-using (var scope = app.Services.CreateScope())
-{
-    var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-    var defaultSettings = new List<(string Key, string Value, string Description)>
-    {
-        // General
-        ("company_name", "Warehouse Co.", "Company name"),
-        ("company_address", "Prishtine, Kosovo", "Company address"),
-        ("company_email", "info@warehouse.com", "Company email"),
-        ("currency", "EUR", "Default currency"),
-
-        // Inventory
-        ("low_stock_threshold", "10", "Notify when stock falls below this value"),
-        ("critical_stock_threshold", "5", "Critical stock alert threshold"),
-        ("auto_reserve_on_confirm", "true", "Automatically reserve stock when order is confirmed"),
-
-        // Shipment
-        ("max_pallets_per_shipment", "20", "Maximum pallets allowed per shipment"),
-        ("shipment_number_prefix", "SHP", "Prefix for shipment numbers"),
-        ("packing_list_number_prefix", "PL", "Prefix for packing list numbers"),
-
-        // Notifications
-        ("low_stock_alerts", "true", "Enable low stock notifications"),
-        ("order_created_notify", "true", "Notify when order is created"),
-        ("shipment_delivered_notify", "true", "Notify when shipment is delivered"),
-    };
-
-    foreach (var (key, value, description) in defaultSettings)
-    {
-        if (!context.Settings.Any(s => s.Key == key))
-        {
-            context.Settings.Add(new Setting
-            {
-                Key = key,
-                Value = value,
-                Description = description,
-                UpdatedAt = DateTime.UtcNow
-            });
-        }
-    }
-    await context.SaveChangesAsync();
-}
 
 app.Run();

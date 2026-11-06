@@ -8,21 +8,28 @@
 // Përfitimi: një socket i vetëm në vend që çdo hook/faqe të hapë lidhjen e vet.
 /* eslint-disable react-refresh/only-export-components */
 
-import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
-import * as signalR from '@microsoft/signalr';
-import { tokenStorage } from '../auth/tokenStorage';
-import { useAuth } from '../auth/AuthContext';
-import { http } from '../api/client';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+} from "react";
+import * as signalR from "@microsoft/signalr";
+import { tokenStorage } from "../auth/tokenStorage";
+import { useAuth } from "../auth/AuthContext";
+import { http } from "../api/client";
 
 // E nxjerrim URL-në e hub-it nga API_BASE (heqim '/api' fundor) që të mos
 // kemi adresë të hardkoduar — përshtatet vetvetiu me mjedisin (dev/prod).
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5138/api';
-const HUB_URL = API_BASE.replace(/\/api\/?$/, '') + '/notificationHub';
+const API_BASE = import.meta.env.VITE_API_BASE || "/api";
+const HUB_URL = API_BASE.replace(/\/api\/?$/, "") + "/notificationHub";
 
 const RealtimeContext = createContext(null);
 
 export function RealtimeProvider({ children }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, activeTenantId } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -33,8 +40,10 @@ export function RealtimeProvider({ children }) {
   const markAsRead = useCallback(async (id) => {
     try {
       await http.patch(`/notification/${id}/read`);
-      setNotifications(prev => prev.map(n => (n.id === id ? { ...n, isRead: true } : n)));
-      setUnreadCount(prev => Math.max(0, prev - 1));
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
+      );
+      setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch {
       // silence
     }
@@ -52,7 +61,6 @@ export function RealtimeProvider({ children }) {
       if (set.size === 0) map.delete(resource);
     };
   }, []);
-  
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -60,68 +68,69 @@ export function RealtimeProvider({ children }) {
     let cancelled = false;
 
     // Ngarkim fillestar i notifikimeve (njësoj si më parë).
-    http.get('/notification').then(data => {
-      if (cancelled) return;
-      setNotifications(data);
-      setUnreadCount(data.filter(n => !n.isRead).length);
-    }).catch(() => {});
+    http
+      .get("/notification")
+      .then((data) => {
+        if (cancelled) return;
+        setNotifications(data);
+        setUnreadCount(data.filter((n) => !n.isRead).length);
+      })
+      .catch(() => {});
 
-const connection = new signalR.HubConnectionBuilder()
-  .withUrl(HUB_URL, { 
-    accessTokenFactory: () => {
-      const token = tokenStorage.getAccessToken();
-      console.log('SignalR token:', token ? token.substring(0, 20) + '...' : 'NULL');
-      return token;
-    }
-  })
-  .withAutomaticReconnect()
-  .build();
+    // Lidhja e WebSocket-it nuk mbart header-a të personalizuar, prandaj tenanti
+    // aktiv i SuperAdmin-it (që te REST-i shkon si X-Tenant-Id) kalohet si query
+    // string. Pa këtë, SuperAdmin-i brenda një tenanti nuk futet në asnjë grup
+    // dhe nuk merr asnjë përditësim live.
+    const hubUrl = activeTenantId
+      ? `${HUB_URL}?tenantId=${encodeURIComponent(activeTenantId)}`
+      : HUB_URL;
 
-connection.start()
-  .then(() => console.log('SignalR connected!'))
-  .catch(err => console.error('SignalR error:', err));
+    const connection = new signalR.HubConnectionBuilder()
+      .withUrl(hubUrl, {
+        accessTokenFactory: () => tokenStorage.getAccessToken(),
+      })
+      .withAutomaticReconnect()
+      .build();
 
+    connection.start().catch((err) => console.error("SignalR error:", err));
 
-    // connection.on('ReceiveNotification', (notification) => {
-    //   const currentUserId = tokenStorage.getUser()?.userId;
-    //   if (notification.userId === currentUserId) {
-    //     setNotifications(prev => [notification, ...prev]);
-    //     setUnreadCount(prev => prev + 1);
-    //   }
-    // });
-
-    connection.on('ResourceChanged', (resource) => {
+    connection.on("ResourceChanged", (resource) => {
       const set = subscribersRef.current.get(resource);
       if (!set) return;
-      set.forEach(cb => {
-        try { cb(resource); } catch { /* mos lejo një abonent të prishë të tjerët */ }
+      set.forEach((cb) => {
+        try {
+          cb(resource);
+        } catch {
+          /* mos lejo një abonent të prishë të tjerët */
+        }
       });
     });
-    connection.on('ReceiveNotification', (notification) => {
-  const currentUserId = tokenStorage.getUser()?.userId;
-  console.log('Received notification:', notification);
-  console.log('Current userId:', currentUserId);
-  console.log('Match:', notification.userId === currentUserId);
-  
-  if (notification.userId === currentUserId) {
-    setNotifications(prev => [notification, ...prev]);
-    setUnreadCount(prev => prev + 1);
-  }
-});
-
+    connection.on("ReceiveNotification", (notification) => {
+      const currentUserId = tokenStorage.getUser()?.userId;
+      if (notification.userId === currentUserId) {
+        setNotifications((prev) => [notification, ...prev]);
+        setUnreadCount((prev) => prev + 1);
+      }
+    });
 
     return () => {
       cancelled = true;
       connection.stop();
     };
-  }, [isAuthenticated]);
+    // Kur SuperAdmin-i ndërron tenant, lidhja duhet rindërtuar që të futet
+    // në grupin e ri — ndryshe do mbetej në grupin e vjetër.
+  }, [isAuthenticated, activeTenantId]);
 
   const value = { notifications, unreadCount, markAsRead, subscribe };
-  return <RealtimeContext.Provider value={value}>{children}</RealtimeContext.Provider>;
+  return (
+    <RealtimeContext.Provider value={value}>
+      {children}
+    </RealtimeContext.Provider>
+  );
 }
 
 export function useRealtime() {
   const ctx = useContext(RealtimeContext);
-  if (!ctx) throw new Error('useRealtime must be used within RealtimeProvider');
+  if (!ctx) throw new Error("useRealtime must be used within RealtimeProvider");
   return ctx;
 }

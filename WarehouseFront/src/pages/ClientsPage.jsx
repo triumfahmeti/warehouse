@@ -18,10 +18,13 @@ import { useLiveResource } from "../realtime/useLiveResource";
 
 export default function ClientsPage() {
   const { hasPermission } = useAuth();
-  const canImport = hasPermission('ExportImport.Import');
+  const canImport = hasPermission("ExportImport.Import");
   const [clients, setClients] = useState([]);
   const [feedback, setFeedback] = useState(null);
-  const showFeedback = (msg, ok = true) => { setFeedback({ msg, ok }); setTimeout(() => setFeedback(null), 3000); };
+  const showFeedback = (msg, ok = true) => {
+    setFeedback({ msg, ok });
+    setTimeout(() => setFeedback(null), 3000);
+  };
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [query, setQuery] = useState("");
@@ -33,14 +36,16 @@ export default function ClientsPage() {
   const load = async () => {
     try {
       const data = await clientsApi.getAll();
-      setClients(data.map((c) => ({
-        id: c.id,
-        name: c.fullName,
-        email: c.email,
-        phone: c.phoneNumber,
-        address: c.address,
-        orders: c.ordersCount,
-      })));
+      setClients(
+        data.map((c) => ({
+          id: c.id,
+          name: c.fullName,
+          email: c.email,
+          phone: c.phoneNumber,
+          address: c.address,
+          orders: c.ordersCount,
+        })),
+      );
       setError(null);
     } catch (err) {
       setError(err.message);
@@ -49,7 +54,9 @@ export default function ClientsPage() {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
   // 'salesorders' këtu mban të freskët numrin e porosive (ordersCount) për klient.
   useLiveResource(["clients", "salesorders"], load);
 
@@ -91,7 +98,10 @@ export default function ClientsPage() {
 
   const toggleFilter = () => {
     setShowFilter((v) => {
-      if (v) { setQuery(""); setSortBy(""); } // mbyllja pastron kërkimin + renditjen
+      if (v) {
+        setQuery("");
+        setSortBy("");
+      } // mbyllja pastron kërkimin + renditjen
       return !v;
     });
   };
@@ -114,41 +124,103 @@ export default function ClientsPage() {
         onFilter={toggleFilter}
         onExport={exportCsv}
         filterActive={showFilter}
-        action={canImport && (
-          <ImportButton
-            onImport={async (file) => {
-              const res = await importApi.clients(file);
-              const msg = res?.errors?.length
-                ? `Imported: ${res.successCount}, skipped: ${res.skippedCount}. Errors: ${res.errors.map(e => `Row ${e.row}: ${e.message}`).join('; ')}`
-                : `Imported: ${res?.successCount ?? 0} clients, skipped: ${res?.skippedCount ?? 0}`;
-              showFeedback(msg, !res?.errors?.length);
-            }}
-          />
-        )}
+        action={
+          canImport && (
+            <ImportButton
+              onImport={async (file) => {
+                const res = await importApi.clients(file);
+                const msg = res?.errors?.length
+                  ? `Imported: ${res.successCount}, skipped: ${res.skippedCount}. Errors: ${res.errors.map((e) => `Row ${e.row}: ${e.message}`).join("; ")}`
+                  : `Imported: ${res?.successCount ?? 0} clients, skipped: ${res?.skippedCount ?? 0}`;
+                showFeedback(msg, !res?.errors?.length);
+              }}
+            />
+          )
+        }
       />
       {feedback && (
-        <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 1100, background: feedback.ok ? colors.text : colors.danger, color: colors.surface, padding: '12px 18px', borderRadius: 10, fontSize: 13, fontFamily: 'var(--font-sans)', boxShadow: '0 8px 24px rgba(0,0,0,0.15)' }}>
+        <div
+          style={{
+            position: "fixed",
+            bottom: 24,
+            right: 24,
+            zIndex: 1100,
+            background: feedback.ok ? colors.text : colors.danger,
+            color: colors.surface,
+            padding: "12px 18px",
+            borderRadius: 10,
+            fontSize: 13,
+            fontFamily: "var(--font-sans)",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+          }}
+        >
           {feedback.msg}
         </div>
       )}
 
       {/* Shiriti i filtrit: kërkim + renditje */}
       {showFilter && (
-        <div style={{ marginBottom: 16, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-          <div style={{ position: "relative", flex: 1, minWidth: 220, maxWidth: 320 }}>
-            <Search size={14} color={colors.textMuted} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+        <div
+          style={{
+            marginBottom: 16,
+            display: "flex",
+            gap: 8,
+            flexWrap: "wrap",
+            alignItems: "center",
+          }}
+        >
+          <div
+            style={{
+              position: "relative",
+              flex: 1,
+              minWidth: 220,
+              maxWidth: 320,
+            }}
+          >
+            <Search
+              size={14}
+              color={colors.textMuted}
+              style={{
+                position: "absolute",
+                left: 10,
+                top: "50%",
+                transform: "translateY(-50%)",
+                pointerEvents: "none",
+              }}
+            />
             <input
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search by name, email or phone..."
-              style={{ width: "100%", padding: "8px 12px 8px 32px", borderRadius: 8, border: `1px solid ${colors.border}`, background: colors.surface, color: colors.text, fontSize: 13, fontFamily: "var(--font-sans)", outline: "none", boxSizing: "border-box" }}
+              style={{
+                width: "100%",
+                padding: "8px 12px 8px 32px",
+                borderRadius: 8,
+                border: `1px solid ${colors.border}`,
+                background: colors.surface,
+                color: colors.text,
+                fontSize: 13,
+                fontFamily: "var(--font-sans)",
+                outline: "none",
+                boxSizing: "border-box",
+              }}
             />
           </div>
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            style={{ padding: "8px 12px", borderRadius: 8, border: `1px solid ${colors.border}`, background: colors.surface, color: colors.text, fontSize: 13, fontFamily: "var(--font-sans)", outline: "none", cursor: "pointer" }}
+            style={{
+              padding: "8px 12px",
+              borderRadius: 8,
+              border: `1px solid ${colors.border}`,
+              background: colors.surface,
+              color: colors.text,
+              fontSize: 13,
+              fontFamily: "var(--font-sans)",
+              outline: "none",
+              cursor: "pointer",
+            }}
           >
             <option value="">Sort by: Default</option>
             <option value="orders-desc">Orders (high → low)</option>
@@ -160,164 +232,184 @@ export default function ClientsPage() {
       )}
 
       {loading ? (
-        <div style={{ padding: 40, textAlign: "center", color: colors.textMuted, fontFamily: "var(--font-mono)", fontSize: 13 }}>
+        <div
+          style={{
+            padding: 40,
+            textAlign: "center",
+            color: colors.textMuted,
+            fontFamily: "var(--font-mono)",
+            fontSize: 13,
+          }}
+        >
           Loading...
         </div>
       ) : error ? (
-        <div style={{ padding: 40, textAlign: "center", color: colors.danger, fontFamily: "var(--font-mono)", fontSize: 13 }}>
+        <div
+          style={{
+            padding: 40,
+            textAlign: "center",
+            color: colors.danger,
+            fontFamily: "var(--font-mono)",
+            fontSize: 13,
+          }}
+        >
           {error}
         </div>
       ) : (
         <>
-      <Table
-        rows={sorted}
-        columns={[
-          {
-            key: "id",
-            label: "ID",
-            width: "56px",
-            render: (r) => (
-              <span
-                style={{
-                  fontFamily: "var(--font-mono)",
-                  color: colors.textMuted,
-                  fontSize: 12,
-                }}
-              >
-                #{r.id}
-              </span>
-            ),
-          },
-          {
-            key: "name",
-            label: "Name",
-            render: (r) => (
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div
-                  style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: 999,
-                    background: `linear-gradient(135deg, ${colors.text}, ${colors.accent})`,
-                    color: "white",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 11,
-                    fontWeight: 600,
-                    flexShrink: 0,
-                  }}
-                >
-                  {r.name.charAt(0)}
-                </div>
-                <span style={{ fontWeight: 500 }}>{r.name}</span>
-              </div>
-            ),
-          },
-          {
-            key: "email",
-            label: "Email",
-            render: (r) => (
-              <span
-                style={{
-                  fontFamily: "var(--font-mono)",
-                  fontSize: 12,
-                  color: colors.textMuted,
-                }}
-              >
-                {r.email}
-              </span>
-            ),
-          },
-          {
-            key: "phone",
-            label: "Phone",
-            render: (r) => (
-              <span
-                style={{
-                  fontFamily: "var(--font-mono)",
-                  fontSize: 12,
-                  color: r.phone ? colors.text : colors.textDim,
-                }}
-              >
-                {r.phone || "—"}
-              </span>
-            ),
-          },
-          {
-            key: "address",
-            label: "Address",
-            render: (r) => (
-              <span
-                style={{
-                  fontSize: 12,
-                  color: r.address ? colors.textMuted : colors.textDim,
-                }}
-              >
-                {r.address || "—"}
-              </span>
-            ),
-          },
-          {
-            key: "orders",
-            label: "Orders",
-            width: "80px",
-            render: (r) => (
-              <span style={{ fontFamily: "var(--font-mono)" }}>{r.orders}</span>
-            ),
-          },
-          {
-            key: "action",
-            label: "",
-            width: "48px",
-            render: (r) => (
-              <button
-                title="Shiko detajet"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setDetail(r);
-                }}
-                style={{
-                  all: "unset",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: 28,
-                  height: 28,
-                  borderRadius: 7,
-                  cursor: "pointer",
-                  color: colors.textMuted,
-                  border: `1px solid ${colors.border}`,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = colors.bg;
-                  e.currentTarget.style.color = colors.text;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "transparent";
-                  e.currentTarget.style.color = colors.textMuted;
-                }}
-              >
-                <Eye size={14} />
-              </button>
-            ),
-          },
-        ]}
-      />
+          <Table
+            rows={sorted}
+            columns={[
+              {
+                key: "id",
+                label: "ID",
+                width: "56px",
+                render: (r) => (
+                  <span
+                    style={{
+                      fontFamily: "var(--font-mono)",
+                      color: colors.textMuted,
+                      fontSize: 12,
+                    }}
+                  >
+                    #{r.id}
+                  </span>
+                ),
+              },
+              {
+                key: "name",
+                label: "Name",
+                render: (r) => (
+                  <div
+                    style={{ display: "flex", alignItems: "center", gap: 10 }}
+                  >
+                    <div
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: 999,
+                        background: `linear-gradient(135deg, ${colors.text}, ${colors.accent})`,
+                        color: "white",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 11,
+                        fontWeight: 600,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {r.name.charAt(0)}
+                    </div>
+                    <span style={{ fontWeight: 500 }}>{r.name}</span>
+                  </div>
+                ),
+              },
+              {
+                key: "email",
+                label: "Email",
+                render: (r) => (
+                  <span
+                    style={{
+                      fontFamily: "var(--font-mono)",
+                      fontSize: 12,
+                      color: colors.textMuted,
+                    }}
+                  >
+                    {r.email}
+                  </span>
+                ),
+              },
+              {
+                key: "phone",
+                label: "Phone",
+                render: (r) => (
+                  <span
+                    style={{
+                      fontFamily: "var(--font-mono)",
+                      fontSize: 12,
+                      color: r.phone ? colors.text : colors.textDim,
+                    }}
+                  >
+                    {r.phone || "—"}
+                  </span>
+                ),
+              },
+              {
+                key: "address",
+                label: "Address",
+                render: (r) => (
+                  <span
+                    style={{
+                      fontSize: 12,
+                      color: r.address ? colors.textMuted : colors.textDim,
+                    }}
+                  >
+                    {r.address || "—"}
+                  </span>
+                ),
+              },
+              {
+                key: "orders",
+                label: "Orders",
+                width: "80px",
+                render: (r) => (
+                  <span style={{ fontFamily: "var(--font-mono)" }}>
+                    {r.orders}
+                  </span>
+                ),
+              },
+              {
+                key: "action",
+                label: "",
+                width: "48px",
+                render: (r) => (
+                  <button
+                    title="See Details"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDetail(r);
+                    }}
+                    style={{
+                      all: "unset",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: 28,
+                      height: 28,
+                      borderRadius: 7,
+                      cursor: "pointer",
+                      color: colors.textMuted,
+                      border: `1px solid ${colors.border}`,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = colors.bg;
+                      e.currentTarget.style.color = colors.text;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "transparent";
+                      e.currentTarget.style.color = colors.textMuted;
+                    }}
+                  >
+                    <Eye size={14} />
+                  </button>
+                ),
+              },
+            ]}
+          />
 
-      {sorted.length === 0 && (
-        <div
-          style={{
-            padding: 32,
-            textAlign: "center",
-            color: colors.textMuted,
-            fontFamily: "var(--font-sans)",
-            fontSize: 13,
-          }}
-        >
-          No clients found{query ? ` for "${query}"` : ""}.
-        </div>
-      )}
+          {sorted.length === 0 && (
+            <div
+              style={{
+                padding: 32,
+                textAlign: "center",
+                color: colors.textMuted,
+                fontFamily: "var(--font-sans)",
+                fontSize: 13,
+              }}
+            >
+              No clients found{query ? ` for "${query}"` : ""}.
+            </div>
+          )}
         </>
       )}
 
@@ -412,17 +504,17 @@ export default function ClientsPage() {
             />
             <DetailRow
               icon={<Phone size={15} />}
-              label="Telefon"
+              label="Phone"
               value={detail.phone || "—"}
             />
             <DetailRow
               icon={<MapPin size={15} />}
-              label="Adresa"
+              label="Address"
               value={detail.address || "—"}
             />
             <DetailRow
               icon={<ShoppingCart size={15} />}
-              label="Porosi gjithsej"
+              label="Orders"
               value={detail.orders}
             />
 
@@ -441,7 +533,7 @@ export default function ClientsPage() {
                 color: colors.text,
               }}
             >
-              Mbyll
+              Close
             </button>
           </div>
         </div>
